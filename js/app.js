@@ -23,9 +23,28 @@
   const $ = id => document.getElementById(id);
   const allItems = () => ITEMS.concat(RARE_ITEMS);
 
+  // الشريط السفلي للتنقل بين الشاشات الرئيسية (لا يظهر في الجولات والسباقات)
+  const TABS = [
+    { name: 'camp', icon: '⛺', label: 'المخيّم' },
+    { name: 'map', icon: '🗺️', label: 'الخريطة' },
+    { act: 'startRace', icon: '🏃', label: 'السباق' },
+    { name: 'shop', icon: '🎒', label: 'المتجر' },
+    { name: 'performance', icon: '📊', label: 'أدائي' },
+  ];
+  const TAB_SCREENS = new Set(['camp', 'map', 'shop', 'animals', 'diary', 'performance', 'ranks']);
+
+  function tabBar() {
+    return `<nav class="tabbar">${TABS.map(t => t.act
+      ? `<button class="tab" data-act="${t.act}"><span>${t.icon}</span><b>${t.label}</b></button>`
+      : `<button class="tab ${nav.cur === t.name ? 'on' : ''}" data-act="go" data-arg="${t.name}"><span>${t.icon}</span><b>${t.label}</b></button>`
+    ).join('')}</nav>`;
+  }
+
   function render(html) {
+    const tabs = !round && !duel && TAB_SCREENS.has(nav.cur) && !!Store.current();
     document.body.classList.toggle('bgrest', !!(round || duel));
-    app.innerHTML = html;
+    document.body.classList.toggle('tabs', tabs);
+    app.innerHTML = html + (tabs ? tabBar() : '');
     window.scrollTo(0, 0);
   }
 
