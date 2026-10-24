@@ -1034,7 +1034,8 @@
           ${races.map(x => `<div class="col"><span class="val">${x.score}</span>
             <i style="height:${(x.score / maxRace) * 100}%"></i></div>`).join('')}
         </div>
-        <p class="muted center">من الأقدم (يمين) إلى الأحدث (يسار)</p>` : '<p class="muted">لم يلعب سباق النهر بعد.</p>'}
+        <p class="muted center">من الأقدم (يمين) إلى الأحدث (يسار)</p>
+        <button class="link-btn" data-act="undoRace">↩️ حذف آخر نتيجة (${ltr(races[races.length - 1].score)})</button>` : '<p class="muted">لم يلعب سباق النهر بعد.</p>'}
       </div>
 
       <div class="card">
@@ -1197,6 +1198,11 @@
       input: '', q: null, locked: true, timer: null,
       secsAtStart: t.secs,
       goal: Engine.raceGoal(p.bestRace),   // الضفة الأخرى في السباق
+      // ما كان عليه الملف قبل السباق، ليستطيع ولي الأمر التراجع عنه إن لعبه غير الطفل
+      undo: mode === 'race' ? {
+        facts: {}, coins: p.coins, bestRace: p.bestRace, unlocked: p.unlocked, animals: p.animals.slice(),
+        day: { secs: t.secs, asked: t.asked, right: t.right, mistakes: t.mistakes.map(m => Engine.key(m[0], m[1])), race: !!t.done.race },
+      } : null,
     };
     round.total = mode === 'review' ? round.queue.length : mode === 'tricky' ? 9 : CONFIG.practiceLength;
     Screens.play();
@@ -1351,6 +1357,49 @@
     p.races.push({ score: right, at: Date.now() });
     p.races = p.races.slice(-50);
     return out;
+  }
+
+  // يُحفظ مع آخر سباق فقط: ما يلزم لإرجاع الملف كما كان قبله
+  function keepUndo(p, u) {
+    const t = Journey.today(p);
+    p.races.forEach(x => delete x.undo);
+    p.races[p.races.length - 1].undo = {
+      facts: u.facts, coins: p.coins - u.coins, bestRace: u.bestRace, unlocked: u.unlocked, animals: u.animals,
+      day: {
+        key: Journey.dayKey(), secs: t.secs - u.day.secs, asked: t.asked - u.day.asked, right: t.right - u.day.right,
+        added: t.mistakes.map(m => Engine.key(m[0], m[1])).filter(k => !u.day.mistakes.includes(k)), race: u.day.race,
+      },
+    };
+  }
+
+  // يحذف آخر نتيجة سباق ويُرجع ما غيّرته. السباقات القديمة (بلا سجل تراجع) تُرجَع جزئياً فقط
+  function undoLastRace(p) {
+    const last = p.races.pop();
+    const u = last.undo;
+    if (u) {
+      Object.entries(u.facts).forEach(([k, f]) => { if (f) p.facts[k] = f; else delete p.facts[k]; });
+      p.coins = Math.max(0, p.coins - u.coins);
+      p.bestRace = u.bestRace;
+      p.unlocked = u.unlocked;
+      p.animals = u.animals;
+      const t = p.days[u.day.key];
+      if (t) {
+        t.secs = Math.max(0, t.secs - u.day.secs);
+        t.asked = Math.max(0, t.asked - u.day.asked);
+        t.right = Math.max(0, t.right - u.day.right);
+        t.mistakes = t.mistakes.filter(m => !u.day.added.includes(Engine.key(m[0], m[1])));
+        if (!u.day.race && !t.chest) delete t.done.race;
+      }
+      return true;
+    }
+    const others = Math.max(0, ...p.races.map(x => x.score));
+    let coins = Math.floor(last.score * COINS.perCorrect);
+    if (p.bestRace === last.score && others < last.score) { p.bestRace = others; coins += COINS.raceRecord; }
+    p.coins = Math.max(0, p.coins - coins);
+    const t = p.days[Journey.dayKey(new Date(last.at))];
+    const sameDay = p.races.some(x => Journey.dayKey(new Date(x.at)) === Journey.dayKey(new Date(last.at)));
+    if (t && !t.chest && !sameDay) delete t.done.race;
+    return false;
   }
 
   function stopDuel() {
@@ -1649,6 +1698,7 @@
     const ok = Number(round.input) === q.answer;
     const ms = performance.now() - round.qStart;
     round.locked = true;
+    if (round.undo && !(q.key in round.undo.facts)) round.undo.facts[q.key] = p.facts[q.key] ? Object.assign({}, p.facts[q.key]) : null;
     Engine.record(p, q.a, q.b, ok, ms);
     Journey.addAnswer(p, q, ok, ms);
     round.asked++;
@@ -1731,6 +1781,7 @@
 
     summary.events = Engine.progress(p);
     summary.coins = p.coins - coinsBefore;
+    if (r.mode === 'race') keepUndo(p, r.undo);
     Store.save();
     const big = summary.events.length || summary.newRecord || summary.rankUp || summary.station || summary.goalReached;
     Sound.play(big ? 'win' : 'coin');
@@ -2078,6 +2129,17 @@
       p.name = name;
       Store.save();
       toast('✅ تغيّر الاسم');
+      Screens.parent();
+    },
+    // إن لعب أحد السباق بدلاً من الطفل: تُحذف النتيجة ولا تؤثر في رتبته ومستواه
+    undoRace() {
+      const p = Store.state.profiles.find(k => k.id === parentKid);
+      if (!p || !parentOK || !p.races.length) return;
+      const last = p.races[p.races.length - 1];
+      if (!confirm(`حذف آخر نتيجة سباق لـ«${p.name}» (${last.score})؟ ستُسحب عملاتها ويعود أفضل سباق كما كان.`)) return;
+      const full = undoLastRace(p);
+      Store.save();
+      toast(full ? '↩️ حُذفت النتيجة وعاد كل شيء كما كان' : '↩️ حُذفت النتيجة وعاد أفضل سباق والعملات');
       Screens.parent();
     },
     setGroup(g) {

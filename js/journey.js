@@ -166,7 +166,7 @@ const Journey = (() => {
   }
 
   return {
-    STATIONS, today, addAnswer, clearMistake, minutesToday, nextStation, chestReady, complete,
+    STATIONS, dayKey, today, addAnswer, clearMistake, minutesToday, nextStation, chestReady, complete,
     openChest, streak, applyShields, week, weekStatus, claimWeek, recentDays, weekReport,
   };
 })();
