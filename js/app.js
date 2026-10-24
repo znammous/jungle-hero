@@ -1035,7 +1035,7 @@
             <i style="height:${(x.score / maxRace) * 100}%"></i></div>`).join('')}
         </div>
         <p class="muted center">من الأقدم (يمين) إلى الأحدث (يسار)</p>
-        <button class="link-btn" data-act="undoRace">↩️ حذف آخر نتيجة (${ltr(races[races.length - 1].score)})</button>` : '<p class="muted">لم يلعب سباق النهر بعد.</p>'}
+        <button class="link-btn dark" data-act="undoRace">↩️ حذف آخر نتيجة (${ltr(races[races.length - 1].score)})</button>` : '<p class="muted">لم يلعب سباق النهر بعد.</p>'}
       </div>
 
       <div class="card">
