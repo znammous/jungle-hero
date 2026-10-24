@@ -440,6 +440,133 @@ button.chip:active { background: rgba(255, 255, 255, 0.28); }
 .mistake-list span { background: #fff; border-radius: 12px; padding: 8px 14px; font-size: 1.3rem; font-weight: 700; }
 .actions { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; margin-top: 6px; }
 
+/* ───── رحلة اليوم (في المخيّم) ───── */
+.big-btn.purple { background: #7b5bb5; }
+.menu > :last-child:nth-child(odd) { grid-column: span 2; }
+
+.expedition { display: flex; flex-direction: column; gap: 14px; }
+.exp-head { display: flex; align-items: center; justify-content: space-between; }
+.exp-head h3 { font-size: 1.3rem; }
+.streak-badge { background: #ffe1c2; color: #b34d00; border-radius: 999px; padding: 4px 14px; font-weight: 800; font-size: 1.15rem; }
+
+.stations { display: flex; align-items: center; }
+.station {
+  flex: 0 0 auto;
+  width: 88px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 4px;
+  border-radius: 18px;
+  background: #fff;
+  border: 3px solid var(--sand-dark);
+  font-size: 0.95rem;
+}
+.station .st-icon { font-size: 2rem; line-height: 1.1; }
+.station.done { background: #e3f4dc; border-color: var(--leaf-light); }
+.station.next { border-color: var(--orange); background: #fff3e2; animation: nudge 1.6s ease-in-out infinite; }
+.station.chest.next { border-color: var(--sun); background: #fff6cc; }
+.st-link { flex: 1; height: 6px; min-width: 8px; border-radius: 999px; background: repeating-linear-gradient(90deg, var(--sand-dark) 0 8px, transparent 8px 14px); }
+.st-link.done { background: var(--leaf-light); }
+@keyframes nudge { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+
+.time-row { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 0.95rem; white-space: nowrap; }
+.time-row .bar { flex: 1; height: 12px; }
+.banner.rest { background: #ffd9c2; align-self: center; }
+.gear .rare { background: radial-gradient(circle, #fff3b0 0, transparent 70%); border-radius: 50%; }
+
+/* ───── الكنز والجوائز ───── */
+.chest-box { font-size: 7rem; animation: wobble 1.2s ease-in-out infinite; }
+@keyframes wobble { 0%, 100% { transform: rotate(0); } 20% { transform: rotate(-8deg); } 40% { transform: rotate(8deg); } 60% { transform: rotate(-4deg); } 80% { transform: rotate(4deg); } }
+.stat.rare b { font-size: 2.6rem; line-height: 1.1; }
+.btn.pulse { animation: nudge 1.4s ease-in-out infinite; }
+
+/* ───── دفتر الرحلة ───── */
+.center { text-align: center; }
+.streak-card { display: flex; align-items: center; gap: 18px; }
+.streak-card b { font-size: 1.2rem; }
+.streak-big { font-size: 3rem; font-weight: 800; color: #d35400; white-space: nowrap; }
+.week-row { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin: 10px 0; }
+.day {
+  background: #fff;
+  border-radius: 14px;
+  padding: 6px 2px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 64px;
+  border: 2px solid transparent;
+}
+.day small { font-size: 0.72rem; color: var(--muted); }
+.day span { font-size: 1.5rem; min-height: 1.6em; }
+.day.done { background: #e3f4dc; }
+.day.played { background: #fff6dc; }
+.day.today { border-color: var(--orange); }
+.day.future { opacity: 0.45; }
+.week-row.compact { margin: 4px 0; }
+.week-row.compact .day { min-height: 46px; }
+.week-row.compact .day span { font-size: 1.2rem; }
+.week-goal { display: flex; align-items: center; gap: 10px; font-size: 0.95rem; margin-bottom: 10px; flex-wrap: wrap; }
+.week-goal .bar { flex: 1; min-width: 80px; height: 12px; }
+.facts-list { list-style: none; display: flex; flex-direction: column; gap: 8px; margin-top: 8px; line-height: 1.6; }
+.rare-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 10px 0 4px; }
+.rare-item { display: flex; flex-direction: column; align-items: center; background: #fff; border-radius: 14px; padding: 8px 4px; font-size: 2rem; opacity: 0.5; }
+.rare-item small { font-size: 0.75rem; text-align: center; }
+.rare-item.found { opacity: 1; background: #fff6cc; }
+
+/* ───── ولي الأمر ───── */
+.footer-links { display: flex; justify-content: center; gap: 18px; flex-wrap: wrap; }
+.link-btn.dark { color: var(--muted); }
+.pin-card { display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center; max-width: 420px; width: 100%; align-self: center; }
+.pin-card p { font-size: 1.15rem; }
+.pin-dots { display: flex; gap: 14px; }
+.pin-dots i { width: 20px; height: 20px; border-radius: 50%; border: 3px solid var(--wood); }
+.pin-dots i.on { background: var(--wood); }
+.numpad.small { max-width: 300px; }
+.numpad.small .key { height: 60px; font-size: 1.6rem; }
+
+.setting { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 12px 0; flex-wrap: wrap; font-weight: 700; }
+.seg { display: flex; background: #fff; border-radius: 14px; padding: 4px; gap: 4px; }
+.seg button { padding: 8px 12px; border-radius: 10px; font-weight: 700; }
+.seg button.on { background: var(--leaf); color: #fff; }
+.kid-tabs { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.kid-tabs .chip.on { background: var(--sun); color: var(--ink); }
+.tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.tile { background: var(--sand); border-radius: 18px; padding: 12px 6px; text-align: center; display: flex; flex-direction: column; box-shadow: 0 5px 0 var(--sand-dark); }
+.tile b { font-size: 1.6rem; }
+.tile small { color: var(--muted); }
+
+.chart { position: relative; display: flex; align-items: flex-end; gap: 8px; height: 170px; margin: 14px 0 6px; padding-bottom: 22px; }
+.chart .col { flex: 1; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; position: relative; }
+.chart .col i { width: 100%; max-width: 38px; min-height: 3px; background: var(--orange); border-radius: 8px 8px 3px 3px; }
+.chart .col i.met { background: var(--leaf); }
+.chart .val { font-size: 0.8rem; font-weight: 700; color: var(--muted); }
+.chart .col small { position: absolute; bottom: -22px; font-size: 0.7rem; color: var(--muted); white-space: nowrap; }
+.chart .goal-line { position: absolute; inset-inline: 0; bottom: calc(22px + (100% - 22px) * var(--goal)); border-top: 2px dashed var(--wood); }
+.chart.races { padding-bottom: 0; }
+.chart.races .col i { background: var(--teal); }
+
+.heatmap { display: grid; grid-template-columns: repeat(13, 1fr); gap: 3px; margin: 10px auto 0; max-width: 520px; }
+.heatmap i { aspect-ratio: 1; border-radius: 5px; display: flex; align-items: center; justify-content: center; font-style: normal; font-size: 0.75rem; font-weight: 700; }
+.hm-head { color: var(--muted); }
+.hm.l0 { background: #e4ded0; }
+.hm.l1 { background: #e8705f; }
+.hm.l2 { background: #f2a65a; }
+.hm.l3 { background: #f6d55c; }
+.hm.l4 { background: #8fd17f; }
+.hm.l5 { background: #3c9a4f; }
+.legend { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-top: 12px; font-size: 0.85rem; }
+.legend span { display: flex; align-items: center; gap: 5px; }
+.legend .hm { width: 14px; height: 14px; border-radius: 4px; display: inline-block; }
+
+@media (max-width: 520px) {
+  .tiles { grid-template-columns: repeat(2, 1fr); }
+  .station { width: 70px; font-size: 0.8rem; }
+  .station .st-icon { font-size: 1.6rem; }
+  .time-row { flex-wrap: wrap; }
+}
+
 /* ───── إشعار ───── */
 .toast {
   position: fixed;

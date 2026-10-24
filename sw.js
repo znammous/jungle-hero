@@ -1,6 +1,6 @@
 // يحفظ ملفات اللعبة على الجهاز لتعمل بدون إنترنت
 // غيّر رقم الإصدار عند تعديل أي ملف حتى يحدَّث الكاش
-const CACHE = 'jungle-hero-v3';
+const CACHE = 'jungle-hero-v5';
 const FILES = [
   './',
   'index.html',
@@ -12,6 +12,7 @@ const FILES = [
   'js/store.js',
   'js/sound.js',
   'js/engine.js',
+  'js/journey.js',
   'js/app.js',
   'manifest.webmanifest',
   'icons/icon.svg',

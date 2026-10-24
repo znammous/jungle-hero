@@ -1,13 +1,21 @@
 // حفظ البيانات على الجهاز نفسه (localStorage) — لا إنترنت ولا خوادم
 const Store = (() => {
   const KEY = 'jungle-hero-v1';
-  const state = { profiles: [], currentId: null, muted: false };
+  const state = { profiles: [], currentId: null, muted: false, settings: {} };
+  // إعدادات ولي الأمر: الهدف اليومي بالدقائق، وتذكير الراحة (0 = بدون)، والرمز السري
+  const DEFAULT_SETTINGS = { goalMin: 15, maxMin: 0, pin: null };
 
   function load() {
     try {
       const saved = JSON.parse(localStorage.getItem(KEY));
       if (saved) Object.assign(state, saved);
     } catch (e) { /* التخزين غير متاح: نكمل في الذاكرة فقط */ }
+    // ترقية البيانات المحفوظة من الإصدار الأول
+    state.settings = Object.assign({}, DEFAULT_SETTINGS, state.settings);
+    state.profiles.forEach(p => {
+      p.days = p.days || {};
+      p.weeklyClaimed = p.weeklyClaimed || [];
+    });
   }
 
   function save() {
@@ -25,6 +33,8 @@ const Store = (() => {
       animals: [],   // الجداول التي اكتُشف حيوانها
       bestRace: 0,
       races: [],     // آخر نتائج السباق
+      days: {},      // سجل كل يوم: الوقت والمحطات والأخطاء والكنز
+      weeklyClaimed: [],
       createdAt: Date.now(),
     };
     state.profiles.push(p);

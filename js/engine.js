@@ -15,6 +15,7 @@ const Engine = (() => {
       f.right++;
       // الإجابة السريعة ترفع الصندوق، والبطيئة الصحيحة تحافظ عليه
       f.box = ms <= CONFIG.fastMs ? Math.min(CONFIG.maxBox, f.box + 1) : Math.max(f.box, 1);
+      if (f.box >= CONFIG.masteredBox && !f.masteredAt) f.masteredAt = Date.now();
     } else {
       f.box = Math.max(0, f.box - 2);
     }
@@ -85,5 +86,5 @@ const Engine = (() => {
     return events;
   }
 
-  return { record, mastery, tablePool, racePool, pick, rankFor, progress };
+  return { key, fact, record, mastery, tablePool, racePool, pick, rankFor, progress };
 })();
