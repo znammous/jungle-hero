@@ -391,7 +391,8 @@
     // ───── سباق الإخوة ─────
     duelPick() {
       const list = Store.state.profiles;
-      render(`<section class="screen">
+      const layout = duelLayout();
+      render(`<section class="screen duel-screen">
         <header class="topbar">
           <button class="chip" data-act="go" data-arg="profiles">→ رجوع</button>
           <h2 class="topbar-title">⚔️ سباق الإخوة</h2>
@@ -410,6 +411,13 @@
             ${i >= 0 ? `<span class="pick-no">${ltr(i + 1)}</span>` : ''}
           </button>`;
         }).join('')}</div>
+        <div class="card">
+          <h3>📱 شكل الشاشة</h3>
+          <div class="layouts">${DUEL_LAYOUTS.map(l => `<button class="layout-opt ${l.id === layout ? 'on' : ''}" data-act="setDuelLayout" data-arg="${l.id}">
+            <span class="mini ${l.id}"><i>${list[0].avatar}</i><i>${list[1].avatar}</i></span>
+            <b>${l.name}</b><small>${l.hint}</small>
+          </button>`).join('')}</div>
+        </div>
         <button class="btn green wide" data-act="startDuel" ${duelPicks.length === 2 ? '' : 'disabled'}>🏁 ابدأ السباق</button>
       </section>`);
     },
@@ -432,7 +440,7 @@
           <button class="key ok" data-dkey="ok" aria-label="تأكيد">✓</button>
         </div>
       </div>`;
-      render(`<section class="duel">
+      render(`<section class="duel ${duelLayout()}">
         ${half(duel.sides[0], 0)}
         <div class="duel-mid">
           <button class="chip" data-act="exitDuel" aria-label="خروج">✕</button>
@@ -455,7 +463,7 @@
         <small>${x.reachedAt ? '🏝️ وصل إلى جزيرته' : `🏝️ ${ltr(`${x.right}/${x.goal}`)}`}</small>
         ${x.banners.map(t => `<div class="banner">${t}</div>`).join('')}
       </div>`;
-      render(`<section class="screen results">
+      render(`<section class="screen results duel-screen">
         <div class="result-hero">${res.winner ? '🏆' : '🤝'}</div>
         <h1>${title}</h1>
         <p class="hint">${res.winner && res.winner.reachedAt ? 'وصل إلى جزيرته أولاً' : 'الأقرب إلى جزيرته'}</p>
@@ -967,6 +975,10 @@
 
   // يُرجع شاشة واحدة، ويعيد false في الشاشة الأولى
   function navBack() {
+    if (duel && app.querySelector('.duel')) {
+      if (!app.querySelector('.duel-lock')) actions.exitDuel();
+      return true;
+    }
     if (nav.cur === 'parent' || nav.cur === 'parentGate') { actions.leaveParent(); return true; }
     if (nav.cur === 'welcome' && nav.stack.length) { actions.skipWelcome(); return true; }
     const prev = nav.stack[nav.stack.length - 1];
@@ -1092,6 +1104,15 @@
   // جزيرة كل طفل على بُعد أفضل نتيجة له وإجابتين، فيفوز من يتفوّق على نفسه
   const duelGoal = p => Math.max(8, p.bestRace + 2);
 
+  // شكل تقسيم الشاشة يُحفظ على هذا الجهاز فقط، والافتراضي حسب وضع الجهاز
+  const DUEL_LAYOUTS = [
+    { id: 'side', name: 'جنباً إلى جنب', hint: 'متجاوران أمام الشاشة' },
+    { id: 'stack', name: 'فوق وتحت', hint: 'كلاهما بنفس الاتجاه' },
+    { id: 'face', name: 'متقابلان', hint: 'التابلت على الطاولة بينكما' },
+  ];
+  const duelLayout = () => Store.state.duelLayout ||
+    (matchMedia('(orientation: landscape)').matches ? 'side' : 'face');
+
   function startDuel() {
     const players = duelPicks.map(id => Store.state.profiles.find(p => p.id === id));
     if (players.length !== 2 || players.some(p => !p)) { Screens.duelPick(); return; }
@@ -1204,6 +1225,12 @@
     p.races.push({ score: right, at: Date.now() });
     p.races = p.races.slice(-50);
     return out;
+  }
+
+  function stopDuel() {
+    abortDuel();
+    Store.save();
+    Screens.duelPick();
   }
 
   function finishDuel() {
@@ -1477,11 +1504,42 @@
       Screens.duelPick();
     },
     startDuel() { startDuel(); },
+    setDuelLayout(id) { Store.state.duelLayout = id; Store.save(); Screens.duelPick(); },
+    // إيقاف سباق الإخوة يحتاج رمز ولي الأمر حتى لا يوقفه الخاسر
     exitDuel() {
-      if (!confirm('إيقاف السباق؟ لن تُحسب النتيجة.')) return;
-      abortDuel();
-      Store.save();
-      Screens.duelPick();
+      if (!duelAlive()) return;
+      if (!Store.state.settings.pin) {
+        if (confirm('إيقاف السباق؟ لن تُحسب النتيجة.')) stopDuel();
+        return;
+      }
+      duel.pin = '';
+      const lock = document.createElement('div');
+      lock.className = 'duel-lock';
+      lock.innerHTML = `<div class="card pin-card">
+        <h2>⏸️ إيقاف السباق</h2>
+        <p>أدخل رمز ولي الأمر</p>
+        <div class="pin-dots" id="duelDots">${'<i></i>'.repeat(4)}</div>
+        <div class="numpad small" dir="ltr">
+          ${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => `<button class="key" data-act="duelPin" data-arg="${n}">${n}</button>`).join('')}
+          <button class="key util" data-act="duelPin" data-arg="del" aria-label="مسح">⌫</button>
+          <button class="key" data-act="duelPin" data-arg="0">0</button>
+          <span></span>
+        </div>
+        <button class="link-btn dark" data-act="duelPin" data-arg="cancel">↩️ متابعة السباق</button>
+      </div>`;
+      app.querySelector('.duel').appendChild(lock);
+    },
+    duelPin(k) {
+      if (!duelAlive()) return;
+      const lock = app.querySelector('.duel-lock');
+      if (k === 'cancel') { lock.remove(); return; }
+      duel.pin = k === 'del' ? duel.pin.slice(0, -1) : (duel.pin + k).slice(0, 4);
+      $('duelDots').innerHTML = [0, 1, 2, 3].map(i => `<i class="${i < duel.pin.length ? 'on' : ''}"></i>`).join('');
+      if (duel.pin.length < 4) return;
+      if (duel.pin === Store.state.settings.pin) { stopDuel(); return; }
+      duel.pin = '';
+      toast('❌ الرمز غير صحيح');
+      setTimeout(() => { if ($('duelDots')) $('duelDots').innerHTML = '<i></i>'.repeat(4); }, 250);
     },
     startTricky() { if (trickyFacts(Store.current()).length) startRound('tricky'); },
 
@@ -1761,6 +1819,13 @@
     if (arabic >= 0) k = String(arabic);
 
     if (!round) {
+      if (document.querySelector('.duel-lock')) {
+        if (/^[0-9]$/.test(k)) actions.duelPin(k);
+        else if (k === 'Backspace') actions.duelPin('del');
+        else if (k === 'Escape') actions.duelPin('cancel');
+        return;
+      }
+      if (duel) return;
       if (document.querySelector('.pin-card')) {
         if (/^[0-9]$/.test(k)) actions.pinKey(k);
         else if (k === 'Backspace') actions.pinKey('del');
@@ -1779,7 +1844,8 @@
 
   // وصلت بيانات من جهاز آخر أو تغيّرت حالة المزامنة: نحدّث الشاشة إن كانت لا تتأثر بجولة جارية
   Sync.onUpdate(changed => {
-    if (round) return;
+    // سباق الإخوة وشاشاته لا تتعلق بمستكشف واحد، فلا نعيد رسمها
+    if (round || duel || app.querySelector('.duel-screen')) return;
     const st = Sync.status();
     if (app.querySelector('.screen.welcome')) {
       // نجح تسجيل الدخول (أو تعذّرت المزامنة): ننتقل لاختيار المستكشف
