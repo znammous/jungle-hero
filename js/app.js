@@ -47,7 +47,7 @@
 
   // نموذج الاسم والشخصية: لمستكشف جديد، أو لتعديل المستكشف الحالي
   function profileForm(p) {
-    if (p) newAvatar = p.avatar;
+    newAvatar = p ? p.avatar : AVATARS[0];
     render(`<section class="screen">
       <header class="topbar"><button class="chip" data-act="go" data-arg="${p ? 'camp' : 'profiles'}">→ رجوع</button></header>
       <div class="card form-card">
