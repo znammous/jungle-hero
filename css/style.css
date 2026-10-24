@@ -582,7 +582,7 @@ button.rank-badge { border: 0; font: inherit; font-weight: 800; cursor: pointer;
 .rare-item.found { opacity: 1; filter: none; background: #fff6cc; }
 
 /* ───── ولي الأمر ───── */
-.leaders { margin-top: 18px; }
+.leaders, .leaders + .card { margin-top: 18px; }
 .boards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin: 10px 0 6px; }
 .board { background: #fff; border-radius: 16px; padding: 12px; }
 .board h4 { text-align: center; margin-bottom: 8px; }
@@ -612,10 +612,10 @@ button.rank-badge { border: 0; font: inherit; font-weight: 800; cursor: pointer;
 .compare { width: 100%; border-collapse: separate; border-spacing: 0 6px; margin-top: 8px; text-align: center; }
 .compare th { font-size: 0.8rem; color: var(--muted); font-weight: 700; padding: 0 4px; }
 .compare tr[data-act] { cursor: pointer; }
-.compare tr[data-act] th { text-align: start; color: var(--ink); font-size: 1rem; white-space: nowrap; }
-.compare tr[data-act] > * { background: #fff; padding: 10px 4px; font-weight: 700; }
-.compare tr[data-act] > :first-child { border-radius: 0 12px 12px 0; padding-inline-start: 10px; }
-.compare tr[data-act] > :last-child { border-radius: 12px 0 0 12px; }
+.compare tr.kid-row th { text-align: start; color: var(--ink); font-size: 1rem; white-space: nowrap; }
+.compare tr.kid-row > * { background: #fff; padding: 10px 4px; font-weight: 700; }
+.compare tr.kid-row > :first-child { border-radius: 0 12px 12px 0; padding-inline-start: 10px; }
+.compare tr.kid-row > :last-child { border-radius: 12px 0 0 12px; }
 .compare tr.on > * { background: #fff6dc; }
 .compare td.top { color: var(--leaf); }
 .tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }

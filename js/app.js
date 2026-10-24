@@ -110,6 +110,7 @@
           </button>
         </div>
         ${leaderboard(list)}
+        ${compareCard(list, false)}
         <div class="footer-links">
           <button class="link-btn" data-act="openParent">👨‍👩‍👧 ولي الأمر</button>
           ${Sync.status() === 'out' ? '<button class="link-btn" data-act="showWelcome">☁️ تفعيل المزامنة</button>' : ''}
@@ -680,7 +681,8 @@
   }
 
   // مقارنة مختصرة بين الأطفال: جهد هذا الأسبوع وتحسّن كل طفل عن نفسه، لا المستوى المطلق
-  function compareCard(kids) {
+  // في لوحة ولي الأمر يفتح الصف تقرير الطفل، وفي الشاشة الرئيسية للعرض فقط
+  function compareCard(kids, inParent = true) {
     if (kids.length < 2) return '';
     const rows = kids.map(k => {
       const r = Journey.weekReport(k);
@@ -694,7 +696,7 @@
       <h3>👥 هذا الأسبوع</h3>
       <table class="compare">
         <tr><th></th><th>🔥 أيام</th><th>⏱️ دقائق</th><th>⭐ إتقان جديد</th><th>🏃 تحسّن السباق</th></tr>
-        ${rows.map(({ k, vals: [d, m, n, g] }) => `<tr class="${k.id === parentKid ? 'on' : ''}" data-act="parentKid" data-arg="${k.id}">
+        ${rows.map(({ k, vals: [d, m, n, g] }) => `<tr class="kid-row ${inParent && k.id === parentKid ? 'on' : ''}"${inParent ? ` data-act="parentKid" data-arg="${k.id}"` : ''}>
           <th>${k.avatar} ${esc(k.name)}</th>
           ${cell(d, 0, ltr(`${d}/7`))}${cell(m, 1, ltr(m))}${cell(n, 2, ltr(n ? `+${n}` : 0))}${cell(g, 3, ltr(gainText(g)))}
         </tr>`).join('')}
