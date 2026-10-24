@@ -599,6 +599,7 @@ button.rank-badge { border: 0; font: inherit; font-weight: 800; cursor: pointer;
 .board li:first-child { background: #fff6cc; }
 .board .place { width: 28px; text-align: center; font-size: 1.2rem; }
 .board .who { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.board .who-rank { display: block; font-size: 0.8rem; font-weight: 600; color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
 .footer-links { display: flex; justify-content: center; gap: 18px; flex-wrap: wrap; }
 .app-buttons { display: flex; justify-content: center; gap: 12px; margin-top: 4px; }
 .link-btn.dark { color: var(--muted); }

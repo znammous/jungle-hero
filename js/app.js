@@ -723,8 +723,9 @@
         <ol>${kids.map(p => {
           // المتساوون في النتيجة يتشاركون المركز
           const place = kids.filter(k => k.bestRace > p.bestRace).length;
+          const rank = Engine.rankFor(p.bestRace);
           return `<li><span class="place">${medals[place] || ltr(place + 1)}</span>
-            <span class="who">${p.avatar} ${esc(p.name)}</span><b>${ltr(p.bestRace)}</b></li>`;
+            <span class="who">${p.avatar} ${esc(p.name)}<small class="who-rank">${rank.emoji} ${rank.name}</small></span><b>${ltr(p.bestRace)}</b></li>`;
         }).join('')}</ol>
       </div>`;
     }).join('');
