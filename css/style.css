@@ -577,9 +577,9 @@ button.rank-badge { border: 0; font: inherit; font-weight: 800; cursor: pointer;
 .week-goal .bar { flex: 1; min-width: 80px; height: 12px; }
 .facts-list { list-style: none; display: flex; flex-direction: column; gap: 8px; margin-top: 8px; line-height: 1.6; }
 .rare-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 10px 0 4px; }
-.rare-item { display: flex; flex-direction: column; align-items: center; background: #fff; border-radius: 14px; padding: 8px 4px; font-size: 2rem; opacity: 0.5; }
+.rare-item { display: flex; flex-direction: column; align-items: center; background: #fff; border-radius: 14px; padding: 8px 4px; font-size: 2rem; opacity: 0.45; filter: grayscale(1); }
 .rare-item small { font-size: 0.75rem; text-align: center; }
-.rare-item.found { opacity: 1; background: #fff6cc; }
+.rare-item.found { opacity: 1; filter: none; background: #fff6cc; }
 
 /* ───── ولي الأمر ───── */
 .leaders { margin-top: 18px; }

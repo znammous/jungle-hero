@@ -391,9 +391,8 @@
 
         <div class="card">
           <h3>✨ القطع النادرة</h3>
-          <div class="rare-grid">${RARE_ITEMS.map(i => p.items.includes(i.id)
-            ? `<span class="rare-item found" title="${i.name}">${i.emoji}<small>${i.name}</small></span>`
-            : `<span class="rare-item"><span>❔</span><small>؟؟؟</small></span>`).join('')}</div>
+          <div class="rare-grid">${RARE_ITEMS.map(i =>
+            `<span class="rare-item ${p.items.includes(i.id) ? 'found' : ''}" title="${i.name}">${i.emoji}<small>${i.name}</small></span>`).join('')}</div>
           <p class="muted center">${ltr(`${rare.length}/${RARE_ITEMS.length}`)}</p>
         </div>
       </section>`);
