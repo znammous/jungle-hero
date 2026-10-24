@@ -510,6 +510,12 @@ button.rank-badge { border: 0; font: inherit; font-weight: 800; cursor: pointer;
 
 /* ───── رحلة اليوم (في المخيّم) ───── */
 .big-btn.purple { background: #7b5bb5; }
+.big-btn.blue { background: #3a78b8; }
+.menu .big-btn:last-child:nth-child(odd) { grid-column: 1 / -1; }
+.tricky { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin: 10px 0 14px; }
+.tricky span { background: #fff; border-radius: 14px; padding: 10px 16px; display: flex; flex-direction: column; align-items: center; }
+.tricky b { font-size: 1.5rem; }
+.tricky small { color: var(--muted); }
 .menu > :last-child:nth-child(odd) { grid-column: span 2; }
 
 .expedition { display: flex; flex-direction: column; gap: 14px; }

@@ -198,7 +198,10 @@
             <span class="big-icon">🐾</span><b>دفتر الحيوانات</b><small>${ltr(`${p.animals.length}/${REGIONS.length}`)}</small>
           </button>
           <button class="big-btn purple" data-act="go" data-arg="diary">
-            <span class="big-icon">📔</span><b>دفتر الرحلة</b><small>أيامك وتقدّمك</small>
+            <span class="big-icon">📔</span><b>دفتر الرحلة</b><small>أيامك وسلسلتك</small>
+          </button>
+          <button class="big-btn blue" data-act="go" data-arg="performance">
+            <span class="big-icon">📊</span><b>أدائي</b><small>${ltr(`${Journey.weekReport(p).mastered}/78`)} متقنة</small>
           </button>
           <button class="big-btn gold" data-act="go" data-arg="ranks">
             <span class="big-icon">🏅</span><b>مسار الرتب</b><small>${ltr(`${RANKS.indexOf(rank) + 1}/${RANKS.length}`)}</small>
@@ -336,24 +339,12 @@
       const p = Store.current();
       const st = Journey.streak(p);
       const w = Journey.weekStatus(p);
-      const r = Journey.weekReport(p);
       const rare = RARE_ITEMS.filter(i => p.items.includes(i.id));
       const dayIcon = d => d.state === 'done' ? '👣' : d.state === 'played' ? '🌱' : '';
       const weekRow = days => days.map(d =>
         `<div class="day ${d.state} ${d.isToday ? 'today' : ''} ${d.future ? 'future' : ''}">
           <small>${d.name}</small><span>${dayIcon(d)}</span>
         </div>`).join('');
-
-      const lines = [];
-      lines.push(`🏃 أفضل نتيجة في السباق: <b>${ltr(p.bestRace)}</b>`);
-      if (r.raceThis !== null && r.raceLast !== null) {
-        const diff = r.raceThis - r.raceLast;
-        lines.push(diff > 0
-          ? `📈 أسرع من الأسبوع الماضي بـ <b>${ltr(diff)}</b> إجابات في السباق!`
-          : `🏃 متوسطك في السباق هذا الأسبوع ${ltr(r.raceThis)} (الأسبوع الماضي ${ltr(r.raceLast)})`);
-      }
-      lines.push(`✅ مسائل أتقنتها: <b>${ltr(`${r.mastered}/78`)}</b>`);
-      if (r.newMastered) lines.push(`🌟 أتقنت <b>${ltr(r.newMastered)}</b> مسألة جديدة هذا الأسبوع`);
 
       render(`<section class="screen">
         ${subHeader('📔 دفتر الرحلة')}
@@ -380,11 +371,6 @@
         </div>
 
         <div class="card">
-          <h3>📈 تقدّمك</h3>
-          <ul class="facts-list">${lines.map(l => `<li>${l}</li>`).join('')}</ul>
-        </div>
-
-        <div class="card">
           <h3>🗓️ آخر 4 أسابيع</h3>
           <div class="month">${[-3, -2, -1, 0].map(o => `<div class="week-row compact">${weekRow(Journey.week(p, o))}</div>`).join('')}</div>
           <p class="muted center">👣 رحلة كاملة · 🌱 لعب قليلاً</p>
@@ -395,6 +381,75 @@
           <div class="rare-grid">${RARE_ITEMS.map(i =>
             `<span class="rare-item ${p.items.includes(i.id) ? 'found' : ''}" title="${i.name}">${i.emoji}<small>${i.name}</small></span>`).join('')}</div>
           <p class="muted center">${ltr(`${rare.length}/${RARE_ITEMS.length}`)}</p>
+        </div>
+      </section>`);
+    },
+
+    // أداء الطفل مقارنة بنفسه فقط
+    performance() {
+      const p = Store.current();
+      const r = Journey.weekReport(p);
+      const st = Journey.streak(p);
+      const races = p.races.slice(-15);
+      const maxRace = Math.max(10, ...races.map(x => x.score));
+      const tricky = trickyFacts(p);
+
+      const lines = [];
+      if (r.raceThis !== null && r.raceLast !== null) {
+        const diff = r.raceThis - r.raceLast;
+        lines.push(diff > 0
+          ? `📈 أسرع من الأسبوع الماضي بـ <b>${ltr(diff)}</b> إجابات في السباق!`
+          : `🏃 متوسطك في السباق هذا الأسبوع ${ltr(r.raceThis)} (الأسبوع الماضي ${ltr(r.raceLast)})`);
+      }
+      lines.push(r.newMastered
+        ? `🌟 أتقنت <b>${ltr(r.newMastered)}</b> مسألة جديدة هذا الأسبوع`
+        : '🌱 تدرّب قليلاً كل يوم لتُتقن مسائل جديدة هذا الأسبوع');
+
+      render(`<section class="screen">
+        ${subHeader('📊 أدائي')}
+
+        <div class="tiles">
+          <div class="tile"><b>🔥 ${ltr(st.count)}</b><small>أيام متتالية</small></div>
+          <div class="tile"><b>${ltr(`${r.mastered}/78`)}</b><small>مسألة متقنة</small></div>
+          <div class="tile"><b>${ltr(p.bestRace)}</b><small>أفضل سباق</small></div>
+          <div class="tile"><b>${ltr(Journey.minutesToday(p))}</b><small>دقيقة اليوم</small></div>
+        </div>
+
+        <div class="card">
+          <ul class="facts-list">${lines.map(l => `<li>${l}</li>`).join('')}</ul>
+        </div>
+
+        <div class="card">
+          <h3>🏃 سباقاتي الأخيرة</h3>
+          ${races.length ? `<div class="chart races">
+            ${races.map(x => `<div class="col"><span class="val">${x.score}</span>
+              <i style="height:${(x.score / maxRace) * 100}%"></i></div>`).join('')}
+          </div>
+          <p class="muted center">من الأقدم (يمين) إلى الأحدث (يسار)</p>`
+          : '<p class="muted">العب سباق النهر لترى نتائجك هنا 🏃</p>'}
+        </div>
+
+        <div class="card">
+          <h3>🎯 مسائل تحتاج تدريب</h3>
+          ${tricky.length ? `<div class="tricky">${tricky.map(([a, b]) => {
+              const f = Engine.fact(p, a, b);
+              return `<span><b dir="ltr">${a} × ${b}</b><small>${ltr(`${f.right}/${f.seen}`)}</small></span>`;
+            }).join('')}</div>
+            <button class="btn orange wide" data-act="startTricky">💪 تدرّب عليها الآن</button>`
+          : '<p class="muted">لا توجد مسائل صعبة عليك الآن، أحسنت! 🌟</p>'}
+        </div>
+
+        <div class="card">
+          <h3>🗺️ خريطة الإتقان</h3>
+          <p class="muted">كل مربع مسألة. اجعل الخريطة كلها خضراء!</p>
+          ${masteryMap(p)}
+          <div class="legend">
+            <span><i class="hm l0"></i>لم تجرّبها</span>
+            <span><i class="hm l1"></i>تحتاج تدريب</span>
+            <span><i class="hm l3"></i>تتحسّن</span>
+            <span><i class="hm l4"></i>أتقنتها</span>
+            <span><i class="hm l5"></i>بطل فيها</span>
+          </div>
         </div>
       </section>`);
     },
@@ -430,7 +485,7 @@
       const r = round;
       const p = Store.current();
       const race = r.mode === 'race';
-      const titles = { race: '🏃 سباق النهر', warmup: '🏕️ الإحماء', review: '📝 المراجعة' };
+      const titles = { race: '🏃 سباق النهر', warmup: '🏕️ الإحماء', review: '📝 المراجعة', tricky: '🎯 مسائل تحتاج تدريب' };
       const title = titles[r.mode] || `${r.region.icon} ${r.region.name}`;
       render(`<section class="screen play">
         <header class="topbar">
@@ -705,6 +760,29 @@
     </div>`;
   }
 
+  function masteryMap(p) {
+    let heat = '<i class="hm-head">×</i>';
+    for (let b = 1; b <= 12; b++) heat += `<i class="hm-head">${b}</i>`;
+    for (let a = 1; a <= 12; a++) {
+      heat += `<i class="hm-head">${a}</i>`;
+      for (let b = 1; b <= 12; b++) {
+        const f = Engine.fact(p, a, b);
+        const lvl = f.seen === 0 ? 'l0' : f.box >= CONFIG.maxBox ? 'l5' : f.box >= CONFIG.masteredBox ? 'l4' : f.box === 2 ? 'l3' : f.box === 1 ? 'l2' : 'l1';
+        heat += `<i class="hm ${lvl}" title="${a} × ${b} = ${a * b} · ${f.right}/${f.seen}"></i>`;
+      }
+    }
+    return `<div class="heatmap" dir="ltr">${heat}</div>`;
+  }
+
+  // أصعب المسائل: جُرّبت 3 مرات على الأقل ولم تُتقن بعد، الأقل دقة أولاً
+  function trickyFacts(p, n = 3) {
+    return Object.entries(p.facts)
+      .filter(([, f]) => f.seen >= 3 && f.box < CONFIG.masteredBox)
+      .sort((x, y) => x[1].right / x[1].seen - y[1].right / y[1].seen)
+      .slice(0, n)
+      .map(([k]) => k.split('x').map(Number));
+  }
+
   // تقرير طفل واحد في لوحة ولي الأمر
   function kidReport(p) {
     const s = Store.state.settings;
@@ -727,17 +805,6 @@
     if (r.hardest.length) {
       summary.push(`أصعب المسائل عنده: ${r.hardest.map(h =>
         `<b dir="ltr">${h.text}</b> (${ltr(`${h.right}/${h.seen}`)})`).join('، ')}.`);
-    }
-
-    let heat = '<i class="hm-head">×</i>';
-    for (let b = 1; b <= 12; b++) heat += `<i class="hm-head">${b}</i>`;
-    for (let a = 1; a <= 12; a++) {
-      heat += `<i class="hm-head">${a}</i>`;
-      for (let b = 1; b <= 12; b++) {
-        const f = Engine.fact(p, a, b);
-        const lvl = f.seen === 0 ? 'l0' : f.box >= CONFIG.maxBox ? 'l5' : f.box >= CONFIG.masteredBox ? 'l4' : f.box === 2 ? 'l3' : f.box === 1 ? 'l2' : 'l1';
-        heat += `<i class="hm ${lvl}" title="${a} × ${b} = ${a * b} · ${f.right}/${f.seen}"></i>`;
-      }
     }
 
     return `
@@ -780,7 +847,7 @@
 
       <div class="card">
         <h3>🗺️ خريطة الإتقان</h3>
-        <div class="heatmap" dir="ltr">${heat}</div>
+        ${masteryMap(p)}
         <div class="legend">
           <span><i class="hm l0"></i>لم يُجرَّب</span>
           <span><i class="hm l1"></i>ضعيف</span>
@@ -795,7 +862,7 @@
 
   // ───────────── زر الرجوع ─────────────
   // الشاشات التي يُرجَع إليها، ويُحفظ موضع التمرير في كل منها لتعود كما تركتها
-  const STACKED = new Set(['profiles', 'camp', 'map', 'shop', 'animals', 'ranks', 'diary']);
+  const STACKED = new Set(['profiles', 'camp', 'map', 'shop', 'animals', 'ranks', 'diary', 'performance']);
   const nav = { stack: [], cur: null, on: false, inPop: false, skip: false };
 
   Object.keys(Screens).forEach(name => {
@@ -923,7 +990,8 @@
     lastRound = { mode, regionIndex };
     round = {
       mode, region,
-      pool: mode === 'race' || mode === 'warmup' ? Engine.racePool(p) : Engine.tablePool(region.table),
+      pool: mode === 'race' || mode === 'warmup' ? Engine.racePool(p)
+        : mode === 'tricky' ? trickyFacts(p) : Engine.tablePool(region.table),
       queue: mode === 'review' ? t.mistakes.map(m => m.slice()) : null,
       total: null,
       asked: 0, right: 0, cleared: 0, mistakes: [],
@@ -931,7 +999,7 @@
       secsAtStart: t.secs,
       goal: Engine.raceGoal(p.bestRace),   // الضفة الأخرى في السباق
     };
-    round.total = mode === 'review' ? round.queue.length : CONFIG.practiceLength;
+    round.total = mode === 'review' ? round.queue.length : mode === 'tricky' ? 9 : CONFIG.practiceLength;
     Screens.play();
     mode === 'race' ? countdown(3) : nextQuestion();
   }
@@ -1077,7 +1145,7 @@
     }
 
     // محطات رحلة اليوم: أي سباق يُكمل محطة السباق
-    const stationId = r.mode === 'practice' ? null : r.mode;
+    const stationId = r.mode === 'practice' || r.mode === 'tricky' ? null : r.mode;
     if (stationId && Journey.complete(p, stationId)) {
       summary.station = Journey.STATIONS.find(x => x.id === stationId);
     }
@@ -1173,7 +1241,11 @@
 
     startRace() { startRound('race'); },
 
-    again() { startRound(lastRound.mode, lastRound.regionIndex); },
+    again() {
+      if (lastRound.mode === 'tricky' && !trickyFacts(Store.current()).length) { go('performance'); return; }
+      startRound(lastRound.mode, lastRound.regionIndex);
+    },
+    startTricky() { if (trickyFacts(Store.current()).length) startRound('tricky'); },
 
     // الخروج من الجولة يعيدك إلى الشاشة التي بدأتها منها
     exitRound() { if (round && !navBack()) go('camp'); },
