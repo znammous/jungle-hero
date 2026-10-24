@@ -218,6 +218,13 @@ button.chip:active { background: rgba(255, 255, 255, 0.28); }
 /* ───── المخيّم ───── */
 .explorer-card { display: flex; align-items: center; gap: 16px; }
 .explorer-card h2 { font-size: 1.6rem; }
+.edit-avatar { position: relative; background: none; flex-shrink: 0; }
+.edit-avatar i {
+  position: absolute; bottom: 0; left: -4px;
+  font-size: 1.1rem; font-style: normal;
+  background: #fff; border-radius: 50%; padding: 4px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+}
 .rank-badge {
   display: inline-block;
   background: var(--jungle);
@@ -324,7 +331,7 @@ button.rank-badge { border: 0; font: inherit; font-weight: 800; cursor: pointer;
 .rank-now > div { flex: 1; }
 .rank-now b { font-size: 1.4rem; }
 .rank-emoji { font-size: 2.8rem; }
-.rank-path { list-style: none; display: flex; flex-direction: column-reverse; gap: 10px; padding: 0; margin: 0; }
+.rank-path { list-style: none; display: flex; flex-direction: column; gap: 10px; padding: 0; margin: 0; }
 .rank-step {
   display: flex;
   align-items: center;
@@ -338,6 +345,7 @@ button.rank-badge { border: 0; font: inherit; font-weight: 800; cursor: pointer;
 .rank-info { display: flex; flex-direction: column; flex: 1; }
 .rank-info small { opacity: 0.85; }
 .rank-state { font-weight: 800; white-space: nowrap; }
+.rank-step.locked { opacity: 0.55; filter: grayscale(1); }
 .rank-step.done { background: var(--sand); color: var(--ink); }
 .rank-step.current { background: var(--sun); color: var(--ink); box-shadow: 0 6px 0 var(--orange); transform: scale(1.02); }
 

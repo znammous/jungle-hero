@@ -45,6 +45,25 @@
 
   const bar = pct => `<span class="bar"><i style="width:${Math.round(Math.min(pct, 1) * 100)}%"></i></span>`;
 
+  // نموذج الاسم والشخصية: لمستكشف جديد، أو لتعديل المستكشف الحالي
+  function profileForm(p) {
+    if (p) newAvatar = p.avatar;
+    render(`<section class="screen">
+      <header class="topbar"><button class="chip" data-act="go" data-arg="${p ? 'camp' : 'profiles'}">→ رجوع</button></header>
+      <div class="card form-card">
+        <h2>${p ? 'تعديل ملفي ✏️' : 'مستكشف جديد 🎒'}</h2>
+        <label for="nameInput">ما اسمك؟</label>
+        <input id="nameInput" maxlength="12" autocomplete="off" placeholder="اكتب اسمك هنا" value="${p ? esc(p.name) : ''}">
+        <p class="label">اختر شخصيتك</p>
+        <div class="avatar-grid">
+          ${AVATARS.map(a => `<button class="avatar-btn ${a === newAvatar ? 'selected' : ''}" data-act="pickAvatar" data-arg="${a}">${a}</button>`).join('')}
+        </div>
+        <button class="btn green wide" data-act="saveProfile" data-arg="${p ? 'edit' : ''}">${p ? 'حفظ التغييرات ✅' : 'ابدأ المغامرة 🚀'}</button>
+      </div>
+    </section>`);
+    setTimeout(() => $('nameInput') && $('nameInput').focus(), 50);
+  }
+
   // ───────────── الشاشات ─────────────
   const Screens = {
     // تُعرض عند فتح اللعبة إذا لم يسجّل ولي الأمر دخوله على هذا الجهاز
@@ -98,22 +117,8 @@
       </section>`);
     },
 
-    newProfile() {
-      render(`<section class="screen">
-        <header class="topbar"><button class="chip" data-act="go" data-arg="profiles">→ رجوع</button></header>
-        <div class="card form-card">
-          <h2>مستكشف جديد 🎒</h2>
-          <label for="nameInput">ما اسمك؟</label>
-          <input id="nameInput" maxlength="12" autocomplete="off" placeholder="اكتب اسمك هنا">
-          <p class="label">اختر شخصيتك</p>
-          <div class="avatar-grid">
-            ${AVATARS.map(a => `<button class="avatar-btn ${a === newAvatar ? 'selected' : ''}" data-act="pickAvatar" data-arg="${a}">${a}</button>`).join('')}
-          </div>
-          <button class="btn green wide" data-act="saveProfile">ابدأ المغامرة 🚀</button>
-        </div>
-      </section>`);
-      setTimeout(() => $('nameInput') && $('nameInput').focus(), 50);
-    },
+    newProfile() { profileForm(null); },
+    editProfile() { profileForm(Store.current()); },
 
     camp() {
       const p = Store.current();
@@ -135,7 +140,7 @@
         </header>
 
         <div class="card explorer-card">
-          <span class="avatar xl">${p.avatar}</span>
+          <button class="avatar xl edit-avatar" data-act="go" data-arg="editProfile" aria-label="تعديل الاسم والشخصية">${p.avatar}<i>✏️</i></button>
           <div>
             <h2>أهلاً يا ${esc(p.name)}!</h2>
             <button class="rank-badge" data-act="go" data-arg="ranks">${rank.emoji} ${rank.name} ‹</button>
@@ -313,12 +318,12 @@
           ${RANKS.map(r => {
             const state = r === cur ? 'current' : r.min <= best ? 'done' : 'locked';
             return `<li class="rank-step ${state}">
-              <span class="rank-emoji">${state === 'locked' ? '🔒' : r.emoji}</span>
+              <span class="rank-emoji">${r.emoji}</span>
               <span class="rank-info">
-                <b>${state === 'locked' && r !== next ? '؟؟؟' : r.name}</b>
+                <b>${r.name}</b>
                 <small>${ltr(r.min)} في الدقيقة</small>
               </span>
-              <span class="rank-state">${state === 'done' ? '✅' : state === 'current' ? '⭐ أنت هنا' : r === next ? '🎯 التالية' : ''}</span>
+              <span class="rank-state">${state === 'done' ? '✅' : state === 'current' ? '⭐ أنت هنا' : r === next ? '🎯 التالية' : '🔒'}</span>
             </li>`;
           }).join('')}
         </ol>
@@ -1065,9 +1070,18 @@
       app.querySelectorAll('.avatar-btn').forEach(b => b.classList.toggle('selected', b === el));
     },
 
-    saveProfile() {
+    saveProfile(mode) {
       const name = $('nameInput').value.trim();
       if (!name) { toast('اكتب اسمك أولاً ✏️'); $('nameInput').focus(); return; }
+      if (mode === 'edit') {
+        const p = Store.current();
+        p.name = name;
+        p.avatar = newAvatar;
+        Store.save();
+        toast('✅ حُفظت التغييرات');
+        go('camp');
+        return;
+      }
       Store.createProfile(name, newAvatar);
       Sound.play('win');
       go('camp');
