@@ -582,6 +582,15 @@ button.rank-badge { border: 0; font: inherit; font-weight: 800; cursor: pointer;
 .rare-item.found { opacity: 1; background: #fff6cc; }
 
 /* ───── ولي الأمر ───── */
+.leaders { margin-top: 18px; }
+.boards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin: 10px 0 6px; }
+.board { background: #fff; border-radius: 16px; padding: 12px; }
+.board h4 { text-align: center; margin-bottom: 8px; }
+.board ol { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.board li { display: flex; align-items: center; gap: 8px; font-weight: 700; padding: 6px 8px; border-radius: 12px; background: var(--sand); }
+.board li:first-child { background: #fff6cc; }
+.board .place { width: 28px; text-align: center; font-size: 1.2rem; }
+.board .who { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .footer-links { display: flex; justify-content: center; gap: 18px; flex-wrap: wrap; }
 .app-buttons { display: flex; justify-content: center; gap: 12px; margin-top: 4px; }
 .link-btn.dark { color: var(--muted); }

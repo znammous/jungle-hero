@@ -109,6 +109,7 @@
             <span class="avatar">➕</span><b>مستكشف جديد</b>
           </button>
         </div>
+        ${leaderboard(list)}
         <div class="footer-links">
           <button class="link-btn" data-act="openParent">👨‍👩‍👧 ولي الأمر</button>
           ${Sync.status() === 'out' ? '<button class="link-btn" data-act="showWelcome">☁️ تفعيل المزامنة</button>' : ''}
@@ -653,6 +654,32 @@
     return `<div class="card" id="syncCard"><h3>☁️ المزامنة بين الأجهزة</h3>${body}</div>`;
   }
 
+  // لوحة المتصدرين: الصغار والكبار كلٌّ في لوحته، يحدّد ولي الأمر مجموعة كل طفل
+  const GROUPS = [{ id: 'small', name: '🐣 الصغار' }, { id: 'big', name: '🦁 الكبار' }];
+  const groupOf = p => p.group || 'big';
+  function leaderboard(list) {
+    if (list.length < 2) return '';
+    const medals = ['🥇', '🥈', '🥉'];
+    const boards = GROUPS.map(g => {
+      const kids = list.filter(p => groupOf(p) === g.id).sort((a, b) => b.bestRace - a.bestRace);
+      if (!kids.length) return '';
+      return `<div class="board">
+        <h4>${g.name}</h4>
+        <ol>${kids.map(p => {
+          // المتساوون في النتيجة يتشاركون المركز
+          const place = kids.filter(k => k.bestRace > p.bestRace).length;
+          return `<li><span class="place">${medals[place] || ltr(place + 1)}</span>
+            <span class="who">${p.avatar} ${esc(p.name)}</span><b>${ltr(p.bestRace)}</b></li>`;
+        }).join('')}</ol>
+      </div>`;
+    }).join('');
+    return `<div class="card leaders">
+      <h3>🏆 المتصدرون في سباق النهر</h3>
+      <div class="boards">${boards}</div>
+      <p class="muted center">أفضل عدد إجابات صحيحة في الدقيقة</p>
+    </div>`;
+  }
+
   // مقارنة مختصرة بين الأطفال: جهد هذا الأسبوع وتحسّن كل طفل عن نفسه، لا المستوى المطلق
   function compareCard(kids) {
     if (kids.length < 2) return '';
@@ -713,6 +740,11 @@
     }
 
     return `
+      <div class="card">
+        <div class="setting"><span>🏆 لوحة المتصدرين</span>
+          <div class="seg">${GROUPS.map(g => `<button class="${groupOf(p) === g.id ? 'on' : ''}" data-act="setGroup" data-arg="${g.id}">${g.name}</button>`).join('')}</div></div>
+      </div>
+
       <div class="tiles">
         <div class="tile"><b>🔥 ${ltr(st.count)}</b><small>أيام متتالية</small></div>
         <div class="tile"><b>${ltr(Journey.minutesToday(p))}</b><small>دقيقة اليوم</small></div>
@@ -1307,6 +1339,11 @@
     setGoal(v) { Store.state.settings.goalMin = Number(v); Store.save(); Screens.parent(); },
     setMax(v) { Store.state.settings.maxMin = Number(v); Store.save(); Screens.parent(); },
     parentKid(id) { parentKid = id; Screens.parent(); },
+    setGroup(g) {
+      const p = Store.state.profiles.find(k => k.id === parentKid);
+      if (!p || !parentOK) return;
+      p.group = g; Store.save(); Screens.parent();
+    },
 
     pickRewardEmoji(e, el) {
       newRewardEmoji = e;
