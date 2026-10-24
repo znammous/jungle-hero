@@ -94,6 +94,7 @@
           <button class="link-btn" data-act="openParent">👨‍👩‍👧 ولي الأمر</button>
           ${Sync.status() === 'out' ? '<button class="link-btn" data-act="showWelcome">☁️ تفعيل المزامنة</button>' : ''}
         </div>
+        ${appButtons()}
       </section>`);
     },
 
@@ -137,7 +138,7 @@
           <span class="avatar xl">${p.avatar}</span>
           <div>
             <h2>أهلاً يا ${esc(p.name)}!</h2>
-            <div class="rank-badge">${rank.emoji} ${rank.name}</div>
+            <button class="rank-badge" data-act="go" data-arg="ranks">${rank.emoji} ${rank.name} ‹</button>
             <p class="muted">${next
               ? `لتصبح ${next.emoji} ${next.name}: سجّل ${ltr(next.min)} أو أكثر في سباق النهر`
               : 'وصلت لأعلى رتبة في الغابة! 🎉'}</p>
@@ -191,6 +192,9 @@
           </button>
           <button class="big-btn purple" data-act="go" data-arg="diary">
             <span class="big-icon">📔</span><b>دفتر الرحلة</b><small>أيامك وتقدّمك</small>
+          </button>
+          <button class="big-btn gold" data-act="go" data-arg="ranks">
+            <span class="big-icon">🏅</span><b>مسار الرتب</b><small>${ltr(`${RANKS.indexOf(rank) + 1}/${RANKS.length}`)}</small>
           </button>
         </nav>
       </section>`);
@@ -283,6 +287,41 @@
             </div>`;
           }).join('')}
         </div>
+      </section>`);
+    },
+
+    ranks() {
+      const p = Store.current();
+      const best = p.bestRace;
+      const cur = Engine.rankFor(best);
+      const next = RANKS.find(r => r.min > best);
+      const prev = cur.min;
+      render(`<section class="screen">
+        ${subHeader('🏅 مسار الرتب')}
+        <p class="hint">كل رتبة تُفتح بعدد الإجابات الصحيحة في دقيقة واحدة في سباق النهر 🏃</p>
+        <div class="card rank-now">
+          <span class="rank-emoji">${cur.emoji}</span>
+          <div>
+            <b>${cur.name}</b>
+            <p class="muted">أفضل نتيجة: ${ltr(best)} في الدقيقة</p>
+            ${next ? `${bar((best - prev) / (next.min - prev))}
+              <p class="muted">باقي ${ltr(next.min - best)} لتصبح ${next.emoji} ${next.name}</p>`
+              : '<p class="muted">فتحت كل الرتب! أنت بطل الغابة 🎉</p>'}
+          </div>
+        </div>
+        <ol class="rank-path">
+          ${RANKS.map(r => {
+            const state = r === cur ? 'current' : r.min <= best ? 'done' : 'locked';
+            return `<li class="rank-step ${state}">
+              <span class="rank-emoji">${state === 'locked' ? '🔒' : r.emoji}</span>
+              <span class="rank-info">
+                <b>${state === 'locked' && r !== next ? '؟؟؟' : r.name}</b>
+                <small>${ltr(r.min)} في الدقيقة</small>
+              </span>
+              <span class="rank-state">${state === 'done' ? '✅' : state === 'current' ? '⭐ أنت هنا' : r === next ? '🎯 التالية' : ''}</span>
+            </li>`;
+          }).join('')}
+        </ol>
       </section>`);
     },
 
@@ -396,7 +435,7 @@
 
         <div class="track ${race ? 'river' : 'trail'}">
           <span class="goal">${race ? '🏝️' : '💎'}</span>
-          ${race && p.bestRace ? `<span class="best-flag" style="--p:${Math.min(p.bestRace / CONFIG.raceGoal, 1)}" title="أفضل نتيجة">🚩</span>` : ''}
+          ${race && p.bestRace ? `<span class="best-flag" style="--p:${Math.min(p.bestRace / r.goal, 1)}" title="أفضل نتيجة">🚩</span>` : ''}
           <span id="walker" class="walker" style="--p:0">${p.avatar}</span>
         </div>
         ${race
@@ -690,6 +729,110 @@
       <button class="link-btn danger" data-act="deleteProfile" data-arg="${p.id}">🗑️ حذف ${esc(p.name)}</button>`;
   }
 
+  // ───────────── زر الرجوع ─────────────
+  // الشاشات التي يُرجَع إليها، ويُحفظ موضع التمرير في كل منها لتعود كما تركتها
+  const STACKED = new Set(['profiles', 'camp', 'map', 'shop', 'animals', 'ranks', 'diary']);
+  const nav = { stack: [], cur: null, on: false, inPop: false, skip: false };
+
+  Object.keys(Screens).forEach(name => {
+    const show = Screens[name];
+    Screens[name] = (...args) => {
+      let y = 0;
+      const i = nav.stack.findIndex(e => e.name === name);
+      if (nav.cur === name) y = window.scrollY;                       // تحديث الشاشة نفسها
+      else if (i >= 0) { y = nav.stack[i].y; nav.stack.length = i; }  // عودة إلى شاشة سابقة
+      else if (STACKED.has(nav.cur)) {
+        nav.stack.push({ name: nav.cur, y: window.scrollY });
+        navGuard();
+      }
+      nav.cur = name;
+      show(...args);
+      if (y) window.scrollTo(0, y);
+    };
+  });
+
+  // يُرجع شاشة واحدة، ويعيد false في الشاشة الأولى
+  function navBack() {
+    if (nav.cur === 'parent' || nav.cur === 'parentGate') { actions.leaveParent(); return true; }
+    if (nav.cur === 'welcome' && nav.stack.length) { actions.skipWelcome(); return true; }
+    const prev = nav.stack[nav.stack.length - 1];
+    if (!prev) return false;
+    if (round) abortRound();
+    Screens[Store.current() ? prev.name : 'profiles']();
+    return true;
+  }
+
+  // نافذة التطبيق لا تعرف زر الرجوع إلا من سجلّ الصفحة، فنُبقي فيه مواضع احتياطية.
+  // تُضاف مع لمس الشاشة لأن المتصفح يتخطّى ما يُضاف بلا لمس، وكل ضغطة رجوع تستهلك موضعاً
+  const NAV_MIN = 2;
+  const depth = () => (history.state && history.state.jh) || 0;
+  function navGuard() {
+    if (!nav.on || nav.inPop) return;
+    try { history.pushState({ jh: depth() + 1 }, ''); } catch (e) {}
+  }
+  function navTop() {
+    for (let i = depth(); i < NAV_MIN; i++) navGuard();
+  }
+  // إلى أول السجلّ: فتُغلق ضغطة الرجوع التالية التطبيق
+  function navToStart() {
+    const d = depth();
+    if (!d) return;
+    nav.skip = true;
+    history.go(-d);
+  }
+
+  function onPop() {
+    if (nav.skip) { nav.skip = false; return; }
+    nav.inPop = true;
+    let ok = true;
+    try { ok = navBack(); } catch (e) {}
+    nav.inPop = false;
+    if (ok) return;
+    navToStart();
+    toast('اضغط رجوع مرة أخرى للخروج');
+  }
+
+  try { history.replaceState({ jh: depth() }, ''); } catch (e) {}
+  try { history.scrollRestoration = 'manual'; } catch (e) {}
+  if (window.history && history.pushState) {
+    nav.on = true;
+    window.addEventListener('popstate', onPop);
+    ['pointerdown', 'keydown'].forEach(t => document.addEventListener(t, navTop, true));
+  }
+
+  // ───── الخروج والتصغير ─────
+  // داخل تطبيق أندرويد (Capacitor) يُستعمل التطبيق نفسه، وفي نافذة الويب ما تسمح به
+  const nativeApp = () => {
+    try {
+      const C = window.Capacitor;
+      return C && C.isNativePlatform && C.isNativePlatform() && C.Plugins && C.Plugins.App || null;
+    } catch (e) { return null; }
+  };
+  const standalone = () => matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches;
+
+  function appButtons() {
+    const A = nativeApp();
+    if (!A && !standalone()) return '';
+    return `<div class="app-buttons">
+      ${A ? '<button class="chip" data-act="minimizeApp">➖ تصغير</button>' : ''}
+      <button class="chip" data-act="exitApp">🚪 خروج</button>
+    </div>`;
+  }
+
+  (() => {
+    const A = nativeApp();
+    if (!A || !A.addListener) return;
+    let last = 0;
+    A.addListener('backButton', () => {
+      let ok = true;
+      try { ok = navBack(); } catch (e) {}
+      if (ok) { last = 0; return; }
+      if (Date.now() - last < 2000) { A.exitApp(); return; }
+      last = Date.now();
+      toast('اضغط رجوع مرة أخرى للخروج');
+    });
+  })();
+
   function go(name, arg) {
     if (round) abortRound();
     Screens[name](arg);
@@ -709,6 +852,7 @@
       asked: 0, right: 0, cleared: 0, mistakes: [],
       input: '', q: null, locked: true, timer: null,
       secsAtStart: t.secs,
+      goal: Engine.raceGoal(p.bestRace),   // الضفة الأخرى في السباق
     };
     round.total = mode === 'review' ? round.queue.length : CONFIG.practiceLength;
     Screens.play();
@@ -797,7 +941,7 @@
     $('score').textContent = round.right;
     let progress;
     if (round.mode === 'race') {
-      progress = Math.min(round.right / CONFIG.raceGoal, 1);
+      progress = Math.min(round.right / round.goal, 1);
     } else if (round.mode === 'review') {
       // في المراجعة: المسألة الخاطئة تعود لآخر الطابور حتى تُجاب صحيحة
       if (ok) {
@@ -945,7 +1089,23 @@
 
     again() { startRound(lastRound.mode, lastRound.regionIndex); },
 
-    exitRound() { if (round) go('camp'); },
+    // الخروج من الجولة يعيدك إلى الشاشة التي بدأتها منها
+    exitRound() { if (round && !navBack()) go('camp'); },
+
+    exitApp() {
+      Store.save();
+      const A = nativeApp();
+      if (A) { A.exitApp(); return; }
+      window.close();
+      // إن لم يسمح المتصفح بإغلاق النافذة
+      setTimeout(() => { navToStart(); toast('اضغط زر الرجوع في الجهاز للخروج'); }, 300);
+    },
+
+    minimizeApp() {
+      Store.save();
+      const A = nativeApp();
+      if (A && A.minimizeApp) A.minimizeApp();
+    },
 
     buy(id) {
       const p = Store.current();

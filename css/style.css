@@ -227,6 +227,7 @@ button.chip:active { background: rgba(255, 255, 255, 0.28); }
   font-weight: 800;
   margin: 6px 0;
 }
+button.rank-badge { border: 0; font: inherit; font-weight: 800; cursor: pointer; }
 .campsite h3 { margin-bottom: 8px; font-size: 1.25rem; }
 .gear { display: flex; flex-wrap: wrap; gap: 10px; font-size: 2.4rem; }
 
@@ -316,6 +317,29 @@ button.chip:active { background: rgba(255, 255, 255, 0.28); }
 .animal.found { background: var(--sand); color: var(--ink); box-shadow: 0 6px 0 var(--sun); }
 .animal-emoji { font-size: 3.2rem; }
 .animal small { font-size: 0.85rem; opacity: 0.85; }
+
+/* ───── مسار الرتب ───── */
+.big-btn.gold { background: #c98a12; }
+.rank-now { display: flex; align-items: center; gap: 16px; margin-bottom: 16px; }
+.rank-now > div { flex: 1; }
+.rank-now b { font-size: 1.4rem; }
+.rank-emoji { font-size: 2.8rem; }
+.rank-path { list-style: none; display: flex; flex-direction: column-reverse; gap: 10px; padding: 0; margin: 0; }
+.rank-step {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.12);
+  color: #e6f4dc;
+}
+.rank-step .rank-emoji { font-size: 2.2rem; }
+.rank-info { display: flex; flex-direction: column; flex: 1; }
+.rank-info small { opacity: 0.85; }
+.rank-state { font-weight: 800; white-space: nowrap; }
+.rank-step.done { background: var(--sand); color: var(--ink); }
+.rank-step.current { background: var(--sun); color: var(--ink); box-shadow: 0 6px 0 var(--orange); transform: scale(1.02); }
 
 /* ───── شاشة اللعب ───── */
 .play { gap: 12px; }
@@ -551,6 +575,7 @@ button.chip:active { background: rgba(255, 255, 255, 0.28); }
 
 /* ───── ولي الأمر ───── */
 .footer-links { display: flex; justify-content: center; gap: 18px; flex-wrap: wrap; }
+.app-buttons { display: flex; justify-content: center; gap: 12px; margin-top: 4px; }
 .link-btn.dark { color: var(--muted); }
 .link-btn.danger { color: var(--red); margin-top: 8px; }
 .pin-card { display: flex; flex-direction: column; align-items: center; gap: 14px; text-align: center; max-width: 420px; width: 100%; align-self: center; }

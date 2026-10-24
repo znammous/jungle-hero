@@ -67,6 +67,11 @@ const Engine = (() => {
     return RANKS.filter(r => score >= r.min).pop();
   }
 
+  // هدف السباق (الضفة الأخرى) = الرتبة التالية، فيبقى الهدف قريباً ويكبر مع المستكشف
+  function raceGoal(best) {
+    return (RANKS.find(r => r.min > best) || RANKS[RANKS.length - 1]).min;
+  }
+
   // بعد كل جولة: فتح مناطق جديدة واكتشاف الحيوانات (مع مكافآت)
   function progress(p) {
     const events = [];
@@ -86,5 +91,5 @@ const Engine = (() => {
     return events;
   }
 
-  return { key, fact, record, mastery, tablePool, racePool, pick, rankFor, progress };
+  return { key, fact, record, mastery, tablePool, racePool, pick, rankFor, raceGoal, progress };
 })();
