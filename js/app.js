@@ -56,8 +56,11 @@
       <header class="topbar"><button class="chip" data-act="go" data-arg="${p ? 'camp' : 'profiles'}">→ رجوع</button></header>
       <div class="card form-card">
         <h2>${p ? 'تعديل ملفي ✏️' : 'مستكشف جديد 🎒'}</h2>
-        <label for="nameInput">ما اسمك؟</label>
-        <input id="nameInput" maxlength="12" autocomplete="off" placeholder="اكتب اسمك هنا" value="${p ? esc(p.name) : ''}">
+        ${p
+          // الاسم يغيّره ولي الأمر فقط من لوحته
+          ? `<p class="label">اسمك: <b>${esc(p.name)}</b></p><p class="muted">لتغيير الاسم اطلب من ولي الأمر 👨‍👩‍👧</p>`
+          : `<label for="nameInput">ما اسمك؟</label>
+        <input id="nameInput" maxlength="12" autocomplete="off" placeholder="اكتب اسمك هنا">`}
         <p class="label">اختر شخصيتك</p>
         <div class="avatar-grid">
           ${AVATARS.map(a => `<button class="avatar-btn ${a === newAvatar ? 'selected' : ''}" data-act="pickAvatar" data-arg="${a}">${a}</button>`).join('')}
@@ -957,6 +960,9 @@
 
     return `
       <div class="card">
+        <div class="setting"><span>✏️ الاسم</span>
+          <div class="reward-form rename"><input id="renameInput" maxlength="12" autocomplete="off" value="${esc(p.name)}">
+            <button class="btn green" data-act="renameKid">حفظ</button></div></div>
         <div class="setting"><span>🏆 لوحة المتصدرين</span>
           <div class="seg">${GROUPS.map(g => `<button class="${groupOf(p) === g.id ? 'on' : ''}" data-act="setGroup" data-arg="${g.id}">${g.name}</button>`).join('')}</div></div>
       </div>
@@ -1705,17 +1711,16 @@
     },
 
     saveProfile(mode) {
-      const name = $('nameInput').value.trim();
-      if (!name) { toast('اكتب اسمك أولاً ✏️'); $('nameInput').focus(); return; }
       if (mode === 'edit') {
         const p = Store.current();
-        p.name = name;
         p.avatar = newAvatar;
         Store.save();
         toast('✅ حُفظت التغييرات');
         go('camp');
         return;
       }
+      const name = $('nameInput').value.trim();
+      if (!name) { toast('اكتب اسمك أولاً ✏️'); $('nameInput').focus(); return; }
       Store.createProfile(name, newAvatar);
       Sound.play('win');
       go('camp');
@@ -1983,6 +1988,16 @@
     setGoal(v) { Store.state.settings.goalMin = Number(v); Store.save(); Screens.parent(); },
     setMax(v) { Store.state.settings.maxMin = Number(v); Store.save(); Screens.parent(); },
     parentKid(id) { parentKid = id; Screens.parent(); },
+    renameKid() {
+      const p = Store.state.profiles.find(k => k.id === parentKid);
+      if (!p || !parentOK) return;
+      const name = $('renameInput').value.trim();
+      if (!name) { toast('اكتب الاسم أولاً ✏️'); return; }
+      p.name = name;
+      Store.save();
+      toast('✅ تغيّر الاسم');
+      Screens.parent();
+    },
     setGroup(g) {
       const p = Store.state.profiles.find(k => k.id === parentKid);
       if (!p || !parentOK) return;
