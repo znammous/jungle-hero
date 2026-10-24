@@ -24,20 +24,21 @@ const RANKS = [
   { min: 40, emoji: '👑', name: 'أسطورة الغابة' },
 ];
 
+// region = رقم المنطقة (من 0) التي يجب الوصول إليها حتى تظهر الأداة في المتجر
 const ITEMS = [
-  { id: 'hat',        emoji: '🧢', name: 'قبعة المستكشف',  price: 15 },
-  { id: 'boots',      emoji: '🥾', name: 'حذاء المغامرة',  price: 25 },
-  { id: 'bag',        emoji: '🎒', name: 'حقيبة الظهر',    price: 30 },
-  { id: 'rope',       emoji: '🪢', name: 'الحبل',          price: 35 },
-  { id: 'compass',    emoji: '🧭', name: 'البوصلة',        price: 40 },
-  { id: 'map',        emoji: '🗺️', name: 'خريطة الكنز',    price: 45 },
-  { id: 'lantern',    emoji: '🔦', name: 'الفانوس',        price: 50 },
-  { id: 'binoculars', emoji: '🔭', name: 'المنظار',        price: 60 },
-  { id: 'camera',     emoji: '📷', name: 'الكاميرا',       price: 70 },
-  { id: 'fire',       emoji: '🔥', name: 'نار المخيّم',    price: 80 },
-  { id: 'tent',       emoji: '⛺', name: 'الخيمة',         price: 100 },
-  { id: 'canoe',      emoji: '🛶', name: 'القارب',         price: 150 },
-  { id: 'hut',        emoji: '🛖', name: 'كوخ الشجرة',     price: 250 },
+  { id: 'hat',        emoji: '🧢', name: 'قبعة المستكشف',  price: 20,  region: 0 },
+  { id: 'boots',      emoji: '🥾', name: 'حذاء المغامرة',  price: 30,  region: 0 },
+  { id: 'bag',        emoji: '🎒', name: 'حقيبة الظهر',    price: 45,  region: 1 },
+  { id: 'rope',       emoji: '🪢', name: 'الحبل',          price: 60,  region: 2 },
+  { id: 'canoe',      emoji: '🛶', name: 'القارب',         price: 120, region: 2 },
+  { id: 'compass',    emoji: '🧭', name: 'البوصلة',        price: 70,  region: 3 },
+  { id: 'binoculars', emoji: '🔭', name: 'المنظار',        price: 90,  region: 4 },
+  { id: 'camera',     emoji: '📷', name: 'الكاميرا',       price: 110, region: 5 },
+  { id: 'map',        emoji: '🗺️', name: 'خريطة الكنز',    price: 130, region: 6 },
+  { id: 'fire',       emoji: '🔥', name: 'نار المخيّم',    price: 150, region: 7 },
+  { id: 'lantern',    emoji: '🔦', name: 'الفانوس',        price: 160, region: 8 },
+  { id: 'tent',       emoji: '⛺', name: 'الخيمة',         price: 200, region: 9 },
+  { id: 'hut',        emoji: '🛖', name: 'كوخ الشجرة',     price: 300, region: 10 },
 ];
 
 // قطع نادرة لا تُباع في المتجر: تأتي من كنز رحلة اليوم والجائزة الأسبوعية فقط
@@ -75,4 +76,17 @@ const CONFIG = {
   idleCapMs: 20000,     // أقصى وقت يُحسب للسؤال الواحد (حتى لا يُحسب وقت الشرود)
   chestRareChance: 0.3, // احتمال قطعة نادرة في كنز اليوم
   weeklyGoal: 5,        // عدد أيام رحلة اليوم المطلوبة للجائزة الأسبوعية
+};
+
+// اقتصاد العملات: كل المكافآت في مكان واحد لتسهل موازنتها
+const COINS = {
+  perCorrect: 0.5,      // عملة لكل إجابتين صحيحتين
+  roundDone: 3,         // إكمال جولة تدريب أو إحماء أو مراجعة
+  perfect: 2,           // جولة بلا أخطاء
+  raceRecord: 5,        // رقم قياسي جديد في السباق
+  unlock: 10,           // فتح منطقة جديدة
+  animal: 20,           // اكتشاف حيوان
+  chestMin: 10,         // كنز رحلة اليوم: من 10 إلى 20
+  chestMax: 20,
+  weekly: 30,           // الجائزة الأسبوعية (تتضاعف إذا لم تبقَ قطع نادرة)
 };

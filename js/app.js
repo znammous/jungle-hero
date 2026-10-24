@@ -211,6 +211,14 @@
         <div class="shop-grid">
           ${ITEMS.map(i => {
             const owned = p.items.includes(i.id);
+            const region = REGIONS[i.region];
+            if (!owned && i.region >= p.unlocked) {
+              return `<button class="item locked" data-act="buy" data-arg="${i.id}">
+                <span class="item-emoji">🔒</span>
+                <b>${i.name}</b>
+                <small>يُفتح في ${region.icon} ${region.name}</small>
+              </button>`;
+            }
             const cant = !owned && p.coins < i.price;
             return `<button class="item ${owned ? 'owned' : ''} ${cant ? 'cant' : ''}" data-act="buy" data-arg="${i.id}">
               <span class="item-emoji">${i.emoji}</span>
@@ -708,21 +716,21 @@
     const coinsBefore = p.coins;
     const summary = { mode: r.mode, right: r.right, asked: r.asked, mistakes: r.mistakes, newRecord: false, rankUp: null };
 
-    p.coins += r.right;
+    p.coins += Math.floor(r.right * COINS.perCorrect);
     if (r.mode === 'race') {
       const oldRank = Engine.rankFor(p.bestRace);
       if (r.right > p.bestRace) {
         summary.newRecord = p.bestRace > 0;
         p.bestRace = r.right;
-        p.coins += 10;
+        p.coins += COINS.raceRecord;
       }
       const newRank = Engine.rankFor(p.bestRace);
       if (newRank !== oldRank) summary.rankUp = newRank;
       p.races.push({ score: r.right, at: Date.now() });
       p.races = p.races.slice(-50);
     } else {
-      p.coins += 5;                                                   // مكافأة إكمال الجولة
-      if (r.mode !== 'review' && r.right === r.asked) p.coins += 5;   // مكافأة الجولة الكاملة
+      p.coins += COINS.roundDone;
+      if (r.mode !== 'review' && r.right === r.asked) p.coins += COINS.perfect;
     }
 
     // محطات رحلة اليوم: أي سباق يُكمل محطة السباق
@@ -804,6 +812,11 @@
       const p = Store.current();
       const item = ITEMS.find(i => i.id === id);
       if (p.items.includes(id)) return;
+      if (item.region >= p.unlocked) {
+        const r = REGIONS[item.region];
+        toast(`🔒 تُفتح هذه الأداة عندما تصل إلى ${r.icon} ${r.name}`);
+        return;
+      }
       if (p.coins < item.price) { toast(`تحتاج ${item.price - p.coins} عملة إضافية 🪙`); return; }
       p.coins -= item.price;
       p.items.push(id);

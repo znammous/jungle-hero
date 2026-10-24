@@ -74,12 +74,12 @@ const Engine = (() => {
            mastery(p, REGIONS[p.unlocked - 1].table) >= CONFIG.unlockAt) {
       events.push({ type: 'unlock', region: REGIONS[p.unlocked] });
       p.unlocked++;
-      p.coins += 20;
+      p.coins += COINS.unlock;
     }
     REGIONS.slice(0, p.unlocked).forEach(r => {
       if (!p.animals.includes(r.table) && mastery(p, r.table) >= 1) {
         p.animals.push(r.table);
-        p.coins += 30;
+        p.coins += COINS.animal;
         events.push({ type: 'animal', region: r });
       }
     });

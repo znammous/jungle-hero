@@ -54,7 +54,7 @@ const Journey = (() => {
     const t = today(p);
     if (!chestReady(p)) return null;
     t.chest = true;
-    const reward = { coins: 20 + Math.floor(Math.random() * 11), item: null };
+    const reward = { coins: COINS.chestMin + Math.floor(Math.random() * (COINS.chestMax - COINS.chestMin + 1)), item: null };
     if (Math.random() < CONFIG.chestRareChance) reward.item = pickRare(p);
     p.coins += reward.coins;
     if (reward.item) p.items.push(reward.item.id);
@@ -104,7 +104,7 @@ const Journey = (() => {
     if (!weekStatus(p).ready) return null;
     p.weeklyClaimed.push(weekKey(new Date()));
     const item = pickRare(p);
-    const reward = { coins: item ? 50 : 100, item };
+    const reward = { coins: item ? COINS.weekly : COINS.weekly * 2, item };
     p.coins += reward.coins;
     if (item) p.items.push(item.id);
     return reward;

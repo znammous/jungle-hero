@@ -303,6 +303,9 @@ button.chip:active { background: rgba(255, 255, 255, 0.28); }
 .item.owned { background: #e3f4dc; box-shadow: 0 6px 0 var(--leaf-light); }
 .item.owned .price { background: var(--leaf); color: #fff; }
 .item.cant { opacity: 0.6; }
+.item.locked { background: #d9d4c4; box-shadow: 0 6px 0 #bdb6a2; }
+.item.locked .item-emoji { opacity: 0.7; }
+.item.locked small { color: var(--muted); font-size: 0.85rem; text-align: center; }
 
 /* ───── دفتر الحيوانات ───── */
 .animal-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
