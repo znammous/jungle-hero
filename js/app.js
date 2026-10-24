@@ -5,6 +5,8 @@
   let lastRound = null;   // لإعادة نفس الجولة من شاشة النتائج
   let duel = null;        // سباق الإخوة الجاري على شاشة مقسومة
   let duelPicks = [];     // الطفلان المختاران لسباق الإخوة
+  let duelMode = 'local'; // 'local' تابلت واحد | 'net' جهازان
+  let netPending = null;  // دعوة سباق على جهازين قبل أن يبدأ: { id, role, pid }
   let newAvatar = AVATARS[0];
   let welcomeSkipped = false;   // اختار «متابعة بدون مزامنة» في هذه المرة
 
@@ -392,33 +394,71 @@
     duelPick() {
       const list = Store.state.profiles;
       const layout = duelLayout();
+      const net = duelMode === 'net';
+      const need = net ? 1 : 2;
+      const canNet = Sync.duel.ready();
       render(`<section class="screen duel-screen">
         <header class="topbar">
           <button class="chip" data-act="go" data-arg="profiles">→ رجوع</button>
           <h2 class="topbar-title">⚔️ سباق الإخوة</h2>
           <span></span>
         </header>
+        <div class="seg duel-modes">
+          <button class="${net ? '' : 'on'}" data-act="setDuelMode" data-arg="local">📱 جهاز واحد</button>
+          <button class="${net ? 'on' : ''}" data-act="setDuelMode" data-arg="net">🌐 جهازان</button>
+        </div>
         <div class="card">
-          <p>اختر المتسابقَين. كل واحد يُسأل من جداوله، وجزيرته على بُعد أفضل نتيجة له وإجابتين.
+          <p>${net ? 'اختر نفسك، ثم يقبل أخوك الدعوة على الجهاز الآخر.' : 'اختر المتسابقَين.'}
+            كل واحد يُسأل من جداوله، وجزيرته على بُعد أفضل نتيجة له وإجابتين.
             <b>الفائز من يصل إلى جزيرته أولاً!</b></p>
-          <p class="muted">ضعوا التابلت بينكما، ولكل واحد لوحة أرقامه.</p>
+          <p class="muted">${net
+            ? (canNet ? 'يحتاج الجهازان إلى الإنترنت وحساب Google نفسه.' : '⚠️ سجّل دخول ولي الأمر بحساب Google على الجهازين أولاً، مع اتصال بالإنترنت.')
+            : 'ضعوا التابلت بينكما، ولكل واحد لوحة أرقامه.'}</p>
         </div>
         <div class="profile-grid">${list.map(p => {
           const i = duelPicks.indexOf(p.id);
           return `<button class="profile-card ${i >= 0 ? 'picked' : ''}" data-act="duelPick" data-arg="${p.id}">
             <span class="avatar">${p.avatar}</span><b>${esc(p.name)}</b>
             <small>🏝️ هدفه ${ltr(duelGoal(p))}</small>
-            ${i >= 0 ? `<span class="pick-no">${ltr(i + 1)}</span>` : ''}
+            ${i >= 0 && !net ? `<span class="pick-no">${ltr(i + 1)}</span>` : ''}
           </button>`;
         }).join('')}</div>
-        <div class="card">
+        ${net ? '' : `<div class="card">
           <h3>📱 شكل الشاشة</h3>
           <div class="layouts">${DUEL_LAYOUTS.map(l => `<button class="layout-opt ${l.id === layout ? 'on' : ''}" data-act="setDuelLayout" data-arg="${l.id}">
             <span class="mini ${l.id}"><i>${list[0].avatar}</i><i>${list[1].avatar}</i></span>
             <b>${l.name}</b><small>${l.hint}</small>
           </button>`).join('')}</div>
-        </div>
-        <button class="btn green wide" data-act="startDuel" ${duelPicks.length === 2 ? '' : 'disabled'}>🏁 ابدأ السباق</button>
+        </div>`}
+        ${net
+          ? `<button class="btn green wide" data-act="netHost" ${duelPicks.length === need && canNet ? '' : 'disabled'}>📨 أرسل الدعوة</button>`
+          : `<button class="btn green wide" data-act="startDuel" ${duelPicks.length === need ? '' : 'disabled'}>🏁 ابدأ السباق</button>`}
+      </section>`);
+    },
+
+    // انتظار المنافس (للداعي) أو انتظار البدء (للمدعو)
+    netWait(role) {
+      render(`<section class="screen results duel-screen net-wait">
+        <div class="result-hero wait-spin">⏳</div>
+        <h1>${role === 'host' ? 'بانتظار المنافس…' : 'بانتظار بدء السباق…'}</h1>
+        <p class="hint">${role === 'host' ? 'افتح اللعبة على الجهاز الآخر واضغط «انضم» في الدعوة.' : 'سيبدأ العدّ بعد لحظة.'}</p>
+        <button class="btn orange" data-act="netCancel">✕ إلغاء</button>
+      </section>`);
+    },
+
+    netJoin(d) {
+      const list = Store.state.profiles.filter(p => p.id !== d.host.pid && p.name !== d.host.name);
+      render(`<section class="screen duel-screen">
+        <header class="topbar">
+          <button class="chip" data-act="go" data-arg="profiles">→ رجوع</button>
+          <h2 class="topbar-title">⚔️ دعوة لسباق</h2>
+          <span></span>
+        </header>
+        <div class="card center"><p>${d.host.avatar} <b>${esc(d.host.name)}</b> يدعوك لسباق! من أنت؟</p></div>
+        <div class="profile-grid">${list.map(p => `<button class="profile-card" data-act="netJoin" data-arg="${p.id}">
+            <span class="avatar">${p.avatar}</span><b>${esc(p.name)}</b>
+            <small>🏝️ هدفه ${ltr(duelGoal(p))}</small>
+          </button>`).join('')}</div>
       </section>`);
     },
 
@@ -440,6 +480,23 @@
           <button class="key ok" data-dkey="ok" aria-label="تأكيد">✓</button>
         </div>
       </div>`;
+      if (duel.net) {
+        const o = duel.net.opp;
+        render(`<section class="duel net">
+          <div class="duel-mid">
+            <button class="chip" data-act="exitDuel" aria-label="خروج">✕</button>
+            <div class="timebar"><i id="timebar"></i><span id="timeText">${CONFIG.raceSeconds}</span></div>
+          </div>
+          <div class="opp">
+            <b>${o.avatar} ${esc(o.name)}</b>
+            <div class="track river"><span class="goal">🏝️</span>
+              <span id="oWalker" class="walker" style="--p:0">${o.avatar}</span></div>
+            <span class="chip">✅ <b id="oScore">0</b></span>
+          </div>
+          ${half(duel.sides[0], 0)}
+        </section>`);
+        return;
+      }
       render(`<section class="duel ${duelLayout()}">
         ${half(duel.sides[0], 0)}
         <div class="duel-mid">
@@ -452,13 +509,13 @@
 
     duelResults(res) {
       const [a, b] = res.sides;
-      const title = res.winner ? `فاز ${res.winner.p.avatar} ${esc(res.winner.p.name)}!` : 'تعادل! 🤝';
+      const title = res.winner ? `فاز ${res.winner.p.avatar} ${esc(res.winner.p.name)}!` : res.note ? 'انتهى السباق' : 'تعادل! 🤝';
       const card = x => `<div class="card duel-card ${x === res.winner ? 'won' : ''}">
         <div class="avatar">${x.p.avatar}</div>
         <b>${esc(x.p.name)}</b>
         <div class="stats">
           <div class="stat good"><b>${x.right}</b><small>صحيحة</small></div>
-          <div class="stat coin"><b>${ltr('+' + x.coins)}</b><small>🪙</small></div>
+          ${x.coins === null ? '' : `<div class="stat coin"><b>${ltr('+' + x.coins)}</b><small>🪙</small></div>`}
         </div>
         <small>${x.reachedAt ? '🏝️ وصل إلى جزيرته' : `🏝️ ${ltr(`${x.right}/${x.goal}`)}`}</small>
         ${x.banners.map(t => `<div class="banner">${t}</div>`).join('')}
@@ -466,10 +523,10 @@
       render(`<section class="screen results duel-screen">
         <div class="result-hero">${res.winner ? '🏆' : '🤝'}</div>
         <h1>${title}</h1>
-        <p class="hint">${res.winner && res.winner.reachedAt ? 'وصل إلى جزيرته أولاً' : 'الأقرب إلى جزيرته'}</p>
+        <p class="hint">${res.note || (res.winner && res.winner.reachedAt ? 'وصل إلى جزيرته أولاً' : res.winner ? 'الأقرب إلى جزيرته' : 'وصلا بنفس النسبة')}</p>
         <div class="duel-cards">${card(a)}${card(b)}</div>
         <div class="actions">
-          <button class="btn orange" data-act="startDuel">⚔️ سباق آخر</button>
+          <button class="btn orange" data-act="${res.net ? 'duelSetup' : 'startDuel'}">⚔️ سباق آخر</button>
           <button class="btn green" data-act="go" data-arg="profiles">🏠 الرئيسية</button>
         </div>
       </section>`);
@@ -1142,6 +1199,7 @@
         $('timeText').textContent = Math.max(0, Math.ceil(left / 1000));
         if (left <= 0) finishDuel();
       }, 100);
+      duel.t0 = performance.now();
       duel.sides.forEach((_, i) => duelNext(i));
       return;
     }
@@ -1158,6 +1216,11 @@
 
   function abortDuel() {
     if (!duel) return;
+    if (duel.net) {
+      clearTimeout(duel.net.waitT);
+      // خرج قبل النهاية: نُعلم الجهاز الآخر
+      if (!duel.net.finished) Sync.duel.update({ [`${duel.net.role}.left`]: true }).catch(() => {});
+    }
     clearInterval(duel.timer);
     duel.timeouts.forEach(clearTimeout);
     duel = null;
@@ -1207,6 +1270,7 @@
     }
     $(`dScore${i}`).textContent = side.right;
     $(`dWalker${i}`).style.setProperty('--p', Math.min(side.right / side.goal, 1));
+    if (duel.net) netPush(false);
     duel.timeouts.push(setTimeout(() => { if (duelAlive()) duelNext(i); }, ok ? 300 : 900));
   }
 
@@ -1233,7 +1297,23 @@
     Screens.duelPick();
   }
 
+  // نتيجة طفل واحد من السباق في ملفه
+  function settleSide(x, won) {
+    const before = x.p.coins;
+    const r = settleRace(x.p, x.right);
+    if (won) x.p.coins += COINS.duelWin;
+    Journey.complete(x.p, 'race');
+    x.banners = [];
+    if (r.newRecord) x.banners.push('🏆 رقم قياسي جديد!');
+    if (r.rankUp) x.banners.push(`${r.rankUp.emoji} رتبة جديدة: ${r.rankUp.name}`);
+    Engine.progress(x.p).forEach(e => x.banners.push(e.type === 'unlock'
+      ? `🔓 منطقة جديدة: ${e.region.icon} ${e.region.name}`
+      : `🐾 حيوان جديد: ${e.region.animal.emoji} ${e.region.animal.name}`));
+    x.coins = x.p.coins - before;
+  }
+
   function finishDuel() {
+    if (duel.net) { netFinish(); return; }
     const sides = duel.sides;
     abortDuel();
     // الفائز: من وصل أولاً، وإلا الأقرب إلى جزيرته
@@ -1243,23 +1323,187 @@
       const [a, b] = sides.map(x => x.right / x.goal);
       winner = a > b ? sides[0] : b > a ? sides[1] : null;
     }
-    sides.forEach(x => {
-      const before = x.p.coins;
-      const r = settleRace(x.p, x.right);
-      if (x === winner) x.p.coins += COINS.duelWin;
-      Journey.complete(x.p, 'race');
-      x.banners = [];
-      if (r.newRecord) x.banners.push('🏆 رقم قياسي جديد!');
-      if (r.rankUp) x.banners.push(`${r.rankUp.emoji} رتبة جديدة: ${r.rankUp.name}`);
-      Engine.progress(x.p).forEach(e => x.banners.push(e.type === 'unlock'
-        ? `🔓 منطقة جديدة: ${e.region.icon} ${e.region.name}`
-        : `🐾 حيوان جديد: ${e.region.animal.emoji} ${e.region.animal.name}`));
-      x.coins = x.p.coins - before;
-    });
+    sides.forEach(x => settleSide(x, x === winner));
     Store.save();
     Sound.play('win');
     Screens.duelResults({ sides, winner });
   }
+
+  // ───── سباق الإخوة على جهازين ─────
+  // كل جهاز يكتب تقدّم طفله فقط في مستند السباق، ويقرأ تقدّم المنافس منه
+  const DEVICE = (() => {
+    try {
+      let id = localStorage.getItem('jungle-hero-device');
+      if (!id) localStorage.setItem('jungle-hero-device', id = Math.random().toString(36).slice(2, 10));
+      return id;
+    } catch (e) { return Math.random().toString(36).slice(2, 10); }
+  })();
+  const INVITE_MS = 2 * 60 * 1000;   // تنتهي الدعوة بعد دقيقتين
+
+  const netPlayer = p => ({
+    device: DEVICE, pid: p.id, name: p.name, avatar: p.avatar, goal: duelGoal(p),
+    right: 0, reachedMs: 0, done: false, left: false,
+  });
+
+  function netHost() {
+    const p = Store.state.profiles.find(k => k.id === duelPicks[0]);
+    if (!p) return;
+    const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    netPending = { id, role: 'host', pid: p.id };
+    Screens.netWait('host');
+    Sync.duel.set({ id, state: 'waiting', createdAt: Date.now(), host: netPlayer(p), guest: null })
+      .catch(() => {
+        netPending = null;
+        toast('⚠️ تعذّر إرسال الدعوة. تأكد من الإنترنت وتسجيل الدخول.', 5000);
+        Screens.duelPick();
+      });
+  }
+
+  function netJoin(pid) {
+    const d = Sync.duel.data();
+    const p = Store.state.profiles.find(k => k.id === pid);
+    if (!p || !inviteFor(d)) { toast('انتهت الدعوة'); go('profiles'); return; }
+    netPending = { id: d.id, role: 'guest', pid };
+    Screens.netWait('guest');
+    Sync.duel.update({ guest: netPlayer(p) }).catch(() => {
+      netPending = null;
+      toast('⚠️ تعذّر الانضمام. تأكد من الإنترنت.', 5000);
+      go('profiles');
+    });
+  }
+
+  function netCancel() {
+    if (netPending) {
+      Sync.duel.update(netPending.role === 'host' ? { state: 'cancelled' } : { guest: null }).catch(() => {});
+      netPending = null;
+    }
+    go('profiles');
+  }
+
+  function startNetDuel(d) {
+    const { role, pid } = netPending;
+    netPending = null;
+    const p = Store.state.profiles.find(k => k.id === pid);
+    const other = role === 'host' ? 'guest' : 'host';
+    if (!p || !d[other]) { go('profiles'); return; }
+    duel = {
+      sides: [{ p, pool: Engine.racePool(p), goal: duelGoal(p), q: null, input: '', right: 0, locked: true, reachedAt: 0, qStart: 0 }],
+      net: { id: d.id, role, other, opp: Object.assign({}, d[other]), finished: false },
+      timer: null, timeouts: [],
+    };
+    Screens.duel();
+    duelCountdown(3);
+  }
+
+  // نرفع التقدّم كل 0.6 ثانية على الأكثر، والنتيجة النهائية فوراً
+  function netPush(final) {
+    const n = duel.net, s = duel.sides[0], t0 = duel.t0;
+    const send = () => {
+      n.pushT = null;
+      const data = {
+        [`${n.role}.right`]: s.right,
+        [`${n.role}.reachedMs`]: s.reachedAt ? Math.round(s.reachedAt - t0) : 0,
+      };
+      if (final) data[`${n.role}.done`] = true;
+      Sync.duel.update(data).catch(() => {});
+    };
+    if (final) { clearTimeout(n.pushT); send(); return; }
+    if (!n.pushT) n.pushT = setTimeout(send, 600);
+  }
+
+  function netFinish() {
+    const n = duel.net;
+    clearInterval(duel.timer);
+    duel.timeouts.forEach(clearTimeout);
+    duel.sides[0].locked = true;
+    n.finished = true;
+    netPush(true);
+    const box = document.createElement('div');
+    box.className = 'duel-lock';
+    box.innerHTML = '<div class="card pin-card"><div class="result-hero wait-spin">⏳</div><h2>بانتظار نتيجة المنافس…</h2></div>';
+    app.querySelector('.duel').appendChild(box);
+    // إذا انقطع اتصال المنافس لا ننتظره طويلاً
+    n.waitT = setTimeout(netResolve, 8000);
+    if (n.opp.done || n.opp.left) netResolve();
+  }
+
+  function netResolve() {
+    if (!duel || !duel.net) return;
+    const n = duel.net, s = duel.sides[0], t0 = duel.t0;
+    abortDuel();
+    const me = Object.assign(s, { reachedAt: s.reachedAt ? s.reachedAt - t0 : 0 });
+    const o = n.opp;
+    const opp = { p: { avatar: o.avatar, name: o.name }, right: o.right, goal: o.goal, reachedAt: o.reachedMs || 0, coins: null, banners: [] };
+    let winner = null, note = '';
+    if (o.left) note = '🏳️ انسحب المنافس قبل النهاية';
+    else if (!o.done) note = '📡 انقطع اتصال المنافس، فلا فائز هذه المرة';
+    else if (me.reachedAt || opp.reachedAt) {
+      winner = !opp.reachedAt ? me : !me.reachedAt ? opp : me.reachedAt <= opp.reachedAt ? me : opp;
+    } else {
+      const a = me.right / me.goal, b = opp.right / opp.goal;
+      winner = a > b ? me : b > a ? opp : null;
+    }
+    settleSide(me, winner === me);
+    Store.save();
+    Sound.play('win');
+    Screens.duelResults({ sides: [me, opp], winner, note, net: true });
+  }
+
+  // دعوة صالحة من جهاز آخر لم يقبلها أحد بعد
+  const inviteFor = d => d && d.state === 'waiting' && !d.guest && d.host && d.host.device !== DEVICE &&
+    Date.now() - d.createdAt < INVITE_MS;
+
+  const inviteBar = document.createElement('div');
+  inviteBar.className = 'invite-bar';
+  inviteBar.hidden = true;
+  document.body.appendChild(inviteBar);
+  inviteBar.addEventListener('click', e => {
+    const d = Sync.duel.data();
+    if (e.target.closest('[data-invite=join]') && inviteFor(d)) { inviteBar.hidden = true; Screens.netJoin(d); }
+    else if (e.target.closest('[data-invite=no]')) { inviteBar.dataset.dismissed = d ? d.id : ''; inviteBar.hidden = true; }
+  });
+  let inviteTimer;
+  function showInvite(d) {
+    const ok = inviteFor(d) && !round && !duel && !netPending && inviteBar.dataset.dismissed !== d.id;
+    inviteBar.hidden = !ok;
+    clearTimeout(inviteTimer);
+    if (!ok) return;
+    inviteBar.innerHTML = `<span>⚔️ ${d.host.avatar} <b>${esc(d.host.name)}</b> يدعوك لسباق!</span>
+      <button class="btn orange" data-invite="join">انضم</button>
+      <button class="chip" data-invite="no" aria-label="تجاهل">✕</button>`;
+    inviteTimer = setTimeout(() => showInvite(Sync.duel.data()), d.createdAt + INVITE_MS - Date.now());
+  }
+
+  Sync.duel.on(d => {
+    showInvite(d);
+    if (netPending) {
+      // انتظار: لا نتابع إلا إذا كانت شاشة الانتظار ما زالت ظاهرة
+      if (!app.querySelector('.net-wait')) { netPending = null; return; }
+      if (!d || d.id !== netPending.id) return;
+      if (d.state === 'cancelled') { netPending = null; toast('أُلغيت الدعوة'); go('profiles'); return; }
+      if (netPending.role === 'guest' && d.guest && d.guest.device !== DEVICE) {
+        netPending = null; toast('سبقك أحد إلى هذه الدعوة'); go('profiles'); return;
+      }
+      if (netPending.role === 'host' && d.guest && d.state === 'waiting') {
+        Sync.duel.update({ state: 'running' }).catch(() => {});
+        startNetDuel(d);
+      } else if (netPending.role === 'guest' && d.state === 'running') {
+        startNetDuel(d);
+      }
+      return;
+    }
+    if (!duel || !duel.net || !d || d.id !== duel.net.id) return;
+    const n = duel.net;
+    const o = d[n.other];
+    if (!o) return;
+    if (o.left && !n.opp.left && !n.finished) toast('🏳️ انسحب المنافس', 3000);
+    n.opp = Object.assign({}, o);
+    if ($('oWalker')) {
+      $('oWalker').style.setProperty('--p', Math.min(o.right / o.goal, 1));
+      $('oScore').textContent = o.right;
+    }
+    if (n.finished && (o.done || o.left)) netResolve();
+  });
 
   function countdown(n) {
     if (!round) return;
@@ -1500,10 +1744,14 @@
     duelPick(id) {
       const i = duelPicks.indexOf(id);
       if (i >= 0) duelPicks.splice(i, 1);
-      else duelPicks = duelPicks.concat(id).slice(-2);
+      else duelPicks = duelPicks.concat(id).slice(duelMode === 'net' ? -1 : -2);
       Screens.duelPick();
     },
     startDuel() { startDuel(); },
+    setDuelMode(m) { duelMode = m; duelPicks = duelPicks.slice(0, m === 'net' ? 1 : 2); Screens.duelPick(); },
+    netHost() { netHost(); },
+    netJoin(pid) { netJoin(pid); },
+    netCancel() { netCancel(); },
     setDuelLayout(id) { Store.state.duelLayout = id; Store.save(); Screens.duelPick(); },
     // إيقاف سباق الإخوة يحتاج رمز ولي الأمر حتى لا يوقفه الخاسر
     exitDuel() {
@@ -1823,6 +2071,12 @@
         if (/^[0-9]$/.test(k)) actions.duelPin(k);
         else if (k === 'Backspace') actions.duelPin('del');
         else if (k === 'Escape') actions.duelPin('cancel');
+        return;
+      }
+      if (duel && duel.net) {
+        if (/^[0-9]$/.test(k)) duelKey(0, k);
+        else if (k === 'Backspace') duelKey(0, 'del');
+        else if (k === 'Enter') duelKey(0, 'ok');
         return;
       }
       if (duel) return;

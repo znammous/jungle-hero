@@ -17,6 +17,10 @@ const Sync = (() => {
   let fb = null, user = null, ref = null, unsub = null, pushTimer = null;
   let lastSync = 0;
   let listeners = [];
+  // سباق الإخوة على جهازين: مستند واحد للسباق الحالي بجانب مستند اللعبة
+  let duelRef = null, duelUnsub = null, duelData = null;
+  const duelListeners = [];
+  const duelNotify = () => duelListeners.forEach(fn => fn(duelData));
   const notify = changed => listeners.forEach(fn => fn(changed));
   const set = s => { status = s; notify(false); };
 
@@ -41,8 +45,16 @@ const Sync = (() => {
 
   function onUser(u) {
     if (unsub) { unsub(); unsub = null; }
+    if (duelUnsub) { duelUnsub(); duelUnsub = null; }
     user = u;
+    duelData = null;
+    duelRef = u ? fb.fs.doc(fb.db, 'families', u.uid, 'apps', 'jungleDuel') : null;
+    duelNotify();
     if (!u) { ref = null; set('out'); return; }
+    duelUnsub = fb.fs.onSnapshot(duelRef, snap => {
+      duelData = snap.exists() ? snap.data() : null;
+      duelNotify();
+    }, () => { duelData = null; duelNotify(); });
     set('syncing');
     ref = fb.fs.doc(fb.db, 'families', u.uid, 'apps', 'jungleHero');
     unsub = fb.fs.onSnapshot(ref, { includeMetadataChanges: true }, snap => {
@@ -102,5 +114,12 @@ const Sync = (() => {
     lastSync: () => lastSync,
     // changed = true عندما وصلت بيانات جديدة من جهاز آخر
     onUpdate: fn => listeners.push(fn),
+    duel: {
+      ready: () => !!duelRef && (status === 'ok' || status === 'syncing'),
+      data: () => duelData,
+      on: fn => duelListeners.push(fn),
+      set: obj => duelRef ? fb.fs.setDoc(duelRef, obj) : Promise.reject(new Error('signed out')),
+      update: obj => duelRef ? fb.fs.updateDoc(duelRef, obj) : Promise.reject(new Error('signed out')),
+    },
   };
 })();
