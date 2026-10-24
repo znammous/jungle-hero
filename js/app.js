@@ -1108,8 +1108,10 @@
 
   function appButtons() {
     const A = nativeApp();
-    if (!A && !standalone()) return '<div class="app-buttons"><button class="chip" data-act="installApp">📲 تثبيت التطبيق</button></div>';
+    const update = '<button class="chip" data-act="checkUpdate">🔄 تحديث</button>';
+    if (!A && !standalone()) return `<div class="app-buttons"><button class="chip" data-act="installApp">📲 تثبيت التطبيق</button>${update}</div>`;
     return `<div class="app-buttons">
+      ${update}
       ${A ? '<button class="chip" data-act="minimizeApp">➖ تصغير</button>' : ''}
       <button class="chip" data-act="exitApp">🚪 خروج</button>
     </div>`;
@@ -1803,6 +1805,7 @@
       setTimeout(() => { navToStart(); toast('اضغط زر الرجوع في الجهاز للخروج'); }, 300);
     },
 
+    checkUpdate() { checkUpdate(); },
     async installApp() {
       if (!installPrompt) {
         const ios = /iPhone|iPad|iPod/.test(navigator.userAgent);
@@ -2115,6 +2118,55 @@
       else if (changed || app.querySelector('.profile-grid')) Screens.profiles();
     }
   });
+
+  // ───── التحديثات ─────
+  // زر «تحديث»: يبحث عن إصدار جديد ويحدّث فوراً، وإلا يعيد تحميل الصفحة
+  let checkUpdate = () => { Store.save(); location.reload(); };
+  // نبحث عن إصدار جديد كلما عاد التطبيق إلى الشاشة. عند وصوله نحدّث فوراً في الشاشة الرئيسية،
+  // وفي غيرها نعرض شريطاً حتى لا نقطع جولة أو سباقاً
+  if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+    const sw = navigator.serviceWorker;
+    const hadController = !!sw.controller;   // أول تثبيت ليس تحديثاً
+    const check = () => sw.getRegistration().then(r => r && r.update()).catch(() => {});
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') check(); });
+    setInterval(check, 30 * 60 * 1000);
+
+    const reload = () => { Store.save(); location.reload(); };
+    const updateBar = document.createElement('div');
+    updateBar.className = 'invite-bar update-bar';
+    updateBar.hidden = true;
+    updateBar.innerHTML = '<span>✨ تحديث جديد جاهز</span><button class="btn green">حدّث الآن</button>';
+    updateBar.querySelector('button').addEventListener('click', reload);
+    document.body.appendChild(updateBar);
+
+    let ready = false, manual = false;
+    checkUpdate = async () => {
+      toast('🔄 جارٍ البحث عن تحديث…');
+      const r = await sw.getRegistration().catch(() => null);
+      if (!r) { reload(); return; }
+      if (ready || r.waiting) { reload(); return; }
+      manual = true;
+      try { await r.update(); } catch (e) { toast('📡 تعذّر الاتصال، تأكد من الإنترنت'); manual = false; return; }
+      if (r.installing || r.waiting) return;   // سيُعاد التحميل عند تفعيل الإصدار الجديد
+      manual = false;
+      toast('✅ لديك أحدث إصدار');
+    };
+    const apply = () => {
+      if (!ready) return;
+      if (manual) { reload(); return; }
+      const idle = !round && !duel && !netPending && (nav.cur === 'profiles' || nav.cur === 'welcome');
+      if (idle) reload();
+      else updateBar.hidden = false;
+    };
+    sw.addEventListener('controllerchange', () => {
+      if (!hadController || ready) return;
+      ready = true;
+      apply();
+    });
+    // إذا عاد إلى الشاشة الرئيسية بعد ظهور الشريط نحدّث وحدنا
+    const showProfiles = Screens.profiles;
+    Screens.profiles = (...args) => { showProfiles(...args); if (ready) setTimeout(apply, 0); };
+  }
 
   Store.load();
   Screens.profiles();
