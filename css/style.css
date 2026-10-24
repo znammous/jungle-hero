@@ -443,6 +443,46 @@ button.rank-badge { border: 0; font: inherit; font-weight: 800; cursor: pointer;
   .numpad { width: 340px; flex-shrink: 0; }
 }
 
+/* ───── سباق الإخوة: شاشة مقسومة ───── */
+.duel-btn { margin-top: 4px; }
+.profile-card { position: relative; }
+.profile-card.picked { outline: 5px solid var(--sun); }
+.pick-no { position: absolute; top: 10px; inset-inline-start: 12px; background: var(--sun); border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; font-weight: 800; }
+.btn:disabled { opacity: 0.5; }
+
+.duel { position: fixed; inset: 0; display: flex; gap: 10px; padding: max(10px, env(safe-area-inset-top)) 10px 10px; }
+.duel-half { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; gap: 10px; justify-content: center; align-items: center; background: rgba(0, 0, 0, 0.18); border-radius: var(--radius); padding: 10px; }
+.duel-head { width: 100%; display: flex; justify-content: space-between; align-items: center; color: #fff; font-size: 1.3rem; }
+.duel .track { width: 100%; height: 58px; flex-shrink: 0; }
+.duel .walker { font-size: 2.1rem; }
+.duel .goal { font-size: 2rem; }
+.duel .question { min-width: 0; width: 100%; min-height: 0; padding: 10px; font-size: clamp(1.8rem, 5vmin, 3rem); }
+.duel .question .fix { color: var(--red); }
+.duel .numpad { max-width: 330px; gap: 8px; }
+.duel .key { height: clamp(44px, 9vmin, 66px); font-size: 1.7rem; }
+.duel-mid { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; }
+.duel-mid .timebar { width: 26px; height: 60%; }
+.duel-mid .timebar i { inset-block: auto 0; width: 100%; height: calc(var(--t, 1) * 100%); }
+.duel-mid .timebar span { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; line-height: 1; font-size: 0.9rem; }
+
+/* بالطول: نصف فوق مقلوب لمن يجلس مقابلاً */
+@media (orientation: portrait) {
+  .duel { flex-direction: column; }
+  .duel-half:first-child { transform: rotate(180deg); }
+  .duel-mid { flex-direction: row; }
+  .duel-mid .timebar { width: auto; flex: 1; height: 26px; }
+  .duel-mid .timebar i { inset-block: 0; height: auto; width: calc(var(--t, 1) * 100%); }
+  .duel .numpad { max-width: 300px; }
+  .duel .key { height: clamp(40px, 6.5vh, 60px); }
+}
+
+.duel-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; width: 100%; max-width: 640px; }
+.duel-card { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.duel-card .avatar { font-size: 3rem; }
+.duel-card.won { outline: 5px solid var(--sun); }
+.duel-card .banner { font-size: 1rem; padding: 8px 12px; }
+.duel-card .stat { background: #fff; min-width: 90px; }
+
 /* ───── النتائج ───── */
 .results { align-items: center; text-align: center; padding-top: 30px; }
 .result-hero { font-size: 5rem; animation: pop 0.6s; }

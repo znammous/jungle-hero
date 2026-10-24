@@ -3,6 +3,8 @@
   const app = document.getElementById('app');
   let round = null;       // الجولة الجارية (تدريب، إحماء، سباق، مراجعة)
   let lastRound = null;   // لإعادة نفس الجولة من شاشة النتائج
+  let duel = null;        // سباق الإخوة الجاري على شاشة مقسومة
+  let duelPicks = [];     // الطفلان المختاران لسباق الإخوة
   let newAvatar = AVATARS[0];
   let welcomeSkipped = false;   // اختار «متابعة بدون مزامنة» في هذه المرة
 
@@ -20,7 +22,7 @@
   const allItems = () => ITEMS.concat(RARE_ITEMS);
 
   function render(html) {
-    document.body.classList.toggle('bgrest', !!round);
+    document.body.classList.toggle('bgrest', !!(round || duel));
     app.innerHTML = html;
     window.scrollTo(0, 0);
   }
@@ -106,6 +108,7 @@
               </button>`;
           }).join('')}
         </div>
+        ${list.length >= 2 ? '<button class="btn orange wide duel-btn" data-act="duelSetup">⚔️ سباق الإخوة</button>' : ''}
         ${leaderboard(list)}
         ${compareCard(list, false)}
         <button class="profile-card add new-explorer" data-act="go" data-arg="newProfile">
@@ -381,6 +384,85 @@
           <div class="rare-grid">${RARE_ITEMS.map(i =>
             `<span class="rare-item ${p.items.includes(i.id) ? 'found' : ''}" title="${i.name}">${i.emoji}<small>${i.name}</small></span>`).join('')}</div>
           <p class="muted center">${ltr(`${rare.length}/${RARE_ITEMS.length}`)}</p>
+        </div>
+      </section>`);
+    },
+
+    // ───── سباق الإخوة ─────
+    duelPick() {
+      const list = Store.state.profiles;
+      render(`<section class="screen">
+        <header class="topbar">
+          <button class="chip" data-act="go" data-arg="profiles">→ رجوع</button>
+          <h2 class="topbar-title">⚔️ سباق الإخوة</h2>
+          <span></span>
+        </header>
+        <div class="card">
+          <p>اختر المتسابقَين. كل واحد يُسأل من جداوله، وجزيرته على بُعد أفضل نتيجة له وإجابتين.
+            <b>الفائز من يصل إلى جزيرته أولاً!</b></p>
+          <p class="muted">ضعوا التابلت بينكما، ولكل واحد لوحة أرقامه.</p>
+        </div>
+        <div class="profile-grid">${list.map(p => {
+          const i = duelPicks.indexOf(p.id);
+          return `<button class="profile-card ${i >= 0 ? 'picked' : ''}" data-act="duelPick" data-arg="${p.id}">
+            <span class="avatar">${p.avatar}</span><b>${esc(p.name)}</b>
+            <small>🏝️ هدفه ${ltr(duelGoal(p))}</small>
+            ${i >= 0 ? `<span class="pick-no">${ltr(i + 1)}</span>` : ''}
+          </button>`;
+        }).join('')}</div>
+        <button class="btn green wide" data-act="startDuel" ${duelPicks.length === 2 ? '' : 'disabled'}>🏁 ابدأ السباق</button>
+      </section>`);
+    },
+
+    duel() {
+      const half = (side, i) => `<div class="duel-half" data-side="${i}">
+        <div class="duel-head">
+          <b>${side.p.avatar} ${esc(side.p.name)}</b>
+          <span class="chip">✅ <b id="dScore${i}">0</b></span>
+        </div>
+        <div class="track river">
+          <span class="goal">🏝️</span>
+          <span id="dWalker${i}" class="walker" style="--p:0">${side.p.avatar}</span>
+        </div>
+        <div id="dQ${i}" class="question" dir="ltr"></div>
+        <div class="numpad" dir="ltr">
+          ${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => `<button class="key" data-dkey="${n}">${n}</button>`).join('')}
+          <button class="key util" data-dkey="del" aria-label="مسح">⌫</button>
+          <button class="key" data-dkey="0">0</button>
+          <button class="key ok" data-dkey="ok" aria-label="تأكيد">✓</button>
+        </div>
+      </div>`;
+      render(`<section class="duel">
+        ${half(duel.sides[0], 0)}
+        <div class="duel-mid">
+          <button class="chip" data-act="exitDuel" aria-label="خروج">✕</button>
+          <div class="timebar"><i id="timebar"></i><span id="timeText">${CONFIG.raceSeconds}</span></div>
+        </div>
+        ${half(duel.sides[1], 1)}
+      </section>`);
+    },
+
+    duelResults(res) {
+      const [a, b] = res.sides;
+      const title = res.winner ? `فاز ${res.winner.p.avatar} ${esc(res.winner.p.name)}!` : 'تعادل! 🤝';
+      const card = x => `<div class="card duel-card ${x === res.winner ? 'won' : ''}">
+        <div class="avatar">${x.p.avatar}</div>
+        <b>${esc(x.p.name)}</b>
+        <div class="stats">
+          <div class="stat good"><b>${x.right}</b><small>صحيحة</small></div>
+          <div class="stat coin"><b>${ltr('+' + x.coins)}</b><small>🪙</small></div>
+        </div>
+        <small>${x.reachedAt ? '🏝️ وصل إلى جزيرته' : `🏝️ ${ltr(`${x.right}/${x.goal}`)}`}</small>
+        ${x.banners.map(t => `<div class="banner">${t}</div>`).join('')}
+      </div>`;
+      render(`<section class="screen results">
+        <div class="result-hero">${res.winner ? '🏆' : '🤝'}</div>
+        <h1>${title}</h1>
+        <p class="hint">${res.winner && res.winner.reachedAt ? 'وصل إلى جزيرته أولاً' : 'الأقرب إلى جزيرته'}</p>
+        <div class="duel-cards">${card(a)}${card(b)}</div>
+        <div class="actions">
+          <button class="btn orange" data-act="startDuel">⚔️ سباق آخر</button>
+          <button class="btn green" data-act="go" data-arg="profiles">🏠 الرئيسية</button>
         </div>
       </section>`);
     },
@@ -980,6 +1062,7 @@
 
   function go(name, arg) {
     if (round) abortRound();
+    abortDuel();
     Screens[name](arg);
   }
 
@@ -1003,6 +1086,152 @@
     round.total = mode === 'review' ? round.queue.length : mode === 'tricky' ? 9 : CONFIG.practiceLength;
     Screens.play();
     mode === 'race' ? countdown(3) : nextQuestion();
+  }
+
+  // ───── سباق الإخوة ─────
+  // جزيرة كل طفل على بُعد أفضل نتيجة له وإجابتين، فيفوز من يتفوّق على نفسه
+  const duelGoal = p => Math.max(8, p.bestRace + 2);
+
+  function startDuel() {
+    const players = duelPicks.map(id => Store.state.profiles.find(p => p.id === id));
+    if (players.length !== 2 || players.some(p => !p)) { Screens.duelPick(); return; }
+    duel = {
+      sides: players.map(p => ({
+        p, pool: Engine.racePool(p), goal: duelGoal(p),
+        q: null, input: '', right: 0, locked: true, reachedAt: 0, qStart: 0,
+      })),
+      timer: null, timeouts: [],
+    };
+    Screens.duel();
+    duelCountdown(3);
+  }
+
+  function duelCountdown(n) {
+    if (!duelAlive()) return;
+    if (n === 0) {
+      Sound.play('go');
+      const total = CONFIG.raceSeconds * 1000;
+      duel.endsAt = performance.now() + total;
+      duel.timer = setInterval(() => {
+        if (!duelAlive()) return;
+        const left = duel.endsAt - performance.now();
+        const tb = $('timebar');
+        tb.style.setProperty('--t', Math.max(0, left / total));
+        tb.classList.toggle('hurry', left <= 10000);
+        $('timeText').textContent = Math.max(0, Math.ceil(left / 1000));
+        if (left <= 0) finishDuel();
+      }, 100);
+      duel.sides.forEach((_, i) => duelNext(i));
+      return;
+    }
+    Sound.play('tick');
+    duel.sides.forEach((_, i) => { $(`dQ${i}`).innerHTML = `<span class="count">${n}</span>`; });
+    duel.timeouts.push(setTimeout(() => duelCountdown(n - 1), 800));
+  }
+
+  // يتوقف السباق إذا غادرت الشاشة بأي طريقة (زر الرجوع مثلاً)
+  function duelAlive() {
+    if (duel && !app.querySelector('.duel')) abortDuel();
+    return !!duel;
+  }
+
+  function abortDuel() {
+    if (!duel) return;
+    clearInterval(duel.timer);
+    duel.timeouts.forEach(clearTimeout);
+    duel = null;
+    document.body.classList.remove('bgrest');
+  }
+
+  function duelNext(i) {
+    const side = duel.sides[i];
+    side.q = Engine.pick(side.p, side.pool, side.q && side.q.key);
+    side.input = '';
+    side.locked = false;
+    side.qStart = performance.now();
+    const el = $(`dQ${i}`);
+    el.className = 'question';
+    el.innerHTML = `<span>${side.q.a}</span><span class="op">×</span><span>${side.q.b}</span><span class="op">=</span><span id="dA${i}" class="answer">&nbsp;</span>`;
+  }
+
+  function duelKey(i, k) {
+    if (!duelAlive()) return;
+    const side = duel.sides[i];
+    if (side.locked) return;
+    if (k === 'del') side.input = side.input.slice(0, -1);
+    else if (k === 'ok') { if (side.input) duelSubmit(i); return; }
+    else if (side.input.length < 3) side.input += k;
+    $(`dA${i}`).innerHTML = side.input || '&nbsp;';
+    if (side.input.length === String(side.q.answer).length) duelSubmit(i);
+  }
+
+  function duelSubmit(i) {
+    const side = duel.sides[i];
+    const q = side.q;
+    const ok = Number(side.input) === q.answer;
+    const ms = performance.now() - side.qStart;
+    side.locked = true;
+    Engine.record(side.p, q.a, q.b, ok, ms);
+    Journey.addAnswer(side.p, q, ok, ms);
+    const el = $(`dQ${i}`);
+    if (ok) {
+      side.right++;
+      Sound.play('right');
+      el.classList.add('right');
+      if (side.right >= side.goal && !side.reachedAt) side.reachedAt = performance.now();
+    } else {
+      Sound.play('wrong');
+      el.classList.add('wrong');
+      el.innerHTML = `<span>${q.a}</span><span class="op">×</span><span>${q.b}</span><span class="op">=</span><span class="fix">${q.answer}</span>`;
+    }
+    $(`dScore${i}`).textContent = side.right;
+    $(`dWalker${i}`).style.setProperty('--p', Math.min(side.right / side.goal, 1));
+    duel.timeouts.push(setTimeout(() => { if (duelAlive()) duelNext(i); }, ok ? 300 : 900));
+  }
+
+  // نتيجة السباق في ملف الطفل: العملات والرقم القياسي والرتبة (مشتركة مع سباق النهر)
+  function settleRace(p, right) {
+    const out = { newRecord: false, rankUp: null };
+    p.coins += Math.floor(right * COINS.perCorrect);
+    const oldRank = Engine.rankFor(p.bestRace);
+    if (right > p.bestRace) {
+      out.newRecord = p.bestRace > 0;
+      p.bestRace = right;
+      p.coins += COINS.raceRecord;
+    }
+    const newRank = Engine.rankFor(p.bestRace);
+    if (newRank !== oldRank) out.rankUp = newRank;
+    p.races.push({ score: right, at: Date.now() });
+    p.races = p.races.slice(-50);
+    return out;
+  }
+
+  function finishDuel() {
+    const sides = duel.sides;
+    abortDuel();
+    // الفائز: من وصل أولاً، وإلا الأقرب إلى جزيرته
+    const reached = sides.filter(x => x.reachedAt).sort((x, y) => x.reachedAt - y.reachedAt);
+    let winner = reached[0] || null;
+    if (!winner) {
+      const [a, b] = sides.map(x => x.right / x.goal);
+      winner = a > b ? sides[0] : b > a ? sides[1] : null;
+    }
+    sides.forEach(x => {
+      const before = x.p.coins;
+      const r = settleRace(x.p, x.right);
+      if (x === winner) x.p.coins += COINS.duelWin;
+      Journey.complete(x.p, 'race');
+      x.banners = [];
+      if (r.newRecord) x.banners.push('🏆 رقم قياسي جديد!');
+      if (r.rankUp) x.banners.push(`${r.rankUp.emoji} رتبة جديدة: ${r.rankUp.name}`);
+      Engine.progress(x.p).forEach(e => x.banners.push(e.type === 'unlock'
+        ? `🔓 منطقة جديدة: ${e.region.icon} ${e.region.name}`
+        : `🐾 حيوان جديد: ${e.region.animal.emoji} ${e.region.animal.name}`));
+      x.coins = x.p.coins - before;
+    });
+    Store.save();
+    Sound.play('win');
+    Screens.duelResults({ sides, winner });
   }
 
   function countdown(n) {
@@ -1128,19 +1357,10 @@
     const coinsBefore = p.coins;
     const summary = { mode: r.mode, right: r.right, asked: r.asked, mistakes: r.mistakes, newRecord: false, rankUp: null };
 
-    p.coins += Math.floor(r.right * COINS.perCorrect);
     if (r.mode === 'race') {
-      const oldRank = Engine.rankFor(p.bestRace);
-      if (r.right > p.bestRace) {
-        summary.newRecord = p.bestRace > 0;
-        p.bestRace = r.right;
-        p.coins += COINS.raceRecord;
-      }
-      const newRank = Engine.rankFor(p.bestRace);
-      if (newRank !== oldRank) summary.rankUp = newRank;
-      p.races.push({ score: r.right, at: Date.now() });
-      p.races = p.races.slice(-50);
+      Object.assign(summary, settleRace(p, r.right));
     } else {
+      p.coins += Math.floor(r.right * COINS.perCorrect);
       p.coins += COINS.roundDone;
       if (r.mode !== 'review' && r.right === r.asked) p.coins += COINS.perfect;
     }
@@ -1245,6 +1465,23 @@
     again() {
       if (lastRound.mode === 'tricky' && !trickyFacts(Store.current()).length) { go('performance'); return; }
       startRound(lastRound.mode, lastRound.regionIndex);
+    },
+    duelSetup() {
+      duelPicks = duelPicks.filter(id => Store.state.profiles.some(p => p.id === id));
+      Screens.duelPick();
+    },
+    duelPick(id) {
+      const i = duelPicks.indexOf(id);
+      if (i >= 0) duelPicks.splice(i, 1);
+      else duelPicks = duelPicks.concat(id).slice(-2);
+      Screens.duelPick();
+    },
+    startDuel() { startDuel(); },
+    exitDuel() {
+      if (!confirm('إيقاف السباق؟ لن تُحسب النتيجة.')) return;
+      abortDuel();
+      Store.save();
+      Screens.duelPick();
     },
     startTricky() { if (trickyFacts(Store.current()).length) startRound('tricky'); },
 
@@ -1501,6 +1738,14 @@
 
   // لوحة الأرقام تستجيب عند اللمس مباشرة لتكون أسرع
   app.addEventListener('pointerdown', e => {
+    const d = e.target.closest('[data-dkey]');
+    if (d) {
+      e.preventDefault();
+      d.classList.add('pressed');
+      setTimeout(() => d.classList.remove('pressed'), 120);
+      duelKey(Number(d.closest('.duel-half').dataset.side), d.dataset.dkey);
+      return;
+    }
     const k = e.target.closest('[data-key]');
     if (!k) return;
     e.preventDefault();
