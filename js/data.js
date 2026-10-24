@@ -99,8 +99,8 @@ const REWARD_PRESETS = [
   { emoji: '🍕', name: 'اختيار عشاء الجمعة',     price: 200 },
   { emoji: '🎮', name: 'نصف ساعة لعب إضافية',    price: 150 },
   { emoji: '🍦', name: 'آيس كريم',               price: 120 },
-  { emoji: '🎬', name: 'اختيار فيلم السهرة',      price: 180 },
+  { emoji: '📖', name: 'اختيار القصة التي نقرأها', price: 180 },
   { emoji: '🏞️', name: 'نزهة في الحديقة',         price: 300 },
-  { emoji: '🌙', name: 'السهر نصف ساعة',          price: 160 },
+  { emoji: '🌙', name: 'تمديد وقت النوم',          price: 160 },
 ];
-const REWARD_EMOJIS = ['🎁', '🍕', '🍦', '🎮', '🎬', '🏞️', '🌙', '🧸', '📚', '⚽', '🎨', '🛍️'];
+const REWARD_EMOJIS = ['🎁', '🍕', '🍦', '🎮', '📖', '🏞️', '🌙', '🧸', '📚', '⚽', '🎨', '🛍️'];
