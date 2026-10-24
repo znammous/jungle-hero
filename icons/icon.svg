@@ -9,5 +9,11 @@
   <path d="M96 150 C150 70 230 80 256 150 C200 130 150 140 96 150Z" fill="#8fd17f"/>
   <path d="M416 150 C362 70 282 80 256 150 C312 130 362 140 416 150Z" fill="#8fd17f"/>
   <circle cx="256" cy="300" r="140" fill="#ffc93c"/>
-  <path d="M196 240 L316 360 M316 240 L196 360" stroke="#1f5130" stroke-width="44" stroke-linecap="round"/>
+  <g font-family="Arial Rounded MT Bold, Arial, sans-serif" font-weight="900" text-anchor="middle" fill="#fff">
+    <circle cx="189" cy="233" r="36" fill="#e8613c"/><text x="189" y="250.28" font-size="48">2</text>
+    <circle cx="323" cy="233" r="36" fill="#2d7fc1"/><text x="323" y="250.28" font-size="48">5</text>
+    <circle cx="189" cy="367" r="36" fill="#8e44ad"/><text x="189" y="384.28" font-size="48">3</text>
+    <circle cx="323" cy="367" r="36" fill="#e8613c"/><text x="323" y="384.28" font-size="48">9</text>
+    <circle cx="256" cy="300" r="48" fill="#1f5130"/><text x="256" y="323.76" font-size="66">7</text>
+  </g>
 </svg>
