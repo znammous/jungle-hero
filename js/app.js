@@ -26,12 +26,12 @@
   }
 
   let toastTimer;
-  function toast(msg) {
+  function toast(msg, ms = 2200) {
     const t = $('toast');
     t.textContent = msg;
     t.hidden = false;
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => { t.hidden = true; }, 2200);
+    toastTimer = setTimeout(() => { t.hidden = true; }, ms);
   }
 
   function subHeader(title) {
@@ -874,9 +874,22 @@
   };
   const standalone = () => matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches;
 
+  // زر التثبيت يظهر في المتصفح فقط؛ ومتصفح لا يدعم نافذة التثبيت يعرض طريقة التثبيت يدوياً
+  let installPrompt = null;
+  window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault();
+    installPrompt = e;
+    if (nav.cur === 'profiles') Screens.profiles();
+  });
+  window.addEventListener('appinstalled', () => {
+    installPrompt = null;
+    toast('✅ ثُبّت التطبيق');
+    if (nav.cur === 'profiles') Screens.profiles();
+  });
+
   function appButtons() {
     const A = nativeApp();
-    if (!A && !standalone()) return '';
+    if (!A && !standalone()) return '<div class="app-buttons"><button class="chip" data-act="installApp">📲 تثبيت التطبيق</button></div>';
     return `<div class="app-buttons">
       ${A ? '<button class="chip" data-act="minimizeApp">➖ تصغير</button>' : ''}
       <button class="chip" data-act="exitApp">🚪 خروج</button>
@@ -1174,6 +1187,17 @@
       setTimeout(() => { navToStart(); toast('اضغط زر الرجوع في الجهاز للخروج'); }, 300);
     },
 
+    async installApp() {
+      if (!installPrompt) {
+        const ios = /iPhone|iPad|iPod/.test(navigator.userAgent);
+        toast(ios ? 'من زر المشاركة ⬆️ اختر «إضافة إلى الشاشة الرئيسية»' : 'من قائمة المتصفح ⋮ اختر «تثبيت التطبيق» أو «إضافة إلى الشاشة الرئيسية»', 5000);
+        return;
+      }
+      const e = installPrompt;
+      installPrompt = null;
+      e.prompt();
+      try { await e.userChoice; } catch (err) {}
+    },
     minimizeApp() {
       Store.save();
       const A = nativeApp();
