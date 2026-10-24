@@ -194,6 +194,8 @@ button.chip:active { background: rgba(255, 255, 255, 0.28); }
 .profile-card:active { transform: translateY(4px); }
 .profile-card b { font-size: 1.35rem; }
 .profile-card small { color: var(--muted); font-size: 0.95rem; }
+.profile-card.new-explorer { min-height: 0; flex-direction: row; justify-content: center; gap: 12px; margin-top: 18px; padding: 14px; }
+.profile-card.new-explorer .avatar { font-size: 2rem; }
 .profile-card.add { background: rgba(255, 255, 255, 0.12); color: #fff; box-shadow: none; border: 3px dashed rgba(255, 255, 255, 0.4); }
 .avatar { font-size: 3.4rem; line-height: 1.1; }
 .avatar.xl { font-size: 4.6rem; }

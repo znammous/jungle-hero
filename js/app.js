@@ -105,12 +105,12 @@
                 <small>🪙 ${p.coins}${st.count ? ` · 🔥 ${st.count}` : ''}</small>
               </button>`;
           }).join('')}
-          <button class="profile-card add" data-act="go" data-arg="newProfile">
-            <span class="avatar">➕</span><b>مستكشف جديد</b>
-          </button>
         </div>
         ${leaderboard(list)}
         ${compareCard(list, false)}
+        <button class="profile-card add new-explorer" data-act="go" data-arg="newProfile">
+          <span class="avatar">➕</span><b>مستكشف جديد</b>
+        </button>
         <div class="footer-links">
           <button class="link-btn" data-act="openParent">👨‍👩‍👧 ولي الأمر</button>
           ${Sync.status() === 'out' ? '<button class="link-btn" data-act="showWelcome">☁️ تفعيل المزامنة</button>' : ''}
