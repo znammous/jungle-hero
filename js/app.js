@@ -144,7 +144,7 @@
           <button class="avatar xl edit-avatar" data-act="go" data-arg="editProfile" aria-label="تعديل الاسم والشخصية">${p.avatar}<i>✏️</i></button>
           <div>
             <h2>أهلاً يا ${esc(p.name)}!</h2>
-            <button class="rank-badge" data-act="go" data-arg="ranks">${rank.emoji} ${rank.name} ‹</button>
+            <button class="rank-badge" data-act="go" data-arg="ranks">${rank.emoji} ${rank.name} ${ltr('‹')}</button>
             <p class="muted">${next
               ? `لتصبح ${next.emoji} ${next.name}: سجّل ${ltr(next.min)} أو أكثر في سباق النهر`
               : 'وصلت لأعلى رتبة في الغابة! 🎉'}</p>
