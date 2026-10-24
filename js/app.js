@@ -4,6 +4,7 @@
   let round = null;       // الجولة الجارية (تدريب، إحماء، سباق، مراجعة)
   let lastRound = null;   // لإعادة نفس الجولة من شاشة النتائج
   let newAvatar = AVATARS[0];
+  let welcomeSkipped = false;   // اختار «متابعة بدون مزامنة» في هذه المرة
 
   // لوحة ولي الأمر
   let parentOK = false;   // فُتحت بالرمز في هذه الزيارة
@@ -46,6 +47,26 @@
 
   // ───────────── الشاشات ─────────────
   const Screens = {
+    // تُعرض عند فتح اللعبة إذا لم يسجّل ولي الأمر دخوله على هذا الجهاز
+    welcome() {
+      render(`<section class="screen welcome">
+        <header class="hero-title">
+          <div class="logo">🌴🧭🌴</div>
+          <h1>بطل الغابة</h1>
+        </header>
+        <div class="card welcome-card">
+          <div class="welcome-icon">☁️</div>
+          <h2>سجّل دخول ولي الأمر</h2>
+          <p>ليظهر تقدّم الأطفال نفسه على اللابتوب والتابلت، ولا يضيع إذا تغيّر الجهاز.</p>
+          <button class="btn green wide google-btn" data-act="syncIn">
+            <span class="g-logo">G</span> تسجيل الدخول بحساب Google
+          </button>
+          <p class="muted">مرة واحدة فقط على كل جهاز، بنفس الحساب.</p>
+          <button class="link-btn dark" data-act="skipWelcome">متابعة بدون مزامنة ←</button>
+        </div>
+      </section>`);
+    },
+
     profiles() {
       const list = Store.state.profiles;
       render(`<section class="screen">
@@ -71,6 +92,7 @@
         </div>
         <div class="footer-links">
           <button class="link-btn" data-act="openParent">👨‍👩‍👧 ولي الأمر</button>
+          ${Sync.status() === 'out' ? '<button class="link-btn" data-act="showWelcome">☁️ تفعيل المزامنة</button>' : ''}
         </div>
       </section>`);
     },
@@ -1125,6 +1147,13 @@
       });
     },
 
+    skipWelcome() {
+      welcomeSkipped = true;
+      Screens.profiles();
+    },
+
+    showWelcome() { Screens.welcome(); },
+
     syncOut() {
       if (confirm('تسجيل الخروج من هذا الجهاز؟ يبقى التقدّم محفوظاً عليه لكن لن يُزامَن.')) Sync.signOut();
     },
@@ -1171,12 +1200,19 @@
   // وصلت بيانات من جهاز آخر أو تغيّرت حالة المزامنة: نحدّث الشاشة إن كانت لا تتأثر بجولة جارية
   Sync.onUpdate(changed => {
     if (round) return;
-    if (app.querySelector('.screen.parent') && parentOK) {
+    const st = Sync.status();
+    if (app.querySelector('.screen.welcome')) {
+      // نجح تسجيل الدخول (أو تعذّرت المزامنة): ننتقل لاختيار المستكشف
+      if (st === 'out') return;
+      if (st === 'ok' || st === 'syncing' || st === 'offline') toast('✅ تم تسجيل الدخول، التقدّم يُزامَن الآن');
+      Screens.profiles();
+    } else if (app.querySelector('.screen.parent') && parentOK) {
       const card = $('syncCard');
       if (changed || !card) Screens.parent();
       else card.outerHTML = syncCard();
-    } else if (changed && (app.querySelector('.profile-grid') || !Store.current()) && !app.querySelector('.pin-card, .form-card')) {
-      Screens.profiles();
+    } else if ((app.querySelector('.profile-grid') || !Store.current()) && !app.querySelector('.pin-card, .form-card')) {
+      if (st === 'out' && !welcomeSkipped && navigator.onLine) Screens.welcome();
+      else if (changed || app.querySelector('.profile-grid')) Screens.profiles();
     }
   });
 
