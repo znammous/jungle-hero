@@ -5,8 +5,8 @@
   let lastRound = null;   // لإعادة نفس الجولة من شاشة النتائج
   let duel = null;        // سباق الإخوة الجاري على شاشة مقسومة
   let duelPicks = [];     // الطفلان المختاران لسباق الإخوة
-  let duelMode = 'local'; // 'local' تابلت واحد | 'net' جهازان
-  let netPending = null;  // دعوة سباق على جهازين قبل أن يبدأ: { id, role, pid }
+  let duelMode = 'local'; // 'local' تابلت واحد | 'net' عدة أجهزة
+  let netPending = null;  // دعوة سباق على عدة أجهزة قبل أن يبدأ: { id, role, pid }
   let newAvatar = AVATARS[0];
   let welcomeSkipped = false;   // اختار «متابعة بدون مزامنة» في هذه المرة
 
@@ -396,10 +396,11 @@
     // ───── سباق الإخوة ─────
     duelPick() {
       const list = Store.state.profiles;
-      const layout = duelLayout();
       const net = duelMode === 'net';
-      const need = net ? 1 : 2;
+      const n = duelPicks.length;
       const canNet = Sync.duel.ready();
+      const picked = duelPicks.map(id => list.find(p => p.id === id));
+      const layout = duelLayout(n);
       render(`<section class="screen duel-screen">
         <header class="topbar">
           <button class="chip" data-act="go" data-arg="profiles">→ رجوع</button>
@@ -408,15 +409,15 @@
         </header>
         <div class="seg duel-modes">
           <button class="${net ? '' : 'on'}" data-act="setDuelMode" data-arg="local">📱 جهاز واحد</button>
-          <button class="${net ? 'on' : ''}" data-act="setDuelMode" data-arg="net">🌐 جهازان</button>
+          <button class="${net ? 'on' : ''}" data-act="setDuelMode" data-arg="net">🌐 عدة أجهزة</button>
         </div>
         <div class="card">
-          <p>${net ? 'اختر نفسك، ثم يقبل أخوك الدعوة على الجهاز الآخر.' : 'اختر المتسابقَين.'}
+          <p>${net ? `اختر نفسك، ثم يقبل إخوتك الدعوة على أجهزتهم (حتى ${ltr(MAX_PLAYERS)} لاعبين).` : `اختر من 2 إلى ${ltr(MAX_PLAYERS)} متسابقين.`}
             كل واحد يُسأل من جداوله، وجزيرته على بُعد أفضل نتيجة له وإجابتين.
-            <b>الفائز من يصل إلى جزيرته أولاً!</b></p>
+            <b>الأول من يصل إلى جزيرته أولاً!</b></p>
           <p class="muted">${net
-            ? (canNet ? 'يحتاج الجهازان إلى الإنترنت وحساب Google نفسه.' : '⚠️ سجّل دخول ولي الأمر بحساب Google على الجهازين أولاً، مع اتصال بالإنترنت.')
-            : 'ضعوا التابلت بينكما، ولكل واحد لوحة أرقامه.'}</p>
+            ? (canNet ? 'تحتاج الأجهزة إلى الإنترنت وحساب Google نفسه.' : '⚠️ سجّل دخول ولي الأمر بحساب Google على كل الأجهزة أولاً، مع اتصال بالإنترنت.')
+            : n === 4 ? '⚠️ أربعة على تابلت واحد: الأزرار أصغر، والأفضل تابلت كبير.' : 'ضعوا التابلت بينكم، ولكل واحد لوحة أرقامه.'}</p>
         </div>
         <div class="profile-grid">${list.map(p => {
           const i = duelPicks.indexOf(p.id);
@@ -426,38 +427,52 @@
             ${i >= 0 && !net ? `<span class="pick-no">${ltr(i + 1)}</span>` : ''}
           </button>`;
         }).join('')}</div>
-        ${net ? '' : `<div class="card">
+        ${net || n < 2 ? '' : `<div class="card">
           <h3>📱 شكل الشاشة</h3>
-          <div class="layouts">${DUEL_LAYOUTS.map(l => `<button class="layout-opt ${l.id === layout ? 'on' : ''}" data-act="setDuelLayout" data-arg="${l.id}">
-            <span class="mini ${l.id}"><i>${list[0].avatar}</i><i>${list[1].avatar}</i></span>
+          <div class="layouts">${duelLayouts(n).map(l => `<button class="layout-opt ${l.id === layout ? 'on' : ''}" data-act="setDuelLayout" data-arg="${l.id}">
+            <span class="mini ${l.id}">${picked.map(p => `<i>${p.avatar}</i>`).join('')}</span>
             <b>${l.name}</b><small>${l.hint}</small>
           </button>`).join('')}</div>
         </div>`}
         ${net
-          ? `<button class="btn green wide" data-act="netHost" ${duelPicks.length === need && canNet ? '' : 'disabled'}>📨 أرسل الدعوة</button>`
-          : `<button class="btn green wide" data-act="startDuel" ${duelPicks.length === need ? '' : 'disabled'}>🏁 ابدأ السباق</button>`}
+          ? `<button class="btn green wide" data-act="netHost" ${n === 1 && canNet ? '' : 'disabled'}>📨 أرسل الدعوة</button>`
+          : `<button class="btn green wide" data-act="startDuel" ${n >= 2 ? '' : 'disabled'}>🏁 ابدأ السباق</button>`}
       </section>`);
     },
 
-    // انتظار المنافس (للداعي) أو انتظار البدء (للمدعو)
+    // انتظار المتسابقين (لصاحب الدعوة) أو انتظار البدء (للمنضم)
     netWait(role) {
+      const d = Sync.duel.data();
+      const players = d && netPending && d.id === netPending.id ? activePlayers(d) : [];
+      const host = role === 'host';
       render(`<section class="screen results duel-screen net-wait">
         <div class="result-hero wait-spin">⏳</div>
-        <h1>${role === 'host' ? 'بانتظار المنافس…' : 'بانتظار بدء السباق…'}</h1>
-        <p class="hint">${role === 'host' ? 'افتح اللعبة على الجهاز الآخر واضغط «انضم» في الدعوة.' : 'سيبدأ العدّ بعد لحظة.'}</p>
-        <button class="btn orange" data-act="netCancel">✕ إلغاء</button>
+        <h1>${host ? 'بانتظار المتسابقين…' : 'بانتظار بدء السباق…'}</h1>
+        <p class="hint">${host
+          ? `افتح اللعبة على الأجهزة الأخرى واضغط «انضم» (حتى ${ltr(MAX_PLAYERS)} لاعبين).`
+          : 'يبدأ السباق عندما يضغط صاحب الدعوة «ابدأ».'}</p>
+        <div class="net-players">${players.map(x => `<span>${x.avatar}<b>${esc(x.name)}</b></span>`).join('')}</div>
+        <div class="actions">
+          ${host ? `<button class="btn green" data-act="netStart" ${players.length >= 2 ? '' : 'disabled'}>🏁 ابدأ السباق (${ltr(players.length)})</button>` : ''}
+          <button class="btn orange" data-act="netCancel">✕ إلغاء</button>
+        </div>
       </section>`);
     },
 
     netJoin(d) {
-      const list = Store.state.profiles.filter(p => p.id !== d.host.pid && p.name !== d.host.name);
+      const taken = activePlayers(d);
+      const list = Store.state.profiles.filter(p => !taken.some(x => x.pid === p.id || x.name === p.name));
+      const host = d.players[d.host];
       render(`<section class="screen duel-screen">
         <header class="topbar">
           <button class="chip" data-act="go" data-arg="profiles">→ رجوع</button>
           <h2 class="topbar-title">⚔️ دعوة لسباق</h2>
           <span></span>
         </header>
-        <div class="card center"><p>${d.host.avatar} <b>${esc(d.host.name)}</b> يدعوك لسباق! من أنت؟</p></div>
+        <div class="card center">
+          <p>${host.avatar} <b>${esc(host.name)}</b> يدعوك لسباق! من أنت؟</p>
+          <div class="net-players">${taken.map(x => `<span>${x.avatar}<b>${esc(x.name)}</b></span>`).join('')}</div>
+        </div>
         <div class="profile-grid">${list.map(p => `<button class="profile-card" data-act="netJoin" data-arg="${p.id}">
             <span class="avatar">${p.avatar}</span><b>${esc(p.name)}</b>
             <small>🏝️ هدفه ${ltr(duelGoal(p))}</small>
@@ -483,51 +498,55 @@
           <button class="key ok" data-dkey="ok" aria-label="تأكيد">✓</button>
         </div>
       </div>`;
+      const mid = `<div class="duel-mid">
+          <button class="chip" data-act="exitDuel" aria-label="خروج">✕</button>
+          <div class="timebar"><i id="timebar"></i><span id="timeText">${CONFIG.raceSeconds}</span></div>
+        </div>`;
       if (duel.net) {
-        const o = duel.net.opp;
         render(`<section class="duel net">
-          <div class="duel-mid">
-            <button class="chip" data-act="exitDuel" aria-label="خروج">✕</button>
-            <div class="timebar"><i id="timebar"></i><span id="timeText">${CONFIG.raceSeconds}</span></div>
-          </div>
-          <div class="opp">
+          ${mid}
+          ${duel.net.opps.map((o, j) => `<div class="opp">
             <b>${o.avatar} ${esc(o.name)}</b>
             <div class="track river"><span class="goal">🏝️</span>
-              <span id="oWalker" class="walker" style="--p:0">${o.avatar}</span></div>
-            <span class="chip">✅ <b id="oScore">0</b></span>
-          </div>
+              <span id="oWalker${j}" class="walker" style="--p:0">${o.avatar}</span></div>
+            <span class="chip">✅ <b id="oScore${j}">0</b></span>
+          </div>`).join('')}
           ${half(duel.sides[0], 0)}
         </section>`);
         return;
       }
-      render(`<section class="duel ${duelLayout()}">
-        ${half(duel.sides[0], 0)}
-        <div class="duel-mid">
-          <button class="chip" data-act="exitDuel" aria-label="خروج">✕</button>
-          <div class="timebar"><i id="timebar"></i><span id="timeText">${CONFIG.raceSeconds}</span></div>
-        </div>
-        ${half(duel.sides[1], 1)}
+      const n = duel.sides.length;
+      if (n === 2) {
+        render(`<section class="duel ${duelLayout(2)}">${half(duel.sides[0], 0)}${mid}${half(duel.sides[1], 1)}</section>`);
+        return;
+      }
+      render(`<section class="duel multi ${duelLayout(n)}">
+        ${mid}
+        <div class="duel-grid">${duel.sides.map(half).join('')}</div>
       </section>`);
     },
 
     duelResults(res) {
-      const [a, b] = res.sides;
-      const title = res.winner ? `فاز ${res.winner.p.avatar} ${esc(res.winner.p.name)}!` : res.note ? 'انتهى السباق' : 'تعادل! 🤝';
+      const medals = ['🥇', '🥈', '🥉'];
+      const firsts = res.sides.filter(x => x.place === 1);
+      const title = res.winner ? `فاز ${res.winner.p.avatar} ${esc(res.winner.p.name)}!`
+        : firsts.length > 1 ? 'تعادل! 🤝' : 'انتهى السباق';
       const card = x => `<div class="card duel-card ${x === res.winner ? 'won' : ''}">
+        <div class="place">${x.place ? medals[x.place - 1] || ltr(x.place) : ''}</div>
         <div class="avatar">${x.p.avatar}</div>
         <b>${esc(x.p.name)}</b>
         <div class="stats">
           <div class="stat good"><b>${x.right}</b><small>صحيحة</small></div>
           ${x.coins === null ? '' : `<div class="stat coin"><b>${ltr('+' + x.coins)}</b><small>🪙</small></div>`}
         </div>
-        <small>${x.reachedAt ? '🏝️ وصل إلى جزيرته' : `🏝️ ${ltr(`${x.right}/${x.goal}`)}`}</small>
+        <small>${x.out || (x.reachedAt ? '🏝️ وصل إلى جزيرته' : `🏝️ ${ltr(`${x.right}/${x.goal}`)}`)}</small>
         ${x.banners.map(t => `<div class="banner">${t}</div>`).join('')}
       </div>`;
       render(`<section class="screen results duel-screen">
         <div class="result-hero">${res.winner ? '🏆' : '🤝'}</div>
         <h1>${title}</h1>
-        <p class="hint">${res.note || (res.winner && res.winner.reachedAt ? 'وصل إلى جزيرته أولاً' : res.winner ? 'الأقرب إلى جزيرته' : 'وصلا بنفس النسبة')}</p>
-        <div class="duel-cards">${card(a)}${card(b)}</div>
+        <p class="hint">${res.note || (res.winner && res.winner.reachedAt ? 'وصل إلى جزيرته أولاً' : res.winner ? 'الأقرب إلى جزيرته' : 'وصلوا بنفس النسبة')}</p>
+        <div class="duel-cards">${res.sides.map(card).join('')}</div>
         <div class="actions">
           <button class="btn orange" data-act="${res.net ? 'duelSetup' : 'startDuel'}">⚔️ سباق آخر</button>
           <button class="btn green" data-act="go" data-arg="profiles">🏠 الرئيسية</button>
@@ -1169,18 +1188,34 @@
   // جزيرة كل طفل على بُعد أفضل نتيجة له وإجابتين، فيفوز من يتفوّق على نفسه
   const duelGoal = p => Math.max(8, p.bestRace + 2);
 
-  // شكل تقسيم الشاشة يُحفظ على هذا الجهاز فقط، والافتراضي حسب وضع الجهاز
-  const DUEL_LAYOUTS = [
-    { id: 'side', name: 'جنباً إلى جنب', hint: 'متجاوران أمام الشاشة' },
-    { id: 'stack', name: 'فوق وتحت', hint: 'كلاهما بنفس الاتجاه' },
-    { id: 'face', name: 'متقابلان', hint: 'التابلت على الطاولة بينكما' },
-  ];
-  const duelLayout = () => Store.state.duelLayout ||
-    (matchMedia('(orientation: landscape)').matches ? 'side' : 'face');
+  const MAX_PLAYERS = 4;
+
+  // أشكال تقسيم الشاشة حسب عدد اللاعبين، ويُحفظ الاختيار على هذا الجهاز فقط
+  const DUEL_LAYOUTS = {
+    2: [
+      { id: 'side', name: 'جنباً إلى جنب', hint: 'متجاوران أمام الشاشة' },
+      { id: 'stack', name: 'فوق وتحت', hint: 'كلاهما بنفس الاتجاه' },
+      { id: 'face', name: 'متقابلان', hint: 'التابلت على الطاولة بينكما' },
+    ],
+    3: [{ id: 'cols', name: 'أعمدة', hint: 'التابلت بالعرض' }],
+    4: [
+      { id: 'grid', name: 'مربعات', hint: 'كلكم بنفس الاتجاه' },
+      { id: 'grid-face', name: 'متقابلون', hint: 'اثنان من كل جهة' },
+    ],
+  };
+  const duelLayouts = n => DUEL_LAYOUTS[Math.min(Math.max(n, 2), MAX_PLAYERS)];
+  function duelLayout(n) {
+    const k = Math.min(Math.max(n, 2), MAX_PLAYERS);
+    const ok = DUEL_LAYOUTS[k];
+    const saved = (Store.state.duelLayouts || {})[k] || (k === 2 ? Store.state.duelLayout : null);
+    if (ok.some(l => l.id === saved)) return saved;
+    if (k === 2) return matchMedia('(orientation: landscape)').matches ? 'side' : 'face';
+    return ok[0].id;
+  }
 
   function startDuel() {
     const players = duelPicks.map(id => Store.state.profiles.find(p => p.id === id));
-    if (players.length !== 2 || players.some(p => !p)) { Screens.duelPick(); return; }
+    if (players.length < 2 || players.some(p => !p)) { Screens.duelPick(); return; }
     duel = {
       sides: players.map(p => ({
         p, pool: Engine.racePool(p), goal: duelGoal(p),
@@ -1227,7 +1262,7 @@
     if (duel.net) {
       clearTimeout(duel.net.waitT);
       // خرج قبل النهاية: نُعلم الجهاز الآخر
-      if (!duel.net.finished) Sync.duel.update({ [`${duel.net.role}.left`]: true }).catch(() => {});
+      if (!duel.net.finished) Sync.duel.update({ [`${myPath}.left`]: true }).catch(() => {});
     }
     clearInterval(duel.timer);
     duel.timeouts.forEach(clearTimeout);
@@ -1320,25 +1355,34 @@
     x.coins = x.p.coins - before;
   }
 
+  // المراكز: من وصل إلى جزيرته أولاً، ثم الأقرب إليها. المتساوون يتشاركون المركز
+  function rankSides(list) {
+    const key = x => x.reachedAt ? [0, x.reachedAt] : [1, -(x.right / x.goal)];
+    const cmp = (a, b) => { const [p, q] = [key(a), key(b)]; return p[0] - q[0] || p[1] - q[1]; };
+    const sorted = list.slice().sort(cmp);
+    sorted.forEach((x, i) => { x.place = i && cmp(sorted[i - 1], x) === 0 ? sorted[i - 1].place : i + 1; });
+    return sorted;
+  }
+  // فائز واحد فقط إذا انفرد بالمركز الأول
+  const soleWinner = ranked => {
+    const firsts = ranked.filter(x => x.place === 1);
+    return ranked.length >= 2 && firsts.length === 1 ? firsts[0] : null;
+  };
+
   function finishDuel() {
     if (duel.net) { netFinish(); return; }
     const sides = duel.sides;
     abortDuel();
-    // الفائز: من وصل أولاً، وإلا الأقرب إلى جزيرته
-    const reached = sides.filter(x => x.reachedAt).sort((x, y) => x.reachedAt - y.reachedAt);
-    let winner = reached[0] || null;
-    if (!winner) {
-      const [a, b] = sides.map(x => x.right / x.goal);
-      winner = a > b ? sides[0] : b > a ? sides[1] : null;
-    }
+    const ranked = rankSides(sides);
+    const winner = soleWinner(ranked);
     sides.forEach(x => settleSide(x, x === winner));
     Store.save();
     Sound.play('win');
-    Screens.duelResults({ sides, winner });
+    Screens.duelResults({ sides: ranked, winner });
   }
 
-  // ───── سباق الإخوة على جهازين ─────
-  // كل جهاز يكتب تقدّم طفله فقط في مستند السباق، ويقرأ تقدّم المنافس منه
+  // ───── سباق الإخوة على عدة أجهزة ─────
+  // مستند واحد للسباق: كل جهاز يكتب تقدّم طفله فقط في players.{معرّف الجهاز}، ويقرأ تقدّم الآخرين
   const DEVICE = (() => {
     try {
       let id = localStorage.getItem('jungle-hero-device');
@@ -1347,11 +1391,14 @@
     } catch (e) { return Math.random().toString(36).slice(2, 10); }
   })();
   const INVITE_MS = 2 * 60 * 1000;   // تنتهي الدعوة بعد دقيقتين
+  const myPath = `players.${DEVICE}`;
 
   const netPlayer = p => ({
-    device: DEVICE, pid: p.id, name: p.name, avatar: p.avatar, goal: duelGoal(p),
+    device: DEVICE, pid: p.id, name: p.name, avatar: p.avatar, goal: duelGoal(p), joinedAt: Date.now(),
     right: 0, reachedMs: 0, done: false, left: false,
   });
+  const activePlayers = d => Object.values((d && d.players) || {})
+    .filter(x => !x.left).sort((a, b) => a.joinedAt - b.joinedAt);
 
   function netHost() {
     const p = Store.state.profiles.find(k => k.id === duelPicks[0]);
@@ -1359,7 +1406,7 @@
     const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
     netPending = { id, role: 'host', pid: p.id };
     Screens.netWait('host');
-    Sync.duel.set({ id, state: 'waiting', createdAt: Date.now(), host: netPlayer(p), guest: null })
+    Sync.duel.set({ id, state: 'waiting', createdAt: Date.now(), host: DEVICE, players: { [DEVICE]: netPlayer(p) } })
       .catch(() => {
         netPending = null;
         toast('⚠️ تعذّر إرسال الدعوة. تأكد من الإنترنت وتسجيل الدخول.', 5000);
@@ -1370,33 +1417,40 @@
   function netJoin(pid) {
     const d = Sync.duel.data();
     const p = Store.state.profiles.find(k => k.id === pid);
-    if (!p || !inviteFor(d)) { toast('انتهت الدعوة'); go('profiles'); return; }
+    if (!p || !inviteFor(d)) { toast('انتهت الدعوة أو اكتمل العدد'); go('profiles'); return; }
     netPending = { id: d.id, role: 'guest', pid };
     Screens.netWait('guest');
-    Sync.duel.update({ guest: netPlayer(p) }).catch(() => {
+    Sync.duel.update({ [myPath]: netPlayer(p) }).catch(() => {
       netPending = null;
       toast('⚠️ تعذّر الانضمام. تأكد من الإنترنت.', 5000);
       go('profiles');
     });
   }
 
+  function netStart() {
+    const d = Sync.duel.data();
+    if (!netPending || netPending.role !== 'host' || !d || d.id !== netPending.id || activePlayers(d).length < 2) return;
+    Sync.duel.update({ state: 'running' }).catch(() => {});
+    startNetDuel(d);
+  }
+
   function netCancel() {
     if (netPending) {
-      Sync.duel.update(netPending.role === 'host' ? { state: 'cancelled' } : { guest: null }).catch(() => {});
+      Sync.duel.update(netPending.role === 'host' ? { state: 'cancelled' } : { [`${myPath}.left`]: true }).catch(() => {});
       netPending = null;
     }
     go('profiles');
   }
 
   function startNetDuel(d) {
-    const { role, pid } = netPending;
+    const { pid } = netPending;
     netPending = null;
     const p = Store.state.profiles.find(k => k.id === pid);
-    const other = role === 'host' ? 'guest' : 'host';
-    if (!p || !d[other]) { go('profiles'); return; }
+    const opps = activePlayers(d).filter(x => x.device !== DEVICE).slice(0, MAX_PLAYERS - 1).map(x => Object.assign({}, x));
+    if (!p || !opps.length) { go('profiles'); return; }
     duel = {
       sides: [{ p, pool: Engine.racePool(p), goal: duelGoal(p), q: null, input: '', right: 0, locked: true, reachedAt: 0, qStart: 0 }],
-      net: { id: d.id, role, other, opp: Object.assign({}, d[other]), finished: false },
+      net: { id: d.id, opps, finished: false },
       timer: null, timeouts: [],
     };
     Screens.duel();
@@ -1409,15 +1463,17 @@
     const send = () => {
       n.pushT = null;
       const data = {
-        [`${n.role}.right`]: s.right,
-        [`${n.role}.reachedMs`]: s.reachedAt ? Math.round(s.reachedAt - t0) : 0,
+        [`${myPath}.right`]: s.right,
+        [`${myPath}.reachedMs`]: s.reachedAt ? Math.round(s.reachedAt - t0) : 0,
       };
-      if (final) data[`${n.role}.done`] = true;
+      if (final) data[`${myPath}.done`] = true;
       Sync.duel.update(data).catch(() => {});
     };
     if (final) { clearTimeout(n.pushT); send(); return; }
     if (!n.pushT) n.pushT = setTimeout(send, 600);
   }
+
+  const othersDone = n => n.opps.every(o => o.done || o.left);
 
   function netFinish() {
     const n = duel.net;
@@ -1428,38 +1484,37 @@
     netPush(true);
     const box = document.createElement('div');
     box.className = 'duel-lock';
-    box.innerHTML = '<div class="card pin-card"><div class="result-hero wait-spin">⏳</div><h2>بانتظار نتيجة المنافس…</h2></div>';
+    box.innerHTML = '<div class="card pin-card"><div class="result-hero wait-spin">⏳</div><h2>بانتظار نتائج المنافسين…</h2></div>';
     app.querySelector('.duel').appendChild(box);
-    // إذا انقطع اتصال المنافس لا ننتظره طويلاً
+    // إذا انقطع اتصال أحدهم لا ننتظره طويلاً
     n.waitT = setTimeout(netResolve, 8000);
-    if (n.opp.done || n.opp.left) netResolve();
+    if (othersDone(n)) netResolve();
   }
 
   function netResolve() {
     if (!duel || !duel.net) return;
     const n = duel.net, s = duel.sides[0], t0 = duel.t0;
     abortDuel();
-    const me = Object.assign(s, { reachedAt: s.reachedAt ? s.reachedAt - t0 : 0 });
-    const o = n.opp;
-    const opp = { p: { avatar: o.avatar, name: o.name }, right: o.right, goal: o.goal, reachedAt: o.reachedMs || 0, coins: null, banners: [] };
-    let winner = null, note = '';
-    if (o.left) note = '🏳️ انسحب المنافس قبل النهاية';
-    else if (!o.done) note = '📡 انقطع اتصال المنافس، فلا فائز هذه المرة';
-    else if (me.reachedAt || opp.reachedAt) {
-      winner = !opp.reachedAt ? me : !me.reachedAt ? opp : me.reachedAt <= opp.reachedAt ? me : opp;
-    } else {
-      const a = me.right / me.goal, b = opp.right / opp.goal;
-      winner = a > b ? me : b > a ? opp : null;
-    }
-    settleSide(me, winner === me);
+    const mine = Object.assign(s, { reachedAt: s.reachedAt ? s.reachedAt - t0 : 0 });
+    const others = n.opps.map(o => ({
+      p: { avatar: o.avatar, name: o.name }, right: o.right, goal: o.goal, reachedAt: o.reachedMs || 0,
+      coins: null, banners: [], out: o.left ? '🏳️ انسحب قبل النهاية' : !o.done ? '📡 انقطع اتصاله' : '',
+    }));
+    const ranked = rankSides([mine, ...others.filter(x => !x.out)]);
+    const winner = soleWinner(ranked);
+    settleSide(mine, winner === mine);
     Store.save();
     Sound.play('win');
-    Screens.duelResults({ sides: [me, opp], winner, note, net: true });
+    Screens.duelResults({
+      sides: ranked.concat(others.filter(x => x.out)), winner, net: true,
+      note: ranked.length < 2 ? 'لم يُكمل المنافسون السباق، فلا فائز هذه المرة' : '',
+    });
   }
 
-  // دعوة صالحة من جهاز آخر لم يقبلها أحد بعد
-  const inviteFor = d => d && d.state === 'waiting' && !d.guest && d.host && d.host.device !== DEVICE &&
-    Date.now() - d.createdAt < INVITE_MS;
+  // دعوة صالحة من جهاز آخر لم ننضم إليها، وفيها مكان
+  const inviteFor = d => !!(d && d.state === 'waiting' && d.players && d.host !== DEVICE && d.players[d.host] &&
+    !activePlayers(d).some(x => x.device === DEVICE) && activePlayers(d).length < MAX_PLAYERS &&
+    Date.now() - d.createdAt < INVITE_MS);
 
   const inviteBar = document.createElement('div');
   inviteBar.className = 'invite-bar';
@@ -1476,7 +1531,8 @@
     inviteBar.hidden = !ok;
     clearTimeout(inviteTimer);
     if (!ok) return;
-    inviteBar.innerHTML = `<span>⚔️ ${d.host.avatar} <b>${esc(d.host.name)}</b> يدعوك لسباق!</span>
+    const host = d.players[d.host];
+    inviteBar.innerHTML = `<span>⚔️ ${host.avatar} <b>${esc(host.name)}</b> يدعوك لسباق!</span>
       <button class="btn orange" data-invite="join">انضم</button>
       <button class="chip" data-invite="no" aria-label="تجاهل">✕</button>`;
     inviteTimer = setTimeout(() => showInvite(Sync.duel.data()), d.createdAt + INVITE_MS - Date.now());
@@ -1489,28 +1545,27 @@
       if (!app.querySelector('.net-wait')) { netPending = null; return; }
       if (!d || d.id !== netPending.id) return;
       if (d.state === 'cancelled') { netPending = null; toast('أُلغيت الدعوة'); go('profiles'); return; }
-      if (netPending.role === 'guest' && d.guest && d.guest.device !== DEVICE) {
-        netPending = null; toast('سبقك أحد إلى هذه الدعوة'); go('profiles'); return;
+      if (d.state === 'running') {
+        if (activePlayers(d).some(x => x.device === DEVICE)) startNetDuel(d);
+        else { netPending = null; toast('بدأ السباق قبل انضمامك'); go('profiles'); }
+        return;
       }
-      if (netPending.role === 'host' && d.guest && d.state === 'waiting') {
-        Sync.duel.update({ state: 'running' }).catch(() => {});
-        startNetDuel(d);
-      } else if (netPending.role === 'guest' && d.state === 'running') {
-        startNetDuel(d);
-      }
+      Screens.netWait(netPending.role);   // تحديث قائمة المنضمين
       return;
     }
     if (!duel || !duel.net || !d || d.id !== duel.net.id) return;
     const n = duel.net;
-    const o = d[n.other];
-    if (!o) return;
-    if (o.left && !n.opp.left && !n.finished) toast('🏳️ انسحب المنافس', 3000);
-    n.opp = Object.assign({}, o);
-    if ($('oWalker')) {
-      $('oWalker').style.setProperty('--p', Math.min(o.right / o.goal, 1));
-      $('oScore').textContent = o.right;
-    }
-    if (n.finished && (o.done || o.left)) netResolve();
+    n.opps.forEach((o, j) => {
+      const x = d.players && d.players[o.device];
+      if (!x) return;
+      if (x.left && !o.left && !n.finished) toast(`🏳️ انسحب ${x.name}`, 3000);
+      Object.assign(o, x);
+      if ($(`oWalker${j}`)) {
+        $(`oWalker${j}`).style.setProperty('--p', Math.min(x.right / x.goal, 1));
+        $(`oScore${j}`).textContent = x.right;
+      }
+    });
+    if (n.finished && othersDone(n)) netResolve();
   });
 
   function countdown(n) {
@@ -1751,15 +1806,23 @@
     duelPick(id) {
       const i = duelPicks.indexOf(id);
       if (i >= 0) duelPicks.splice(i, 1);
-      else duelPicks = duelPicks.concat(id).slice(duelMode === 'net' ? -1 : -2);
+      else if (duelMode === 'net') duelPicks = [id];
+      else if (duelPicks.length < MAX_PLAYERS) duelPicks.push(id);
+      else toast(`الحد الأقصى ${MAX_PLAYERS} لاعبين`);
       Screens.duelPick();
     },
     startDuel() { startDuel(); },
-    setDuelMode(m) { duelMode = m; duelPicks = duelPicks.slice(0, m === 'net' ? 1 : 2); Screens.duelPick(); },
+    setDuelMode(m) { duelMode = m; duelPicks = duelPicks.slice(0, m === 'net' ? 1 : MAX_PLAYERS); Screens.duelPick(); },
     netHost() { netHost(); },
+    netStart() { netStart(); },
     netJoin(pid) { netJoin(pid); },
     netCancel() { netCancel(); },
-    setDuelLayout(id) { Store.state.duelLayout = id; Store.save(); Screens.duelPick(); },
+    setDuelLayout(id) {
+      const k = Math.min(Math.max(duelPicks.length, 2), MAX_PLAYERS);
+      Store.state.duelLayouts = Object.assign({}, Store.state.duelLayouts, { [k]: id });
+      Store.save();
+      Screens.duelPick();
+    },
     // إيقاف سباق الإخوة يحتاج رمز ولي الأمر حتى لا يوقفه الخاسر
     exitDuel() {
       if (!duelAlive()) return;

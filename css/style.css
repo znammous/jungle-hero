@@ -502,6 +502,39 @@ button.rank-badge { border: 0; font: inherit; font-weight: 800; cursor: pointer;
 .invite-bar span { flex: 1; font-size: 1.05rem; }
 .invite-bar .btn { padding: 10px 18px; font-size: 1.05rem; }
 
+/* 3 و4 لاعبين على جهاز واحد: شريط الوقت فوق، واللاعبون في شبكة */
+.duel.multi { flex-direction: column; }
+.duel.multi .duel-mid { flex-direction: row; }
+.duel.multi .duel-mid .timebar { width: auto; flex: 1; height: 26px; }
+.duel.multi .duel-mid .timebar i { inset-block: 0; height: auto; width: calc(var(--t, 1) * 100%); }
+.duel-grid { flex: 1; min-height: 0; display: grid; gap: 10px; }
+.duel.cols .duel-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.duel.grid .duel-grid, .duel.grid-face .duel-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: repeat(2, minmax(0, 1fr)); }
+.duel.grid-face .duel-half:nth-child(-n+2) { transform: rotate(180deg); }
+.duel.multi .duel-half { padding: 8px; gap: 6px; }
+.duel.multi .duel-half > * { flex-shrink: 0; }
+.duel.multi .question { min-height: 0; line-height: 1.2; }
+.duel.multi .duel-head { font-size: 1.1rem; }
+.duel.multi .track { height: 44px; }
+.duel.multi .walker { font-size: 1.6rem; }
+.duel.multi .goal { font-size: 1.5rem; }
+.duel.multi .question { font-size: clamp(1.4rem, 4vmin, 2.4rem); padding: 6px; }
+.duel.multi .numpad { max-width: 280px; gap: 6px; }
+.duel.multi .key { font-size: 1.4rem; border-radius: 14px; }
+.duel.cols .key { height: clamp(40px, calc((100vh - 330px) / 4), 62px); }
+.duel.grid .key, .duel.grid-face .key { height: clamp(32px, calc((50vh - 250px) / 4), 54px); }
+
+.net-players { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+.net-players span { background: var(--sand); color: var(--ink); border-radius: 14px; padding: 8px 14px; display: flex; align-items: center; gap: 6px; font-size: 1.4rem; }
+.net-players b { font-size: 1rem; }
+.duel.net .opp + .opp { margin-top: -4px; }
+.duel-card { position: relative; }
+.duel-card .place { position: absolute; top: 10px; inset-inline-start: 12px; font-size: 2rem; font-weight: 800; }
+
+.mini.grid, .mini.grid-face { flex-wrap: wrap; }
+.mini.grid i, .mini.grid-face i { flex: 0 0 calc(50% - 2px); height: calc(50% - 2px); }
+.mini.grid-face i:nth-child(-n+2) { transform: rotate(180deg); }
+
 .layouts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 10px; }
 .layout-opt { background: #fff; border-radius: 16px; padding: 10px 6px; display: flex; flex-direction: column; align-items: center; gap: 4px; border: 3px solid transparent; }
 .layout-opt.on { border-color: var(--leaf); background: #eaf7e4; }
@@ -511,7 +544,7 @@ button.rank-badge { border: 0; font: inherit; font-weight: 800; cursor: pointer;
 .mini.stack, .mini.face { flex-direction: column; }
 .mini.face i:first-child { transform: rotate(180deg); }
 
-.duel-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; width: 100%; max-width: 640px; }
+.duel-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; width: 100%; max-width: 900px; }
 .duel-card { display: flex; flex-direction: column; align-items: center; gap: 8px; }
 .duel-card .avatar { font-size: 3rem; }
 .duel-card.won { outline: 5px solid var(--sun); }
