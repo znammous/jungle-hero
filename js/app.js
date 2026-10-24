@@ -3,7 +3,6 @@
   const app = document.getElementById('app');
   let round = null;       // الجولة الجارية (تدريب، إحماء، سباق، مراجعة)
   let lastRound = null;   // لإعادة نفس الجولة من شاشة النتائج
-  let managing = false;   // وضع حذف المستكشفين
   let newAvatar = AVATARS[0];
 
   // لوحة ولي الأمر
@@ -59,22 +58,18 @@
           ${list.map(p => {
             const r = Engine.rankFor(p.bestRace);
             const st = Journey.streak(p);
-            return `<div class="profile-wrap">
-              <button class="profile-card" data-act="selectProfile" data-arg="${p.id}">
+            return `<button class="profile-card" data-act="selectProfile" data-arg="${p.id}">
                 <span class="avatar">${p.avatar}</span>
                 <b>${esc(p.name)}</b>
                 <small>${r.emoji} ${r.name}</small>
                 <small>🪙 ${p.coins}${st.count ? ` · 🔥 ${st.count}` : ''}</small>
-              </button>
-              ${managing ? `<button class="delete-btn" data-act="deleteProfile" data-arg="${p.id}" aria-label="حذف">✕</button>` : ''}
-            </div>`;
+              </button>`;
           }).join('')}
           <button class="profile-card add" data-act="go" data-arg="newProfile">
             <span class="avatar">➕</span><b>مستكشف جديد</b>
           </button>
         </div>
         <div class="footer-links">
-          ${list.length ? `<button class="link-btn" data-act="toggleManage">${managing ? 'تم' : 'إدارة المستكشفين'}</button>` : ''}
           <button class="link-btn" data-act="openParent">👨‍👩‍👧 ولي الأمر</button>
         </div>
       </section>`);
@@ -228,6 +223,26 @@
           }).join('')}
         </div>
         <p class="hint">✨ هناك قطع نادرة لا تُباع هنا! تجدها في كنز رحلة اليوم والجائزة الأسبوعية.</p>
+
+        <h3 class="shop-title">🛡️ درع السلسلة</h3>
+        <div class="card shield-card">
+          <span class="item-emoji">🛡️</span>
+          <div>
+            <b>يحمي سلسلة أيامك 🔥</b>
+            <p class="muted">إذا فاتك يوم، يُستخدم الدرع تلقائياً فلا تنقطع سلسلتك. لديك ${ltr(`${p.shields || 0}/${MAX_SHIELDS}`)}</p>
+          </div>
+          <button class="btn orange" data-act="buyShield">🪙 ${COINS.shield}</button>
+        </div>
+
+        <h3 class="shop-title">🏠 جوائز العائلة</h3>
+        ${rewards().length ? `<div class="shop-grid">${rewards().map(r => `
+          <button class="item ${p.coins < r.price ? 'cant' : ''}" data-act="requestReward" data-arg="${r.id}">
+            <span class="item-emoji">${r.emoji}</span>
+            <b>${esc(r.name)}</b>
+            <span class="price">🪙 ${r.price}</span>
+          </button>`).join('')}</div>`
+          : '<p class="hint">لا توجد جوائز عائلية بعد. اطلب من ولي الأمر أن يضيفها من لوحته 👨‍👩‍👧</p>'}
+        ${requestsList(p)}
       </section>`);
     },
 
@@ -479,6 +494,12 @@
           <button class="link-btn dark" data-act="changePin">🔑 تغيير الرمز</button>
         </div>
 
+        ${pendingCard()}
+
+        ${rewardsCard()}
+
+        ${syncCard()}
+
         ${p ? `<div class="kid-tabs">${kids.map(k =>
             `<button class="chip ${k.id === parentKid ? 'on' : ''}" data-act="parentKid" data-arg="${k.id}">${k.avatar} ${esc(k.name)}</button>`).join('')}</div>
           ${kidReport(p)}`
@@ -486,6 +507,83 @@
       </section>`);
     },
   };
+
+  // ───── جوائز العائلة ─────
+  // الجوائز في إعدادات ولي الأمر، والطلبات في ملف كل طفل (فتُزامَن مع باقي البيانات)
+  const rewards = () => Store.state.settings.rewards || (Store.state.settings.rewards = []);
+  const requests = p => p.requests || (p.requests = []);
+  let newRewardEmoji = REWARD_EMOJIS[0];
+
+  function requestsList(p) {
+    const list = requests(p).slice(-6).reverse();
+    if (!list.length) return '';
+    const label = { pending: '⏳ بانتظار ولي الأمر', given: '✅ حصلت عليها', declined: '↩️ أُعيدت العملات' };
+    return `<div class="card">
+      <h3>📬 طلباتك</h3>
+      <ul class="request-list">${list.map(r =>
+        `<li class="${r.status}"><span>${r.emoji} ${esc(r.name)}</span><small>${label[r.status]}</small></li>`).join('')}</ul>
+    </div>`;
+  }
+
+  function pendingCard() {
+    const pending = [];
+    Store.state.profiles.forEach(k => requests(k).forEach(r => { if (r.status === 'pending') pending.push({ k, r }); }));
+    if (!pending.length) return '';
+    return `<div class="card pending-card">
+      <h3>📬 طلبات جوائز بانتظارك</h3>
+      ${pending.map(({ k, r }) => `<div class="pending-row">
+        <span>${k.avatar} <b>${esc(k.name)}</b> طلب ${r.emoji} ${esc(r.name)} <small>(🪙 ${r.price})</small></span>
+        <span class="pending-actions">
+          <button class="btn green small" data-act="giveReward" data-arg="${k.id}:${r.id}">✅ تم التسليم</button>
+          <button class="btn gray small" data-act="declineReward" data-arg="${k.id}:${r.id}">↩️ رفض</button>
+        </span>
+      </div>`).join('')}
+    </div>`;
+  }
+
+  function rewardsCard() {
+    const list = rewards();
+    const presets = REWARD_PRESETS.filter(x => !list.some(r => r.name === x.name));
+    return `<div class="card">
+      <h3>🏠 جوائز العائلة</h3>
+      <p class="muted">جوائز حقيقية يشتريها الأطفال بعملاتهم. عند الشراء يصلك طلب هنا لتؤكد التسليم، أو ترفضه فتعود العملات.</p>
+      ${list.length ? `<ul class="reward-list">${list.map(r => `<li>
+        <span>${r.emoji} ${esc(r.name)}</span><b>🪙 ${r.price}</b>
+        <button class="link-btn danger" data-act="removeReward" data-arg="${r.id}" aria-label="حذف">✕</button>
+      </li>`).join('')}</ul>` : ''}
+      ${presets.length ? `<p class="label">اقتراحات سريعة:</p>
+        <div class="preset-row">${presets.map((x, i) =>
+          `<button class="chip light" data-act="addPreset" data-arg="${REWARD_PRESETS.indexOf(x)}">${x.emoji} ${x.name} · ${x.price}</button>`).join('')}</div>` : ''}
+      <p class="label">أو أضف جائزة من عندك:</p>
+      <div class="emoji-row">${REWARD_EMOJIS.map(e =>
+        `<button class="avatar-btn small ${e === newRewardEmoji ? 'selected' : ''}" data-act="pickRewardEmoji" data-arg="${e}">${e}</button>`).join('')}</div>
+      <div class="reward-form">
+        <input id="rewardName" maxlength="30" placeholder="اسم الجائزة" autocomplete="off">
+        <input id="rewardPrice" type="number" inputmode="numeric" min="10" max="2000" placeholder="السعر" dir="ltr">
+        <button class="btn green small" data-act="addReward">➕ إضافة</button>
+      </div>
+    </div>`;
+  }
+
+  // تسجيل الدخول لمزامنة التقدّم بين اللابتوب والتابلت
+  function syncCard() {
+    const st = Sync.status();
+    const when = Sync.lastSync()
+      ? new Date(Sync.lastSync()).toLocaleTimeString('ar', { hour: 'numeric', minute: '2-digit', numberingSystem: 'latn' })
+      : '';
+    let body;
+    if (st === 'loading') body = '<p class="muted">جارٍ التحميل…</p>';
+    else if (st === 'unavailable') body = '<p class="muted">المزامنة تحتاج اتصالاً بالإنترنت. اللعبة تعمل وتحفظ على هذا الجهاز.</p>';
+    else if (st === 'out') body = `<p class="muted">سجّل دخولك بحساب Google على كل جهاز ليظهر تقدّم الأطفال نفسه على اللابتوب والتابلت.</p>
+      <button class="btn green wide" data-act="syncIn">تسجيل الدخول بحساب Google</button>`;
+    else {
+      const label = { syncing: '⏳ جارٍ المزامنة…', offline: '📴 بدون اتصال — ستُرفع التعديلات عند عودة الإنترنت', ok: `✅ متزامن${when ? ` · آخر مزامنة ${when}` : ''}`, error: '⚠️ تعذّرت المزامنة' }[st];
+      body = `<p>${label}</p>
+        <p class="muted" dir="ltr">${esc(Sync.email())}</p>
+        <button class="link-btn dark" data-act="syncOut">تسجيل الخروج من هذا الجهاز</button>`;
+    }
+    return `<div class="card" id="syncCard"><h3>☁️ المزامنة بين الأجهزة</h3>${body}</div>`;
+  }
 
   // تقرير طفل واحد في لوحة ولي الأمر
   function kidReport(p) {
@@ -565,7 +663,9 @@
           <span><i class="hm l4"></i>متقن</span>
           <span><i class="hm l5"></i>متقن جداً</span>
         </div>
-      </div>`;
+      </div>
+
+      <button class="link-btn danger" data-act="deleteProfile" data-arg="${p.id}">🗑️ حذف ${esc(p.name)}</button>`;
   }
 
   function go(name, arg) {
@@ -756,24 +856,41 @@
     $('pinDots').innerHTML = [0, 1, 2, 3].map(i => `<i class="${i < pinBuffer.length ? 'on' : ''}"></i>`).join('');
   }
 
+  // ولي الأمر يؤكد تسليم الجائزة، أو يرفضها فتعود العملات للطفل
+  function settleRequest(arg, status) {
+    if (!parentOK) return;
+    const [kidId, reqId] = arg.split(':');
+    const k = Store.state.profiles.find(x => x.id === kidId);
+    const r = k && requests(k).find(x => x.id === reqId);
+    if (!r || r.status !== 'pending') return;
+    r.status = status;
+    if (status === 'declined') k.coins += r.price;
+    Store.save();
+    toast(status === 'given' ? '✅ سُجّل التسليم' : `↩️ أُعيدت ${r.price} عملة إلى ${k.name}`);
+    Screens.parent();
+  }
+
   // ───────────── الأزرار ─────────────
   const actions = {
     go: arg => go(arg),
 
     selectProfile(id) {
-      if (managing) return;
       Store.select(id);
+      const used = Journey.applyShields(Store.current());
+      if (used) Store.save();
       go('camp');
+      if (used) toast(`🛡️ ${used === 1 ? 'درع السلسلة حمى' : `${used} دروع حمت`} سلسلتك من الانقطاع!`);
     },
 
-    toggleManage() { managing = !managing; Screens.profiles(); },
-
+    // الحذف من لوحة ولي الأمر فقط، فلا يصل إليه إلا من يعرف الرمز
     deleteProfile(id) {
+      if (!parentOK) return;
       const p = Store.state.profiles.find(x => x.id === id);
       if (p && confirm(`هل تريد حذف «${p.name}»؟ سيضيع كل تقدّمه.`)) {
         Store.deleteProfile(id);
-        if (!Store.state.profiles.length) managing = false;
-        Screens.profiles();
+        parentKid = null;
+        toast('حُذف المستكشف');
+        Screens.parent();
       }
     },
 
@@ -823,6 +940,32 @@
       Store.save();
       Sound.play('coin');
       toast(`اشتريت ${item.name} ${item.emoji}`);
+      Screens.shop();
+    },
+
+    buyShield() {
+      const p = Store.current();
+      if ((p.shields || 0) >= MAX_SHIELDS) { toast(`لديك ${MAX_SHIELDS} دروع، وهذا الحد الأقصى 🛡️`); return; }
+      if (p.coins < COINS.shield) { toast(`تحتاج ${COINS.shield - p.coins} عملة إضافية 🪙`); return; }
+      p.coins -= COINS.shield;
+      p.shields = (p.shields || 0) + 1;
+      Store.save();
+      Sound.play('coin');
+      toast('🛡️ اشتريت درع السلسلة');
+      Screens.shop();
+    },
+
+    requestReward(id) {
+      const p = Store.current();
+      const r = rewards().find(x => x.id === id);
+      if (!r) return;
+      if (p.coins < r.price) { toast(`تحتاج ${r.price - p.coins} عملة إضافية 🪙`); return; }
+      if (!confirm(`هل تريد طلب «${r.name}» مقابل ${r.price} عملة؟`)) return;
+      p.coins -= r.price;
+      requests(p).push({ id: Date.now().toString(36), emoji: r.emoji, name: r.name, price: r.price, at: Date.now(), status: 'pending' });
+      Store.save();
+      Sound.play('win');
+      toast('📬 أُرسل طلبك إلى ولي الأمر');
       Screens.shop();
     },
 
@@ -942,6 +1085,49 @@
     setGoal(v) { Store.state.settings.goalMin = Number(v); Store.save(); Screens.parent(); },
     setMax(v) { Store.state.settings.maxMin = Number(v); Store.save(); Screens.parent(); },
     parentKid(id) { parentKid = id; Screens.parent(); },
+
+    pickRewardEmoji(e, el) {
+      newRewardEmoji = e;
+      app.querySelectorAll('.emoji-row .avatar-btn').forEach(b => b.classList.toggle('selected', b === el));
+    },
+
+    addPreset(i) {
+      const x = REWARD_PRESETS[Number(i)];
+      rewards().push({ id: Date.now().toString(36), emoji: x.emoji, name: x.name, price: x.price });
+      Store.save();
+      Screens.parent();
+    },
+
+    addReward() {
+      const name = $('rewardName').value.trim();
+      const price = Math.round(Number($('rewardPrice').value));
+      if (!name) { toast('اكتب اسم الجائزة'); return; }
+      if (!(price >= 10 && price <= 2000)) { toast('السعر بين 10 و 2000 عملة'); return; }
+      rewards().push({ id: Date.now().toString(36), emoji: newRewardEmoji, name, price });
+      Store.save();
+      toast('➕ أُضيفت الجائزة');
+      Screens.parent();
+    },
+
+    removeReward(id) {
+      const s = Store.state.settings;
+      s.rewards = rewards().filter(r => r.id !== id);
+      Store.save();
+      Screens.parent();
+    },
+
+    giveReward(arg) { settleRequest(arg, 'given'); },
+    declineReward(arg) { settleRequest(arg, 'declined'); },
+
+    syncIn() {
+      Sync.signIn().catch(e => {
+        if (e.code !== 'auth/popup-closed-by-user') toast('تعذّر تسجيل الدخول');
+      });
+    },
+
+    syncOut() {
+      if (confirm('تسجيل الخروج من هذا الجهاز؟ يبقى التقدّم محفوظاً عليه لكن لن يُزامَن.')) Sync.signOut();
+    },
   };
 
   app.addEventListener('click', e => {
@@ -982,6 +1168,19 @@
     e.preventDefault();
   });
 
+  // وصلت بيانات من جهاز آخر أو تغيّرت حالة المزامنة: نحدّث الشاشة إن كانت لا تتأثر بجولة جارية
+  Sync.onUpdate(changed => {
+    if (round) return;
+    if (app.querySelector('.screen.parent') && parentOK) {
+      const card = $('syncCard');
+      if (changed || !card) Screens.parent();
+      else card.outerHTML = syncCard();
+    } else if (changed && (app.querySelector('.profile-grid') || !Store.current()) && !app.querySelector('.pin-card, .form-card')) {
+      Screens.profiles();
+    }
+  });
+
   Store.load();
   Screens.profiles();
+  Sync.start();
 })();

@@ -61,19 +61,42 @@ const Journey = (() => {
     return reward;
   }
 
-  // الأيام المتتالية التي اكتملت فيها رحلة اليوم، مع يوم راحة واحد مسموح في كل أسبوع
-  function streak(p) {
+  // الأيام المتتالية التي اكتملت فيها رحلة اليوم، مع يوم راحة واحد مسموح في كل أسبوع،
+  // والأيام التي غطّاها درع. breakAt = اليوم الذي انقطعت عنده السلسلة (إن وُجد)
+  function walk(p, extraCovered = []) {
     const doneKeys = Object.keys(p.days).filter(k => p.days[k].chest).sort();
     const now = new Date();
-    if (!doneKeys.length) return { count: 0, restUsed: false };
+    if (!doneKeys.length) return { count: 0, restUsed: false, breakAt: null };
+    const covered = new Set((p.shieldDays || []).concat(extraCovered));
     const rests = new Set();
     let count = isDone(p, now) ? 1 : 0;   // اليوم الحالي لا يكسر السلسلة قبل أن ينتهي
     for (let d = addDays(now, -1); dayKey(d) >= doneKeys[0]; d = addDays(d, -1)) {
+      const k = dayKey(d);
       if (isDone(p, d)) count++;
+      else if (covered.has(k)) continue;
       else if (!rests.has(weekKey(d))) rests.add(weekKey(d));
-      else break;
+      else return { count, restUsed: rests.has(weekKey(now)), breakAt: k };
     }
-    return { count, restUsed: rests.has(weekKey(now)) };
+    return { count, restUsed: rests.has(weekKey(now)), breakAt: null };
+  }
+
+  const streak = p => walk(p);
+
+  // يستخدم الدروع تلقائياً لسدّ انقطاع حديث (آخر 7 أيام)،
+  // ولا يستخدم أي درع إن كانت الدروع لا تكفي لسدّ الفجوة كلها. يعيد عدد الدروع المستخدمة
+  function applyShields(p) {
+    const recent = dayKey(addDays(new Date(), -7));
+    const plan = [];
+    for (;;) {
+      const w = walk(p, plan);
+      if (!w.breakAt || w.breakAt < recent) break;
+      if (plan.length >= (p.shields || 0)) return 0;
+      plan.push(w.breakAt);
+    }
+    if (!plan.length) return 0;
+    p.shieldDays = (p.shieldDays || []).concat(plan);
+    p.shields -= plan.length;
+    return plan.length;
   }
 
   // أيام أسبوع (0 = هذا الأسبوع، -1 = الماضي...)
@@ -144,6 +167,6 @@ const Journey = (() => {
 
   return {
     STATIONS, today, addAnswer, clearMistake, minutesToday, nextStation, chestReady, complete,
-    openChest, streak, week, weekStatus, claimWeek, recentDays, weekReport,
+    openChest, streak, applyShields, week, weekStatus, claimWeek, recentDays, weekReport,
   };
 })();

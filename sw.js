@@ -1,6 +1,6 @@
 // يحفظ ملفات اللعبة على الجهاز لتعمل بدون إنترنت
 // غيّر رقم الإصدار عند تعديل أي ملف حتى يحدَّث الكاش
-const CACHE = 'jungle-hero-v6';
+const CACHE = 'jungle-hero-v8';
 const FILES = [
   './',
   'index.html',
@@ -13,6 +13,7 @@ const FILES = [
   'js/sound.js',
   'js/engine.js',
   'js/journey.js',
+  'js/sync.js',
   'js/app.js',
   'manifest.webmanifest',
   'icons/icon.svg',
@@ -32,8 +33,21 @@ self.addEventListener('activate', e => {
   );
 });
 
+// مكتبة Firebase تُحفظ عند أول تحميل لتعمل المزامنة لاحقاً حتى لو فُتحت اللعبة بدون إنترنت
+const SDK = 'https://www.gstatic.com/firebasejs/';
+
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
+  if (e.request.url.startsWith(SDK)) {
+    e.respondWith(caches.match(e.request).then(hit => hit || fetch(e.request).then(res => {
+      const copy = res.clone();
+      caches.open(CACHE).then(c => c.put(e.request, copy));
+      return res;
+    })));
+    return;
+  }
+  // اتصالات Firebase وتسجيل الدخول تذهب للشبكة مباشرة
+  if (new URL(e.request.url).origin !== location.origin) return;
   e.respondWith(
     caches.match(e.request, { ignoreSearch: true })
       .then(hit => hit || fetch(e.request))
