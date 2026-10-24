@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#1f5130">
+  <meta name="mobile-web-app-capable" content="yes">
+  <title>بطل الغابة</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <main id="app"></main>
+  <div id="toast" class="toast" role="status" hidden></div>
+
+  <!-- سكربتات عادية (وليست modules) حتى تعمل اللعبة عند فتح الملف مباشرة بدون خادم -->
+  <script src="js/data.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/sound.js"></script>
+  <script src="js/engine.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+      navigator.serviceWorker.register('sw.js').catch(() => {});
+    }
+  </script>
+</body>
+</html>
