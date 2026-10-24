@@ -566,6 +566,8 @@
 
         ${syncCard()}
 
+        ${compareCard(kids)}
+
         ${p ? `<div class="kid-tabs">${kids.map(k =>
             `<button class="chip ${k.id === parentKid ? 'on' : ''}" data-act="parentKid" data-arg="${k.id}">${k.avatar} ${esc(k.name)}</button>`).join('')}</div>
           ${kidReport(p)}`
@@ -649,6 +651,30 @@
         <button class="link-btn dark" data-act="syncOut">تسجيل الخروج من هذا الجهاز</button>`;
     }
     return `<div class="card" id="syncCard"><h3>☁️ المزامنة بين الأجهزة</h3>${body}</div>`;
+  }
+
+  // مقارنة مختصرة بين الأطفال: جهد هذا الأسبوع وتحسّن كل طفل عن نفسه، لا المستوى المطلق
+  function compareCard(kids) {
+    if (kids.length < 2) return '';
+    const rows = kids.map(k => {
+      const r = Journey.weekReport(k);
+      const gain = r.raceThis !== null && r.raceLast !== null ? r.raceThis - r.raceLast : null;
+      return { k, vals: [r.daysPlayed, r.minutes, r.newMastered, gain] };
+    });
+    const best = [0, 1, 2, 3].map(i => Math.max(...rows.map(x => x.vals[i] ?? -Infinity)));
+    const cell = (v, i, text) => `<td class="${v !== null && v > 0 && v === best[i] ? 'top' : ''}">${text}</td>`;
+    const gainText = g => g === null ? '—' : g > 0 ? `↑ ${g}` : g < 0 ? `↓ ${-g}` : '=';
+    return `<div class="card">
+      <h3>👥 هذا الأسبوع</h3>
+      <table class="compare">
+        <tr><th></th><th>🔥 أيام</th><th>⏱️ دقائق</th><th>⭐ إتقان جديد</th><th>🏃 تحسّن السباق</th></tr>
+        ${rows.map(({ k, vals: [d, m, n, g] }) => `<tr class="${k.id === parentKid ? 'on' : ''}" data-act="parentKid" data-arg="${k.id}">
+          <th>${k.avatar} ${esc(k.name)}</th>
+          ${cell(d, 0, ltr(`${d}/7`))}${cell(m, 1, ltr(m))}${cell(n, 2, ltr(n ? `+${n}` : 0))}${cell(g, 3, ltr(gainText(g)))}
+        </tr>`).join('')}
+      </table>
+      <p class="muted center">التحسّن = متوسط السباق هذا الأسبوع مقارنة بالأسبوع الماضي لكل طفل</p>
+    </div>`;
   }
 
   // تقرير طفل واحد في لوحة ولي الأمر

@@ -600,6 +600,15 @@ button.rank-badge { border: 0; font: inherit; font-weight: 800; cursor: pointer;
 .seg button.on { background: var(--leaf); color: #fff; }
 .kid-tabs { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
 .kid-tabs .chip.on { background: var(--sun); color: var(--ink); }
+.compare { width: 100%; border-collapse: separate; border-spacing: 0 6px; margin-top: 8px; text-align: center; }
+.compare th { font-size: 0.8rem; color: var(--muted); font-weight: 700; padding: 0 4px; }
+.compare tr[data-act] { cursor: pointer; }
+.compare tr[data-act] th { text-align: start; color: var(--ink); font-size: 1rem; white-space: nowrap; }
+.compare tr[data-act] > * { background: #fff; padding: 10px 4px; font-weight: 700; }
+.compare tr[data-act] > :first-child { border-radius: 0 12px 12px 0; padding-inline-start: 10px; }
+.compare tr[data-act] > :last-child { border-radius: 12px 0 0 12px; }
+.compare tr.on > * { background: #fff6dc; }
+.compare td.top { color: var(--leaf); }
 .tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
 .tile { background: var(--sand); border-radius: 18px; padding: 12px 6px; text-align: center; display: flex; flex-direction: column; box-shadow: 0 5px 0 var(--sand-dark); }
 .tile b { font-size: 1.6rem; }
