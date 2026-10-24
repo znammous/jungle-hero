@@ -12,6 +12,7 @@
   const $ = id => document.getElementById(id);
 
   function render(html) {
+    document.body.classList.toggle('bgrest', !!round);
     app.innerHTML = html;
     window.scrollTo(0, 0);
   }

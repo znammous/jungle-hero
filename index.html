@@ -12,10 +12,12 @@
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+  <div id="bg" class="bg" aria-hidden="true"></div>
   <main id="app"></main>
   <div id="toast" class="toast" role="status" hidden></div>
 
   <!-- سكربتات عادية (وليست modules) حتى تعمل اللعبة عند فتح الملف مباشرة بدون خادم -->
+  <script src="js/background.js"></script>
   <script src="js/data.js"></script>
   <script src="js/store.js"></script>
   <script src="js/sound.js"></script>
