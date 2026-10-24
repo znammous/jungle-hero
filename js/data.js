@@ -48,7 +48,7 @@ const ITEMS = [
 // قطع نادرة لا تُباع في المتجر: تأتي من كنز رحلة اليوم والجائزة الأسبوعية فقط
 const RARE_ITEMS = [
   { id: 'r-vase',    emoji: '🏺', name: 'الجرّة الأثرية' },
-  { id: 'r-statue',  emoji: '🗿', name: 'تمثال المعبد' },
+  { id: 'r-statue',  emoji: '🗝️', name: 'المفتاح العتيق' },  // المعرّف القديم باقٍ حتى لا تضيع القطعة ممن جمعها
   { id: 'r-fossil',  emoji: '🦴', name: 'العظمة الأحفورية' },
   { id: 'r-shell',   emoji: '🐚', name: 'الصدفة النادرة' },
   { id: 'r-feather', emoji: '🪶', name: 'الريشة الذهبية' },
