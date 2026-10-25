@@ -1162,6 +1162,7 @@
   const rewards = () => Store.state.settings.rewards || (Store.state.settings.rewards = []);
   const requests = p => p.requests || (p.requests = []);
   let newRewardEmoji = REWARD_EMOJIS[0];
+  let editReward = null;  // الجائزة التي يعدّلها ولي الأمر الآن: { id, emoji }
 
   function requestsList(p) {
     const list = requests(p).slice(-6).reverse();
@@ -1213,8 +1214,18 @@
     return `<div class="card">
       <h3>🏠 جوائز العائلة</h3>
       <p class="muted">جوائز حقيقية يشتريها الأطفال بعملاتهم. عند الشراء يصلك طلب هنا لتؤكد التسليم، أو ترفضه فتعود العملات.</p>
-      ${list.length ? `<ul class="reward-list">${list.map(r => `<li>
+      ${list.length ? `<ul class="reward-list">${list.map(r => editReward && editReward.id === r.id ? `<li class="editing">
+        <div class="emoji-row">${REWARD_EMOJIS.map(e =>
+          `<button class="avatar-btn small ${e === editReward.emoji ? 'selected' : ''}" data-act="pickEditEmoji" data-arg="${e}">${e}</button>`).join('')}</div>
+        <div class="reward-form">
+          <input id="editRewardName" maxlength="30" value="${esc(r.name)}" placeholder="اسم الجائزة" autocomplete="off">
+          <input id="editRewardPrice" type="number" inputmode="numeric" min="10" max="2000" value="${r.price}" placeholder="السعر" dir="ltr">
+          <button class="btn green small" data-act="saveReward">💾 حفظ</button>
+          <button class="btn gray small" data-act="cancelEditReward">إلغاء</button>
+        </div>
+      </li>` : `<li>
         <span>${r.emoji} ${esc(r.name)}</span><b>🪙 ${r.price}</b>
+        <button class="link-btn edit" data-act="editReward" data-arg="${r.id}" aria-label="تعديل">✏️</button>
         <button class="link-btn danger" data-act="removeReward" data-arg="${r.id}" aria-label="حذف">✕</button>
       </li>`).join('')}</ul>` : ''}
       ${presets.length ? `<p class="label">اقتراحات سريعة:</p>
@@ -2947,6 +2958,13 @@
     </div>`);
   }
 
+  // يعيد رسم الشاشة دون القفز إلى أعلاها (للتعديلات داخل لوحة ولي الأمر)
+  function stayAt(redraw) {
+    const y = window.scrollY;
+    redraw();
+    window.scrollTo(0, y);
+  }
+
   const actions = {
     winnerShot(id) { winnerShot(winById(id)); },
     certShow(id) { certShow(winById(id)); },
@@ -3403,6 +3421,7 @@
     // ───── ولي الأمر ─────
     openParent() {
       parentOK = false;
+      editReward = null;
       pinStage = null;
       pinBuffer = '';
       Screens.parentGate();
@@ -3539,7 +3558,38 @@
       const s = Store.state.settings;
       s.rewards = rewards().filter(r => r.id !== id);
       Store.save();
-      Screens.parent();
+      stayAt(() => Screens.parent());
+    },
+
+    // تعديل جائزة في مكانها: الطلبات السابقة تبقى بالاسم والسعر الذي اشتُريت به
+    editReward(id) {
+      const r = rewards().find(x => x.id === id);
+      if (!r) return;
+      editReward = { id, emoji: r.emoji };
+      stayAt(() => Screens.parent());
+      $('editRewardName').focus();
+    },
+    pickEditEmoji(e, el) {
+      if (!editReward) return;
+      editReward.emoji = e;
+      el.parentNode.querySelectorAll('.avatar-btn').forEach(b => b.classList.toggle('selected', b === el));
+    },
+    saveReward() {
+      const r = editReward && rewards().find(x => x.id === editReward.id);
+      if (!r) return;
+      const name = $('editRewardName').value.trim();
+      const price = Math.round(Number($('editRewardPrice').value));
+      if (!name) { toast('اكتب اسم الجائزة'); return; }
+      if (!(price >= 10 && price <= 2000)) { toast('السعر بين 10 و 2000 عملة'); return; }
+      Object.assign(r, { emoji: editReward.emoji, name, price });
+      editReward = null;
+      Store.save();
+      toast('💾 حُفظت الجائزة');
+      stayAt(() => Screens.parent());
+    },
+    cancelEditReward() {
+      editReward = null;
+      stayAt(() => Screens.parent());
     },
 
     giveReward(arg) { settleRequest(arg, 'given'); },
