@@ -173,7 +173,7 @@ const WinnerCard = (() => {
     text(ctx, s, W / 2, cy + 4, 58, { color: '#fff', stroke: 'rgba(120, 50, 0, 0.35)', strokeWidth: 6, max: w - 60 });
   }
 
-  // info: { name, avatar, kind, land, note, right, wrong, date }
+  // info: { name, avatar, vs: [أسماء المنافسين], kind, land, note, right, wrong, date }
   async function draw(info) {
     try { await Promise.all(['800 100px "Baloo Bhaijaan 2"', '400 40px "Baloo Bhaijaan 2"'].map(f => document.fonts.load(f, 'تهانينا abc'))); } catch (e) {}
     const c = document.createElement('canvas');
@@ -204,15 +204,16 @@ const WinnerCard = (() => {
     text(ctx, info.avatar, W / 2, cy + 12, 210, { emoji: true });
     crown(ctx, W / 2, cy - r - 175, 300);
 
-    text(ctx, '🎉 تهانينا 🎉', W / 2, 790, 92, { color: '#ffc93c', stroke: '#143a21', strokeWidth: 14 });
-    text(ctx, info.name, W / 2, 920, 150, { color: '#fff', stroke: '#b4561a', strokeWidth: 22 });
-    ribbon(ctx, `بطل ${info.kind}`, 1065);
+    text(ctx, '🎉 تهانينا 🎉', W / 2, 765, 92, { color: '#ffc93c', stroke: '#143a21', strokeWidth: 14 });
+    text(ctx, info.name, W / 2, 890, 150, { color: '#fff', stroke: '#b4561a', strokeWidth: 22 });
+    ribbon(ctx, `بطل ${info.kind}`, 1025);
+    if (info.vs && info.vs.length) text(ctx, `⚔️ ضد ${info.vs.join(' و')}`, W / 2, 1130, 52, { color: '#ffc93c' });
 
-    if (info.note) text(ctx, info.note, W / 2, 1180, 44, { color: '#fbf3dc', weight: 400 });
+    if (info.note) text(ctx, info.note, W / 2, 1195, 40, { color: '#fbf3dc', weight: 400 });
     const stats = [`✅ ${info.right} صحيحة`].concat(info.wrong == null ? [] : [`❌ ${info.wrong} خاطئة`]);
     const line = [info.land, ...stats].join('   •   ');
-    text(ctx, line, W / 2, 1245, 38, { color: '#8fd17f', weight: 400 });
-    text(ctx, info.date, W / 2, 1300, 32, { color: 'rgba(255, 255, 255, 0.55)', weight: 400 });
+    text(ctx, line, W / 2, 1252, 36, { color: '#8fd17f', weight: 400 });
+    text(ctx, info.date, W / 2, 1305, 30, { color: 'rgba(255, 255, 255, 0.55)', weight: 400 });
 
     return new Promise(res => c.toBlob(res, 'image/png'));
   }
