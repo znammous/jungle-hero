@@ -1085,3 +1085,6 @@ body.tabs .toast, body.tabs .update-bar { bottom: calc(84px + env(safe-area-inse
 .numline text { font: 700 13px "Baloo Bhaijaan 2", sans-serif; fill: var(--ink); text-anchor: middle; }
 .numline .marker { fill: var(--orange); }
 .mistake-list .numline, .tricky .numline, .feedback .numline { width: 6em; vertical-align: middle; }
+.bshape .numline { width: min(340px, 78vw); }
+.duel .bshape .numline { width: min(260px, 100%); }
+.bshape { direction: ltr; }

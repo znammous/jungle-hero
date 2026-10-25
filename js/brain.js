@@ -26,11 +26,9 @@ const Brain = (() => {
     return s.brain || (s.brain = { best: 0, lv: {} });
   }
 
-  // مسائل المناطق المفتوحة في الغابة (الكسور لها مولّداتها في آخر الملف)
+  // مسائل المناطق المفتوحة في الغابة (الكسور والسالب لها مولّداتها في آخر الملف)
   function pool(p, w) {
-    if (w === 'frac') return { w };
-    // ألعابه مبنية على أعداد موجبة، فغابة السالب والموجب تأخذ مسائل غابة الجمع والطرح (مفتوحة قبلها دائماً)
-    if (w === 'neg') w = 'add';
+    if (w === 'frac' || w === 'neg') return { w };
     const W = Engine.world(w);
     const pairs = W.gen
       ? W.regions.slice(0, Engine.state(p, w).unlocked).flatMap(r => Engine.tablePool(r.table, p, w))
@@ -250,10 +248,85 @@ const Brain = (() => {
     };
   }
 
+  // ── غابة السالب والموجب: المستويات الأولى أعداد، ثم عمليات بالسالب تقترب نتائجها ──
+  const sgn = n => (n < 0 ? `−${-n}` : `${n}`);
+  const par = n => (n < 0 ? `(${sgn(n)})` : `${n}`);
+  const nz = (lo, hi) => { let n; do n = rnd(lo, hi); while (n === 0); return n; };
+  // العدد وحده لا يحتاج كشف ناتجه تحت الكفّة
+  const int = n => ({ answer: n, html: `<span dir="ltr">${sgn(n)}</span>`, reveal: '&nbsp;' });
+
+  // عملية بعدد سالب، وأنواعها تزيد مع المستوى: 3 + (−5)، −4 + (−2)، −6 + 4، 2 − 7، 3 − (−4)
+  function negExpr(lv) {
+    const kind = any(['pn', 'nn', 'np', 'sub', 'subn'].slice(0, Math.min(lv + 1, 5)));
+    let a, b, op = '+';
+    if (kind === 'pn') { a = rnd(1, 9); b = nz(-9, -1); }
+    else if (kind === 'nn') { a = nz(-9, -1); b = nz(-9, -1); }
+    else if (kind === 'np') { a = nz(-9, -1); b = rnd(1, 9); }
+    else if (kind === 'sub') { a = rnd(0, 9); b = rnd(a + 1, 12); op = '−'; }
+    else { a = nz(-9, 9); b = nz(-9, -1); op = '−'; }
+    const v = op === '+' ? a + b : a - b;
+    return { answer: v, html: `<span dir="ltr">${sgn(a)} ${op} ${par(b)}</span>`, reveal: `= ${sgn(v)}` };
+  }
+
+  // أيّهما أكبر: سالب وموجب، ثم سالبان متباعدان فمتقاربان (−3 أكبر من −8)، ثم عمليتان
+  function negCompare(lv) {
+    for (let i = 0; i < 100; i++) {
+      let x, y;
+      if (lv === 1) { x = int(nz(-9, -1)); y = int(rnd(0, 9)); }
+      else if (lv <= 3) {
+        const a = nz(-10, -1), d = lv === 2 ? rnd(3, 8) : rnd(1, 2);
+        x = int(a); y = int(a - d >= -12 ? a - d : a + d);
+        if (y.answer >= 0) continue;
+      } else {
+        x = negExpr(lv); y = negExpr(lv);
+        if (lv === 5 && Math.abs(x.answer - y.answer) > 3) continue;
+      }
+      if (x.answer !== y.answer) return Math.random() < 0.5 ? { x, y } : { x: y, y: x };
+    }
+    return { x: int(-3), y: int(-8) };
+  }
+
+  // اضغط كل ما يساوي −2، ومن البطاقات الخاطئة عكس الإشارة (2) لأنه الخطأ الأشهر
+  function negPick(lv, cap = 8) {
+    const size = Math.min(3 + lv, cap);
+    const byVal = new Map();
+    for (let i = 0; i < 500; i++) {
+      const e = negExpr(Math.max(lv, 2));
+      if (!byVal.has(e.answer)) byVal.set(e.answer, []);
+      const list = byVal.get(e.answer);
+      if (!list.some(x => x.html === e.html)) list.push(e);
+    }
+    const vals = [...byVal.keys()].filter(v => v !== 0 && Math.abs(v) <= 10 && byVal.get(v).length >= 2 && (lv > 2 || v < 0));
+    const n = vals.length ? any(vals) : -2;
+    if (!byVal.has(n)) byVal.set(n, [{ answer: n, html: `<span dir="ltr">3 + ${par(-5)}</span>` }]);
+    const good = shuffle(byVal.get(n)).slice(0, lv === 1 ? rnd(1, 2) : rnd(2, 3));
+    const near = shuffle([-n, n + 1, n - 1, n + 2, n - 2, n + 3, n - 3].filter(v => byVal.has(v)));
+    const bad = [];
+    for (let j = 0; near.length && bad.length < size - good.length && j < 60; j++) {
+      const v = near[j % near.length];
+      const c = any(byVal.get(v));
+      if (!bad.some(x => x.html === c.html)) bad.push(c);
+    }
+    const cards = good.map(c => Object.assign({ ok: true }, c)).concat(bad.map(c => Object.assign({ ok: false }, c)));
+    return { n, label: sgn(n), cards: shuffle(cards) };
+  }
+
+  // أين يشير السهم على خط الأعداد؟ وفي المستويات العليا يظهر لحظة ثم يختفي
+  function negArr(lv) {
+    const a = lv <= 2 ? nz(-9, -1) : nz(-10, 10);
+    const set = new Set([a]);
+    shuffle([-a, a + 1, a - 1, a + 2, a - 2]).forEach(v => { if (set.size < 4 && v !== 0) set.add(v); });
+    return {
+      flash: lv >= 4 ? (lv === 4 ? 2200 : 1500) : 0,
+      text: 'أين يشير السهم؟', answer: String(a), shape: Integers.make(`line:${a}`).text,
+      options: shuffle([...set]).map(v => ({ v: String(v), html: sgn(v) })),
+    };
+  }
+
   const make = {
-    cmp: (P, lv) => (P.w === 'frac' ? fracCompare(lv) : compare(P, lv)),
-    pick: (P, lv, cap) => (P.w === 'frac' ? fracPick(lv, cap) : pick(P, lv, cap)),
-    arr: (P, lv) => (P.w === 'frac' ? fracArr(lv) : arr(P, lv)),
+    cmp: (P, lv) => (P.w === 'frac' ? fracCompare(lv) : P.w === 'neg' ? negCompare(lv) : compare(P, lv)),
+    pick: (P, lv, cap) => (P.w === 'frac' ? fracPick(lv, cap) : P.w === 'neg' ? negPick(lv, cap) : pick(P, lv, cap)),
+    arr: (P, lv) => (P.w === 'frac' ? fracArr(lv) : P.w === 'neg' ? negArr(lv) : arr(P, lv)),
   };
 
   // المستوى يرتفع بعد إجابتين صحيحتين متتاليتين، وينزل مع كل خطأ

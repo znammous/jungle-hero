@@ -1996,8 +1996,9 @@
     else if (k === 'ok') { if (/\d/.test(round.input)) submit(); return; }
     else if (round.input.replace('-', '').length < 3) round.input += k;
     $('answer').innerHTML = round.input.replace('-', '−') || '&nbsp;';
-    // يُصحَّح تلقائياً عند كتابة عدد الأرقام الصحيح (مع الإشارة إن كان سالباً)
-    if (/\d/.test(round.input) && round.input.length === String(round.q.answer).length) submit();
+    // يُصحَّح تلقائياً عند كتابة عدد الأرقام الصحيح. أسئلة السالب تنتظر زر ✓،
+    // لأن التصحيح التلقائي يكشف الإشارة: يُصحَّح «7» فوراً إن كان الجواب 7، ولا يُصحَّح إن كان −7
+    if (!round.q.minus && /\d/.test(round.input) && round.input.length === String(round.q.answer).length) submit();
   }
 
   function submit() {
