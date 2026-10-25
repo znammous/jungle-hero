@@ -1205,3 +1205,46 @@ body.tabs .toast, body.tabs .update-bar { bottom: calc(84px + env(safe-area-inse
 .shot-layer { position: fixed; inset: 0; z-index: 50; background: rgba(10, 25, 14, 0.82); display: flex; align-items: center; justify-content: center; padding: 16px; animation: pop 0.3s; }
 .shot-box { display: flex; flex-direction: column; align-items: center; gap: 14px; width: 100%; max-width: 440px; }
 .shot-box img { width: 100%; max-height: 68vh; object-fit: contain; border-radius: var(--radius); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); }
+
+/* سجل الفائزين */
+.win-tally { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
+.win-champ { display: flex; flex-direction: column; align-items: center; min-width: 96px; padding: 8px 12px; border-radius: 16px; background: #fff; }
+.win-champ.first { background: #fff4c2; box-shadow: 0 4px 0 var(--sun); }
+.win-champ .avatar { font-size: 2.4rem; }
+.win-list { display: flex; flex-direction: column; gap: 10px; width: 100%; }
+.win-row { display: flex; align-items: center; gap: 12px; padding: 12px 14px; }
+.win-row .avatar { font-size: 2.2rem; }
+.win-info { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.win-info b small { color: var(--orange); font-size: 0.85rem; }
+.win-acts { display: flex; gap: 6px; }
+
+/* شهادة الفوز: نسبة A4 بالعرض، والمقاسات بوحدة cqw حتى تتناسب في المعاينة والطباعة */
+.cert-box { max-width: 900px; }
+.cert { width: 100%; aspect-ratio: 297 / 210; container-type: inline-size; background: #fffaf0; color: var(--ink); border-radius: 6px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); padding: 2.2cqw; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.cert-frame { position: relative; height: 100%; border: 1.1cqw double var(--leaf); outline: 0.35cqw solid var(--sun); outline-offset: -2.2cqw; border-radius: 1.2cqw; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.2cqw; text-align: center; padding: 3cqw 6cqw;
+  background: radial-gradient(circle at 50% 40%, #fff6d6, transparent 60%); }
+.cert-leaf { position: absolute; font-size: 5.5cqw; line-height: 1; }
+.cert-leaf.tl { top: 1.5cqw; left: 1.5cqw; } .cert-leaf.tr { top: 1.5cqw; right: 1.5cqw; }
+.cert-leaf.bl { bottom: 1.5cqw; left: 1.5cqw; } .cert-leaf.br { bottom: 1.5cqw; right: 1.5cqw; }
+.cert-app { font-size: 2cqw; color: var(--muted); font-weight: 700; }
+.cert-title { font-size: 6.5cqw; line-height: 1.1; color: var(--jungle); text-shadow: 0 0.3cqw 0 var(--sun); }
+.cert-line { font-size: 2.4cqw; }
+.cert-line b { color: var(--jungle); }
+.cert-name { display: flex; align-items: center; gap: 2cqw; font-size: 6cqw; font-weight: 800; line-height: 1.2; color: var(--orange); border-bottom: 0.3cqw dashed var(--sand-dark); padding: 0 3cqw 0.6cqw; }
+.cert-avatar { position: relative; font-size: 5.5cqw; }
+.cert-avatar i { position: absolute; top: -3cqw; left: 50%; transform: translateX(-50%); font-size: 3.4cqw; font-style: normal; }
+.cert-note { font-size: 1.9cqw; color: var(--muted); }
+.cert-foot { display: flex; align-items: flex-end; justify-content: space-between; width: 100%; margin-top: 1.5cqw; }
+.cert-foot > div:not(.cert-seal) { display: flex; flex-direction: column; align-items: center; width: 26cqw; }
+.cert-foot b { font-size: 2.1cqw; border-bottom: 0.2cqw solid var(--ink); width: 100%; padding-bottom: 0.4cqw; }
+.cert-foot small { font-size: 1.7cqw; color: var(--muted); margin-top: 0.4cqw; }
+.cert-seal { font-size: 6cqw; width: 10cqw; height: 10cqw; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle, #fff2a8, var(--sun) 60%, #d98a12); box-shadow: 0 0 0 0.5cqw #fff4c2, 0 0 0 0.8cqw #d98a12; }
+
+@page { size: A4 landscape; margin: 0; }
+@media print {
+  body { background: #fff !important; min-height: 0; }
+  body > *:not(#app), #app > *:not(.cert-layer), .tabbar, .invite-bar, .cert-box > .actions { display: none !important; }
+  .cert-layer { position: static; background: none; padding: 0; animation: none; display: block; }
+  .cert-box { max-width: none; display: block; }
+  .cert { width: 297mm; height: 210mm; aspect-ratio: auto; border-radius: 0; box-shadow: none; padding: 7mm; }
+}

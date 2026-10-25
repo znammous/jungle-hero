@@ -2,7 +2,8 @@
 const Store = (() => {
   const KEY = 'jungle-hero-v1';
   // deleted: معرّفات المحذوفين ووقت الحذف، حتى لا يعودوا من جهاز آخر
-  const state = { profiles: [], currentId: null, muted: false, settings: {}, settingsAt: 0, deleted: {}, linked: false };
+  // wins: سجل الفائزين في تحديات الإخوة على هذا الجهاز (لا يُرفع للسحابة)
+  const state = { profiles: [], currentId: null, muted: false, settings: {}, settingsAt: 0, deleted: {}, linked: false, wins: [] };
   // إعدادات ولي الأمر: الهدف اليومي بالدقائق، وتذكير الراحة (0 = بدون)، والرمز السري
   const DEFAULT_SETTINGS = { goalMin: 15, maxMin: 0, pin: null };
 
@@ -19,6 +20,7 @@ const Store = (() => {
     // ترقية البيانات المحفوظة من الإصدارات السابقة
     state.settings = Object.assign({}, DEFAULT_SETTINGS, state.settings);
     state.deleted = state.deleted || {};
+    state.wins = state.wins || [];
     state.profiles.forEach(p => {
       p.days = p.days || {};
       p.weeklyClaimed = p.weeklyClaimed || [];

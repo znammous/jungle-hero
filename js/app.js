@@ -527,7 +527,7 @@
         <header class="topbar">
           <button class="chip" data-act="go" data-arg="home">→ رجوع</button>
           <h2 class="topbar-title">⚔️ سباق الإخوة</h2>
-          <span></span>
+          <button class="chip" data-act="go" data-arg="winners">🏆 السجل</button>
         </header>
         <div class="duel-opts">
         <div class="seg duel-modes">
@@ -696,11 +696,7 @@
         <small>${x.out || (x.reachedAt ? '🏝️ وصل إلى جزيرته' : `🏝️ ${ltr(`${x.right}/${x.goal}`)}`)}</small>
         ${x.banners.map(t => `<div class="banner">${t}</div>`).join('')}
       </div>`;
-      lastWin = res.winner ? {
-        name: res.winner.p.name, avatar: res.winner.p.avatar, right: res.winner.right, wrong: res.winner.wrong,
-        kind: res.chart ? 'مبارزة العقول' : res.againLabel ? 'شدّ الحبل' : 'سباق النهر',
-        land: landName(duelLand), note: res.note || (res.winner.reachedAt ? 'وصل إلى جزيرته أولاً' : 'الأقرب إلى جزيرته'),
-      } : null;
+      lastWin = res.winner ? logWin(res) : null;
       render(`<section class="screen results duel-screen">
         <div class="result-hero">${res.winner ? '🏆' : '🤝'}</div>
         <h1>${title}</h1>
@@ -713,7 +709,45 @@
             : `<button class="btn orange" data-act="${res.net ? 'duelSetup' : 'startDuel'}">⚔️ سباق آخر</button>`}
           <button class="btn green" data-act="go" data-arg="home">🏠 الرئيسية</button>
         </div>
-        ${res.winner ? '<button class="btn shot-btn" data-act="winnerShot">📸 صورة الفائز</button>' : ''}
+        ${res.winner ? `<div class="actions pair">
+          <button class="btn shot-btn" data-act="winnerShot">📸 صورة الفائز</button>
+          <button class="btn shot-btn" data-act="certShow">🖨️ الشهادة</button>
+        </div>` : ''}
+        <button class="chip" data-act="go" data-arg="winners">🏆 سجل الفائزين</button>
+      </section>`);
+    },
+
+    // سجل الفائزين: عدد مرات فوز كل طفل، ثم كل الانتصارات من الأحدث مع الشهادة والصورة
+    winners() {
+      const wins = Store.state.wins.slice().reverse();
+      const tally = {};
+      wins.forEach(x => {
+        const t = tally[x.name] || (tally[x.name] = { name: x.name, avatar: x.avatar, n: 0 });
+        t.n++;
+      });
+      const top = Object.values(tally).sort((a, b) => b.n - a.n);
+      render(`<section class="screen duel-screen winners">
+        <header class="topbar">
+          <button class="chip" data-act="duelSetup">→ رجوع</button>
+          <h2 class="topbar-title">🏆 سجل الفائزين</h2>
+          <span></span>
+        </header>
+        ${wins.length ? `<div class="card win-tally">${top.map((t, i) => `<div class="win-champ ${i === 0 ? 'first' : ''}">
+            <span class="avatar">${t.avatar}</span><b>${esc(t.name)}</b><small>👑 ${ltr(t.n)} ${t.n === 1 ? 'فوز' : 'انتصارات'}</small>
+          </div>`).join('')}</div>
+        <div class="win-list">${wins.map(x => `<div class="card win-row">
+          <span class="avatar">${x.avatar}</span>
+          <div class="win-info">
+            <b>${esc(x.name)} <small>بطل ${x.kind}</small></b>
+            <small>${x.land} · ${winDate(x.at)}</small>
+            ${x.vs && x.vs.length ? `<small class="muted">ضد ${x.vs.map(esc).join(' و')}</small>` : ''}
+          </div>
+          <div class="win-acts">
+            <button class="chip" data-act="certShow" data-arg="${x.id}" aria-label="الشهادة">🖨️</button>
+            <button class="chip" data-act="winnerShot" data-arg="${x.id}" aria-label="الصورة">📸</button>
+          </div>
+        </div>`).join('')}</div>`
+        : `<div class="card center"><p>لا يوجد فائزون بعد 🌱</p><p class="muted">كل من يفوز في سباق النهر أو مبارزة العقول أو شدّ الحبل يُسجَّل هنا، ويمكنكم طباعة شهادته.</p></div>`}
       </section>`);
     },
 
@@ -2810,18 +2844,40 @@
   }
 
   // ───────────── الأزرار ─────────────
+  const winDate = at => new Date(at).toLocaleDateString('ar-SA-u-nu-latn-ca-gregory', { day: 'numeric', month: 'long', year: 'numeric' });
+  const MAX_WINS = 300;
+
+  // يسجّل الفائز في سجل الفائزين مرة واحدة لكل نتيجة، ويعيد السطر المسجّل
+  function logWin(res) {
+    if (res.logged) return res.logged;
+    const w = res.winner;
+    const entry = {
+      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 5), at: Date.now(),
+      name: w.p.name, avatar: w.p.avatar, right: w.right, wrong: w.wrong,
+      kind: res.chart ? 'مبارزة العقول' : res.againLabel ? 'شدّ الحبل' : 'سباق النهر',
+      land: landName(duelLand), note: res.note || (w.reachedAt ? 'وصل إلى جزيرته أولاً' : 'الأقرب إلى جزيرته'),
+      vs: res.sides.filter(x => x !== w).map(x => x.p.name),
+    };
+    Store.state.wins.push(entry);
+    Store.state.wins = Store.state.wins.slice(-MAX_WINS);
+    Store.save();
+    res.logged = entry;
+    return entry;
+  }
+  const winById = id => (id ? Store.state.wins.find(x => x.id === id) : lastWin);
+
   // بطاقة الفائز: تُعرض فوق شاشة النتيجة مع زرّي المشاركة والحفظ
   let shot = null;
-  async function winnerShot() {
-    if (!lastWin || document.querySelector('.shot-layer')) return;
-    const blob = await WinnerCard.draw({ ...lastWin, date: new Date().toLocaleDateString('ar-SA-u-nu-latn-ca-gregory', { day: 'numeric', month: 'long', year: 'numeric' }) });
+  async function winnerShot(win) {
+    if (!win || document.querySelector('.shot-layer')) return;
+    const blob = await WinnerCard.draw({ ...win, date: winDate(win.at) });
     if (!blob) { toast('تعذّر إنشاء الصورة'); return; }
-    const file = new File([blob], `بطل-الغابة-${lastWin.name}.png`, { type: 'image/png' });
+    const file = new File([blob], `بطل-الغابة-${win.name}.png`, { type: 'image/png' });
     shot = { url: URL.createObjectURL(blob), file };
     const canShare = navigator.canShare && navigator.canShare({ files: [file] });
     app.insertAdjacentHTML('beforeend', `<div class="shot-layer" data-act="closeShot">
       <div class="shot-box" data-act="keepShot">
-        <img src="${shot.url}" alt="بطاقة تهنئة ${esc(lastWin.name)}">
+        <img src="${shot.url}" alt="بطاقة تهنئة ${esc(win.name)}">
         <div class="actions pair">
           ${canShare ? '<button class="btn orange" data-act="shareShot">📤 مشاركة</button>' : ''}
           <button class="btn green" data-act="saveShot">💾 حفظ الصورة</button>
@@ -2836,8 +2892,40 @@
     shot = null;
   }
 
+  // شهادة الفوز: صفحة A4 بالعرض تُعرض للمعاينة ثم تُطبع (أو تُحفظ PDF من نافذة الطباعة)
+  function certShow(win) {
+    if (!win || document.querySelector('.shot-layer')) return;
+    app.insertAdjacentHTML('beforeend', `<div class="shot-layer cert-layer" data-act="closeShot">
+      <div class="shot-box cert-box" data-act="keepShot">
+        <div class="cert">
+          <div class="cert-frame">
+            <span class="cert-leaf tl">🌿</span><span class="cert-leaf tr">🌴</span>
+            <span class="cert-leaf bl">🍃</span><span class="cert-leaf br">🌿</span>
+            <small class="cert-app">🌳 أبطال الغابة 🌳</small>
+            <h1 class="cert-title">شهادة بطل</h1>
+            <p class="cert-line">تُمنح هذه الشهادة بكل فخر إلى</p>
+            <div class="cert-name"><span class="cert-avatar">${win.avatar}<i>👑</i></span>${esc(win.name)}</div>
+            <p class="cert-line">تقديراً للفوز في <b>«${win.kind}»</b> في ${win.land}</p>
+            <p class="cert-note">${esc(win.note)} · ✅ ${ltr(win.right)} إجابة صحيحة${win.vs && win.vs.length ? ` · ضد ${win.vs.map(esc).join(' و')}` : ''}</p>
+            <div class="cert-foot">
+              <div><b>${winDate(win.at)}</b><small>التاريخ</small></div>
+              <div class="cert-seal">🏆</div>
+              <div><b>&nbsp;</b><small>توقيع ولي الأمر</small></div>
+            </div>
+          </div>
+        </div>
+        <div class="actions pair">
+          <button class="btn green" data-act="certPrint">🖨️ طباعة</button>
+          <button class="btn orange" data-act="closeShot">✖ إغلاق</button>
+        </div>
+      </div>
+    </div>`);
+  }
+
   const actions = {
-    winnerShot() { winnerShot(); },
+    winnerShot(id) { winnerShot(winById(id)); },
+    certShow(id) { certShow(winById(id)); },
+    certPrint() { window.print(); },
     closeShot() { closeShot(); },
     keepShot() {},  // الضغط داخل البطاقة لا يغلقها، الخلفية المعتمة فقط
     shareShot() {
