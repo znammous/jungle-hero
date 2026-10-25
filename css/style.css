@@ -721,8 +721,8 @@ button.rank-badge { border: 0; font: inherit; font-weight: 800; cursor: pointer;
 .big-btn.blue { background: #3a78b8; }
 .menu .big-btn:last-child:nth-child(odd) { grid-column: 1 / -1; }
 .tricky { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin: 10px 0 14px; }
-.tricky span { background: #fff; border-radius: 14px; padding: 10px 16px; display: flex; flex-direction: column; align-items: center; }
-.tricky b { font-size: 1.5rem; }
+.tricky > span { background: #fff; border-radius: 14px; padding: 10px 16px; display: flex; flex-direction: column; align-items: center; }
+.tricky b { font-size: 1.5rem; white-space: nowrap; }
 .tricky small { color: var(--muted); }
 .menu > :last-child:nth-child(odd) { grid-column: span 2; }
 
@@ -952,9 +952,9 @@ body.tabs .toast, body.tabs .update-bar { bottom: calc(84px + env(safe-area-inse
 .question .q-prompt .fr { font-size: 1.1em; color: var(--ink); }
 /* دائرة أو شريط مقسوم، الملوّن منه هو الكسر */
 .shape { width: 1.5em; height: 1.5em; vertical-align: middle; }
-.shape.bar { width: 3em; height: 1.2em; }
+.shape.strip { width: 3em; height: 1.2em; }
 .question .shape { width: 120px; height: 120px; }
-.question .shape.bar { width: 240px; height: 96px; }
+.question .shape.strip { width: 240px; height: 96px; }
 .shape .on { fill: var(--orange); }
 .shape .off { fill: #fff; }
 .shape path, .shape rect { stroke: var(--ink); stroke-width: 2; stroke-linejoin: round; }
