@@ -532,7 +532,7 @@
         <header class="topbar">
           <button class="chip" data-act="go" data-arg="home">→ رجوع</button>
           <h2 class="topbar-title">⚔️ سباق الإخوة</h2>
-          <button class="chip" data-act="go" data-arg="winners">🏆 السجل</button>
+          <span></span>
         </header>
         <div class="duel-opts">
         <div class="seg duel-modes">
@@ -547,6 +547,7 @@
           ? `<button class="${duelLand === ALL_LANDS ? 'on' : ''}" data-act="setDuelLand" data-arg="${ALL_LANDS}">${landName(ALL_LANDS)}</button>` : ''}</div>
         ${brainKind ? `<div class="card"><h3>🎮 الألعاب</h3>${brainPickGrid(duelBrainPicks(), 'duelBrainToggle')}</div>` : ''}
         ${net ? sendBtn : ''}
+        <button class="btn shot-btn wide" data-act="go" data-arg="winners">🏆 سجل الفائزين</button>
         <div class="profile-grid">${list.map(p => {
           const i = duelPicks.indexOf(p.id);
           return `<button class="profile-card ${i >= 0 ? 'picked' : ''}" data-act="duelPick" data-arg="${p.id}">
