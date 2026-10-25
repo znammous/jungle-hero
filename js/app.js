@@ -866,6 +866,7 @@
     brainSetup() {
       const p = Store.current();
       const ids = brainChoice(p);
+      const first = ids.includes(p.brainFirst) ? p.brainFirst : '';
       const mins = Math.max(1, Math.round(ids.length * (Brain.SECONDS + 3) / 60));
       // العدد بالعربية: لعبة، لعبتان، 3 ألعاب
       const count = (n, one, two, many) => (n === 1 ? one : n === 2 ? two : `${ltr(n)} ${n <= 10 ? many : one}`);
@@ -879,6 +880,13 @@
           <h3>🎮 اختر ألعابك</h3>
           ${brainPickGrid(ids, 'brainToggle', true)}
         </div>
+        ${ids.length > 1 ? `<div class="card">
+          <h3>🏁 أول لعبة</h3>
+          <div class="bfirst">
+            <button class="${first ? '' : 'on'}" data-act="brainFirst" data-arg="">🎲 عشوائي</button>
+            ${ids.map(Brain.game).map(G => `<button class="${G.id === first ? 'on' : ''}" data-act="brainFirst" data-arg="${G.id}">${G.icon} ${G.name}</button>`).join('')}
+          </div>
+        </div>` : ''}
         <button class="btn orange wide" data-act="brainStart" ${ids.length ? '' : 'disabled'}>ابدأ ▶ ${ids.length ? `(${count(ids.length, 'لعبة', 'لعبتان', 'ألعاب')} · ${count(mins, 'دقيقة', 'دقيقتان', 'دقائق')} تقريباً)` : ''}</button>
         <button class="btn green wide" data-act="brainInvite">⚔️ ادعُ إخوتك لمبارزة العقول</button>
       </section>`);
@@ -2375,6 +2383,8 @@
     abortBrain();
     const w = Engine.current(p).id, ids = Brain.pickGames(brainChoice(p));
     if (!ids.length) { Screens.brainSetup(); return; }
+    // اللعبة التي اختار أن يبدأ بها أولاً، والباقي بترتيب عشوائي
+    if (ids.includes(p.brainFirst)) ids.unshift(...ids.splice(ids.indexOf(p.brainFirst), 1));
     brain = { duel: false, g: 0, ids, phase: 'intro', sides: [brainSideFor(p, w, ids)], timer: null, timeouts: [], secsAtStart: Journey.today(p).secs };
     Screens.brain();
   }
@@ -2966,6 +2976,11 @@
     brainToggle(id) {
       const p = Store.current();
       p.brainGames = toggleBrainId(brainChoice(p), id);
+      Store.save();
+      Screens.brainSetup();
+    },
+    brainFirst(id) {
+      Store.current().brainFirst = id;
       Store.save();
       Screens.brainSetup();
     },

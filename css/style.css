@@ -1178,3 +1178,6 @@ body.tabs .toast, body.tabs .update-bar { bottom: calc(84px + env(safe-area-inse
 .bpick-g.on::after { top: 4px; inset-inline-start: 8px; color: var(--leaf); font-weight: 800; }
 .bpick-icon { font-size: 1.8rem; }
 .bpick-g small { color: var(--muted); font-size: 0.8rem; line-height: 1.3; }
+.bfirst { display: flex; flex-wrap: wrap; gap: 8px; }
+.bfirst button { padding: 8px 12px; border-radius: 999px; background: #fff; border: 3px solid transparent; font-weight: 700; }
+.bfirst button.on { border-color: var(--orange); background: #ffefd9; }
