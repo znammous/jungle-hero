@@ -6,6 +6,7 @@
   let duel = null;        // سباق الإخوة الجاري على شاشة مقسومة
   let brain = null;       // تحدّي العقل الجاري: أربع ألعاب قصيرة متتالية
   let duelPicks = [];     // الطفلان المختاران لسباق الإخوة
+  let lastWin = null;      // بيانات بطاقة تهنئة آخر فائز في التحدي
   let duelLand = 'mul';    // غابة سباق الإخوة ومبارزة العقول: يختارها من يبدأ التحدي، والكل يلعب فيها
   let duelMode = 'net';   // 'net' عدة أجهزة (الافتراضي) | 'local' تابلت واحد
   let duelKind = 'race';  // 'race' سباق النهر | 'brain' مبارزة العقول | 'rope' شدّ الحبل (لاعبان فقط)
@@ -695,6 +696,11 @@
         <small>${x.out || (x.reachedAt ? '🏝️ وصل إلى جزيرته' : `🏝️ ${ltr(`${x.right}/${x.goal}`)}`)}</small>
         ${x.banners.map(t => `<div class="banner">${t}</div>`).join('')}
       </div>`;
+      lastWin = res.winner ? {
+        name: res.winner.p.name, avatar: res.winner.p.avatar, right: res.winner.right, wrong: res.winner.wrong,
+        kind: res.chart ? 'مبارزة العقول' : res.againLabel ? 'شدّ الحبل' : 'سباق النهر',
+        land: landName(duelLand), note: res.note || (res.winner.reachedAt ? 'وصل إلى جزيرته أولاً' : 'الأقرب إلى جزيرته'),
+      } : null;
       render(`<section class="screen results duel-screen">
         <div class="result-hero">${res.winner ? '🏆' : '🤝'}</div>
         <h1>${title}</h1>
@@ -707,6 +713,7 @@
             : `<button class="btn orange" data-act="${res.net ? 'duelSetup' : 'startDuel'}">⚔️ سباق آخر</button>`}
           <button class="btn green" data-act="go" data-arg="home">🏠 الرئيسية</button>
         </div>
+        ${res.winner ? '<button class="btn shot-btn" data-act="winnerShot">📸 صورة الفائز</button>' : ''}
       </section>`);
     },
 
@@ -2803,7 +2810,47 @@
   }
 
   // ───────────── الأزرار ─────────────
+  // بطاقة الفائز: تُعرض فوق شاشة النتيجة مع زرّي المشاركة والحفظ
+  let shot = null;
+  async function winnerShot() {
+    if (!lastWin || document.querySelector('.shot-layer')) return;
+    const blob = await WinnerCard.draw({ ...lastWin, date: new Date().toLocaleDateString('ar-SA-u-nu-latn-ca-gregory', { day: 'numeric', month: 'long', year: 'numeric' }) });
+    if (!blob) { toast('تعذّر إنشاء الصورة'); return; }
+    const file = new File([blob], `بطل-الغابة-${lastWin.name}.png`, { type: 'image/png' });
+    shot = { url: URL.createObjectURL(blob), file };
+    const canShare = navigator.canShare && navigator.canShare({ files: [file] });
+    app.insertAdjacentHTML('beforeend', `<div class="shot-layer" data-act="closeShot">
+      <div class="shot-box" data-act="keepShot">
+        <img src="${shot.url}" alt="بطاقة تهنئة ${esc(lastWin.name)}">
+        <div class="actions pair">
+          ${canShare ? '<button class="btn orange" data-act="shareShot">📤 مشاركة</button>' : ''}
+          <button class="btn green" data-act="saveShot">💾 حفظ الصورة</button>
+        </div>
+        <button class="chip" data-act="closeShot">✖ إغلاق</button>
+      </div>
+    </div>`);
+  }
+  function closeShot() {
+    document.querySelector('.shot-layer')?.remove();
+    if (shot) URL.revokeObjectURL(shot.url);
+    shot = null;
+  }
+
   const actions = {
+    winnerShot() { winnerShot(); },
+    closeShot() { closeShot(); },
+    keepShot() {},  // الضغط داخل البطاقة لا يغلقها، الخلفية المعتمة فقط
+    shareShot() {
+      if (shot) navigator.share({ files: [shot.file], title: 'بطل الغابة 👑' }).catch(() => {});
+    },
+    saveShot() {
+      if (!shot) return;
+      const a = document.createElement('a');
+      a.href = shot.url;
+      a.download = shot.file.name;
+      a.click();
+      toast('💾 حُفظت الصورة');
+    },
     go: arg => go(arg),
 
     // المستكشفون من الإصدارات السابقة بلا رمز يختارون رمزاً أول مرة
