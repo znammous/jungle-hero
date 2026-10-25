@@ -8,7 +8,8 @@ const Brain = (() => {
     return a;
   };
 
-  const SECONDS = 45;   // مدة كل لعبة
+  const SECONDS = 45;        // مدة كل لعبة
+  const DUEL_SECONDS = 30;   // مدة كل لعبة في مبارزة العقول
   const MAX_LV = 5;
   const FRUITS = ['🍎', '🍌', '🍓', '🥥', '🍊', '🍇', '🥭', '🍐'];
 
@@ -80,8 +81,9 @@ const Brain = (() => {
     return out;
   }
 
-  function pick(P, lv) {
-    const size = Math.min(3 + lv, 8);
+  // cap = أكبر عدد للبطاقات (أقل في الشاشة المقسومة)
+  function pick(P, lv, cap = 8) {
+    const size = Math.min(3 + lv, cap);
     for (let i = 0; i < 80; i++) {
       const n = any(P.qs).answer;
       const good = shuffle(ways(P, n));
@@ -130,7 +132,8 @@ const Brain = (() => {
       const { a, b } = q;
       return {
         fruit, flash, text: 'كم ثمرة؟', answer: a * b,
-        groups: [{ count: a * b, cols: b }],
+        // الصفوف أقل من الأعمدة حتى تتسع المصفوفة بالعرض
+        groups: [{ count: a * b, cols: Math.max(a, b) }],
         options: choices(a * b, [a * (b + 1), a * (b - 1), (a + 1) * b, (a - 1) * b, a * b + 1, a * b - 1], lv),
       };
     }
@@ -191,8 +194,8 @@ const Brain = (() => {
   }
 
   // اضغط كل الكسور التي تساوي الكسر (½ = 2/4 = 3/6)، ومن المستوى الثاني تظهر الرسوم أيضاً
-  function fracPick(lv) {
-    const size = Math.min(3 + lv, 8);
+  function fracPick(lv, cap = 8) {
+    const size = Math.min(3 + lv, cap);
     const d = rnd(2, Math.min(2 + lv, 6));
     let k = rnd(1, d - 1);
     if (gcd(k, d) > 1) k = 1;
@@ -247,7 +250,7 @@ const Brain = (() => {
 
   const make = {
     cmp: (P, lv) => (P.w === 'frac' ? fracCompare(lv) : compare(P, lv)),
-    pick: (P, lv) => (P.w === 'frac' ? fracPick(lv) : pick(P, lv)),
+    pick: (P, lv, cap) => (P.w === 'frac' ? fracPick(lv, cap) : pick(P, lv, cap)),
     arr: (P, lv) => (P.w === 'frac' ? fracArr(lv) : arr(P, lv)),
   };
 
@@ -267,5 +270,5 @@ const Brain = (() => {
 
   const medal = pts => (pts >= 300 ? '🥇' : pts >= 180 ? '🥈' : pts >= 80 ? '🥉' : '🎖️');
 
-  return { SECONDS, GAMES, state, pool, make, step, medal };
+  return { SECONDS, DUEL_SECONDS, GAMES, state, pool, make, step, medal };
 })();

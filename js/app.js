@@ -7,6 +7,7 @@
   let brain = null;       // تحدّي العقل الجاري: ثلاث ألعاب قصيرة متتالية
   let duelPicks = [];     // الطفلان المختاران لسباق الإخوة
   let duelMode = 'local'; // 'local' تابلت واحد | 'net' عدة أجهزة
+  let duelKind = 'race';  // 'race' سباق النهر | 'brain' مبارزة العقول (على جهاز واحد فقط)
   let netPending = null;  // دعوة سباق على عدة أجهزة قبل أن يبدأ: { id, role, pid }
   let newAvatar = AVATARS[0];
   let welcomeSkipped = false;   // اختار «متابعة بدون مزامنة» في هذه المرة
@@ -511,6 +512,7 @@
       const canNet = Sync.duel.ready();
       const picked = duelPicks.map(id => list.find(p => p.id === id));
       const layout = duelLayout(n);
+      const brainKind = !net && duelKind === 'brain';
       render(`<section class="screen duel-screen">
         <header class="topbar">
           <button class="chip" data-act="go" data-arg="profiles">→ رجوع</button>
@@ -521,19 +523,26 @@
           <button class="${net ? '' : 'on'}" data-act="setDuelMode" data-arg="local">📱 جهاز واحد</button>
           <button class="${net ? 'on' : ''}" data-act="setDuelMode" data-arg="net">🌐 عدة أجهزة</button>
         </div>
+        ${net ? '' : `<div class="seg duel-modes">
+          <button class="${brainKind ? '' : 'on'}" data-act="setDuelKind" data-arg="race">🏃 سباق النهر</button>
+          <button class="${brainKind ? 'on' : ''}" data-act="setDuelKind" data-arg="brain">🧠 مبارزة العقول</button>
+        </div>`}
         <div class="card">
-          <p>${net ? `اختر نفسك، ثم يقبل إخوتك الدعوة على أجهزتهم (حتى ${ltr(MAX_PLAYERS)} لاعبين).` : `اختر من 2 إلى ${ltr(MAX_PLAYERS)} متسابقين.`}
+          ${brainKind ? `<p>كل واحد يُسأل من غابته، والصعوبة تتكيّف معه وحده: تصعب كلما أجاب صحيحاً.
+            ثلاث ألعاب، ${ltr(Brain.DUEL_SECONDS)} ثانية لكل منها، ومن يُجب صحيحاً أكثر يفوز باللعبة.
+            <b>الفائز من يكسب ألعاباً أكثر!</b></p>
+          <p class="muted">${n === 4 ? '⚠️ أربعة على تابلت واحد: الأزرار أصغر، والأفضل تابلت كبير.' : 'ضعوا التابلت بينكم، ولكل واحد جزء من الشاشة يضغط فيه.'}</p>` : `<p>${net ? `اختر نفسك، ثم يقبل إخوتك الدعوة على أجهزتهم (حتى ${ltr(MAX_PLAYERS)} لاعبين).` : `اختر من 2 إلى ${ltr(MAX_PLAYERS)} متسابقين.`}
             كل واحد يُسأل من جداوله، وجزيرته على بُعد أفضل نتيجة له وإجابتين.
             <b>الأول من يصل إلى جزيرته أولاً!</b></p>
           <p class="muted">${net
             ? (canNet ? 'تحتاج الأجهزة إلى الإنترنت وحساب Google نفسه.' : '⚠️ سجّل دخول ولي الأمر بحساب Google على كل الأجهزة أولاً، مع اتصال بالإنترنت.')
-            : n === 4 ? '⚠️ أربعة على تابلت واحد: الأزرار أصغر، والأفضل تابلت كبير.' : 'ضعوا التابلت بينكم، ولكل واحد لوحة أرقامه.'}</p>
+            : n === 4 ? '⚠️ أربعة على تابلت واحد: الأزرار أصغر، والأفضل تابلت كبير.' : 'ضعوا التابلت بينكم، ولكل واحد لوحة أرقامه.'}</p>`}
         </div>
         <div class="profile-grid">${list.map(p => {
           const i = duelPicks.indexOf(p.id);
           return `<button class="profile-card ${i >= 0 ? 'picked' : ''}" data-act="duelPick" data-arg="${p.id}">
             <span class="avatar">${p.avatar}</span><b>${esc(p.name)}</b>
-            <small>🏝️ هدفه ${ltr(duelGoal(p))}</small>
+            <small>${brainKind ? `${Engine.current(p).icon} ${Engine.current(p).name}` : `🏝️ هدفه ${ltr(duelGoal(p))}`}</small>
             ${i >= 0 && !net ? `<span class="pick-no">${ltr(i + 1)}</span>` : ''}
           </button>`;
         }).join('')}</div>
@@ -546,6 +555,7 @@
         </div>`}
         ${net
           ? `<button class="btn green wide" data-act="netHost" ${n === 1 && canNet ? '' : 'disabled'}>📨 أرسل الدعوة</button>`
+          : brainKind ? `<button class="btn green wide" data-act="startBrainDuel" ${n >= 2 ? '' : 'disabled'}>🧠 ابدأ المبارزة</button>`
           : `<button class="btn green wide" data-act="startDuel" ${n >= 2 ? '' : 'disabled'}>🏁 ابدأ السباق</button>`}
       </section>`);
     },
@@ -658,7 +668,9 @@
         <p class="hint">${res.note || (res.winner && res.winner.reachedAt ? 'وصل إلى جزيرته أولاً' : res.winner ? 'الأقرب إلى جزيرته' : 'وصلوا بنفس النسبة')}</p>
         <div class="duel-cards">${res.sides.map(card).join('')}</div>
         <div class="actions">
-          <button class="btn orange" data-act="${res.net ? 'duelSetup' : 'startDuel'}">⚔️ سباق آخر</button>
+          ${res.again
+            ? `<button class="btn orange" data-act="${res.again}">🧠 مبارزة أخرى</button>`
+            : `<button class="btn orange" data-act="${res.net ? 'duelSetup' : 'startDuel'}">⚔️ سباق آخر</button>`}
           <button class="btn green" data-act="go" data-arg="profiles">🏠 الرئيسية</button>
         </div>
       </section>`);
@@ -800,8 +812,9 @@
     brain() {
       const b = brain;
       const G = Brain.GAMES[b.g];
+      const games = b.sides[0].games;
       const steps = `<div class="brain-steps">${Brain.GAMES.map((x, i) =>
-        `<span class="${i < b.g ? 'done' : i === b.g ? 'on' : ''}">${i < b.g ? b.games[i].medal : x.icon}</span>`).join('')}</div>`;
+        `<span class="${i < b.g ? 'done' : i === b.g ? 'on' : ''}">${i < b.g ? games[i].medal : x.icon}</span>`).join('')}</div>`;
       if (b.phase === 'intro') {
         render(`<section class="screen brain">
           <header class="topbar">
@@ -824,13 +837,41 @@
         <header class="topbar">
           <button class="chip" data-act="exitBrain" aria-label="خروج">✕</button>
           <h2 class="topbar-title">${G.icon} ${G.name}</h2>
-          <div class="chip">🧠 <b id="bScore">0</b></div>
+          <div class="chip">🧠 <b id="bScore0">0</b></div>
         </header>
         ${steps}
         <div class="timebar"><i id="timebar"></i><span id="timeText">${Brain.SECONDS}</span></div>
-        <div class="brain-lv" id="bLv"></div>
-        <div class="brain-stage" id="bStage"></div>
-        <div id="feedback" class="feedback"></div>
+        <div class="brain-lv" id="bLv0"></div>
+        <div class="brain-stage" id="bStage0"></div>
+        <div id="bFb0" class="feedback"></div>
+      </section>`);
+    },
+
+    // مبارزة العقول: نفس تقسيم شاشة سباق الإخوة، ولكل لاعب أسئلته ومستواه
+    brainDuel() {
+      const G = Brain.GAMES[brain.g];
+      const half = (s, i) => `<div class="duel-half bhalf" data-side="${i}">
+        <div class="duel-head">
+          <b>${s.p.avatar} ${esc(s.p.name)}</b>
+          <span class="chip">✅ <b id="bScore${i}">0</b></span>
+        </div>
+        <div class="brain-lv" id="bLv${i}"></div>
+        <div class="brain-stage" id="bStage${i}"></div>
+        <div class="feedback" id="bFb${i}"></div>
+      </div>`;
+      const mid = `<div class="duel-mid">
+          <button class="chip" data-act="exitBrain" aria-label="خروج">✕</button>
+          <span class="bmid-game">${G.icon}</span>
+          <div class="timebar"><i id="timebar"></i><span id="timeText">${Brain.DUEL_SECONDS}</span></div>
+        </div>`;
+      const n = brain.sides.length;
+      if (n === 2) {
+        render(`<section class="duel brain ${duelLayout(2)}">${half(brain.sides[0], 0)}${mid}${half(brain.sides[1], 1)}</section>`);
+        return;
+      }
+      render(`<section class="duel brain multi ${duelLayout(n)}">
+        ${mid}
+        <div class="duel-grid">${brain.sides.map(half).join('')}</div>
       </section>`);
     },
 
@@ -2010,128 +2051,154 @@
   }
 
   // ───── تحدّي العقل ─────
-  function startBrain() {
-    const p = Store.current();
+  // brain.sides: لاعب واحد من المخيّم، أو من 2 إلى 4 في مبارزة العقول على شاشة مقسومة.
+  // كل لاعب يُسأل من غابته الحالية وبمستواه هو
+  function brainSideFor(p) {
     const w = Engine.current(p).id;
     const bs = Brain.state(p, w);
-    abortBrain();
-    brain = {
-      w, g: 0, phase: 'intro', P: null, q: null, locked: true, timer: null, timeouts: [],
-      secsAtStart: Journey.today(p).secs,
+    return {
+      p, w, P: null, q: null, locked: true,
       // كل لعبة تبدأ أقل بمستوى من آخر ما وصل إليه، ليبدأ مرتاحاً
       games: Brain.GAMES.map(G => {
         const lv = Math.max(1, (bs.lv[G.id] || 1) - 1);
-        return { id: G.id, lv, top: lv, streak: 0, right: 0, wrong: 0, points: 0, medal: '' };
+        return { id: G.id, lv, top: lv, streak: 0, right: 0, wrong: 0, points: 0, medal: '', won: false };
       }),
     };
+  }
+
+  function startBrain() {
+    const p = Store.current();
+    abortBrain();
+    brain = { duel: false, g: 0, phase: 'intro', sides: [brainSideFor(p)], timer: null, timeouts: [], secsAtStart: Journey.today(p).secs };
     Screens.brain();
+  }
+
+  function startBrainDuel() {
+    const players = duelPicks.map(id => Store.state.profiles.find(p => p.id === id));
+    if (players.length < 2 || players.some(p => !p)) { Screens.duelPick(); return; }
+    abortBrain();
+    brain = { duel: true, g: 0, phase: 'play', sides: players.map(brainSideFor), timer: null, timeouts: [] };
+    brainGo();
   }
 
   // تتوقف اللعبة إذا غادرت الشاشة بأي طريقة
   function brainAlive() {
-    if (brain && !app.querySelector('.screen.brain')) abortBrain();
+    if (brain && !app.querySelector('.brain')) abortBrain();
     return !!brain;
   }
-  const brainLive = () => (brainAlive() && !brain.locked ? brain : null);
+  const brainSide = i => (brainAlive() && brain.phase === 'play' && !brain.sides[i].locked ? brain.sides[i] : null);
 
   function abortBrain() {
     if (!brain) return;
     clearInterval(brain.timer);
     brain.timeouts.forEach(clearTimeout);
-    // الوقت الذي لُعب يُحسب في وقت اليوم
-    if (brain.t0) Journey.today(Store.current()).secs += (performance.now() - brain.t0) / 1000;
+    // الوقت الذي لُعب يُحسب في وقت اليوم لكل لاعب
+    if (brain.t0) brain.sides.forEach(s => { Journey.today(s.p).secs += (performance.now() - brain.t0) / 1000; });
     brain = null;
     document.body.classList.remove('bgrest');
     Store.save();
   }
 
   function brainGo() {
-    if (!brainAlive()) return;
-    const p = Store.current();
-    brain.phase = 'play';
-    brain.P = Brain.pool(p, brain.w);
-    Screens.brain();
-    brainLevel();
+    if (!brain) return;
+    const b = brain;
+    b.phase = 'play';
+    b.sides.forEach(s => { s.P = Brain.pool(s.p, s.w); s.locked = true; });
+    b.duel ? Screens.brainDuel() : Screens.brain();
+    b.sides.forEach((_, i) => brainLevel(i));
+    const G = Brain.GAMES[b.g];
     const tick = n => {
       if (!brainAlive()) return;
       if (n === 0) {
         Sound.play('go');
-        const total = Brain.SECONDS * 1000;
-        brain.t0 = brain.t0 || performance.now();
-        brain.endsAt = performance.now() + total;
-        brain.timer = setInterval(() => {
+        const total = (b.duel ? Brain.DUEL_SECONDS : Brain.SECONDS) * 1000;
+        b.t0 = b.t0 || performance.now();
+        b.endsAt = performance.now() + total;
+        b.timer = setInterval(() => {
           if (!brainAlive()) return;
-          const left = brain.endsAt - performance.now();
+          const left = b.endsAt - performance.now();
           const tb = $('timebar');
-          tb.style.width = Math.max(0, (left / total) * 100) + '%';
+          if (b.duel) tb.style.setProperty('--t', Math.max(0, left / total));
+          else tb.style.width = Math.max(0, (left / total) * 100) + '%';
           tb.classList.toggle('hurry', left <= 10000);
           $('timeText').textContent = Math.max(0, Math.ceil(left / 1000));
           if (left <= 0) brainEndGame();
         }, 100);
-        brainNext();
+        b.sides.forEach((_, i) => brainNext(i));
         return;
       }
       Sound.play('tick');
-      $('bStage').innerHTML = `<div class="question"><span class="count">${n}</span></div>`;
-      brain.timeouts.push(setTimeout(() => tick(n - 1), 800));
+      b.sides.forEach((_, i) => {
+        $(`bStage${i}`).innerHTML = (b.duel ? `<div class="bgame">${G.icon} ${G.name}<small>${G.how}</small></div>` : '') +
+          `<div class="question"><span class="count">${n}</span></div>`;
+      });
+      b.timeouts.push(setTimeout(() => tick(n - 1), 800));
     };
     tick(3);
   }
 
-  function brainLevel() {
-    const g = brain.games[brain.g];
-    $('bLv').innerHTML = `المستوى ${'⭐'.repeat(g.lv)}<span class="dim">${'⭐'.repeat(5 - g.lv)}</span>`;
-    $('bScore').textContent = g.points;
+  function brainLevel(i) {
+    const g = brain.sides[i].games[brain.g];
+    $(`bLv${i}`).innerHTML = `المستوى ${'⭐'.repeat(g.lv)}<span class="dim">${'⭐'.repeat(5 - g.lv)}</span>`;
+    // في المبارزة تُعدّ الإجابات الصحيحة، لأن لكل لاعب مستواه
+    $(`bScore${i}`).textContent = brain.duel ? g.right : g.points;
   }
 
   const brainExpr = c => c.html || `<span dir="ltr">${c.a} ${c.op} ${c.b}</span>`;
 
-  function brainNext() {
+  function brainNext(i) {
     if (!brainAlive()) return;
     const b = brain;
-    const g = b.games[b.g];
-    // مسائل الجمع والطرح عشوائية، فتتجدّد مع كل سؤال
-    if (Engine.world(b.w).gen) b.P = Brain.pool(Store.current(), b.w);
-    const q = Brain.make[g.id](b.P, g.lv);
-    if (!q) { brainEndGame(); return; }
-    b.q = q;
-    $('feedback').textContent = '';
-    const stage = $('bStage');
+    const s = b.sides[i];
+    const g = s.games[b.g];
+    // مسائل الجمع والطرح والكسور عشوائية، فتتجدّد مع كل سؤال
+    if (Engine.world(s.w).gen) s.P = Brain.pool(s.p, s.w);
+    // شاشة المبارزة أضيق، فبطاقات أقل
+    const q = Brain.make[g.id](s.P, g.lv, b.duel ? 6 : 8);
+    if (!q) { s.locked = true; return; }
+    s.q = q;
+    $(`bFb${i}`).textContent = '';
+    const stage = $(`bStage${i}`);
     if (g.id === 'cmp') {
       stage.innerHTML = `<div class="scale">
-        ${[q.x, q.y].map((c, i) => `<button class="pan" data-act="brainCmp" data-arg="${i}">
+        ${[q.x, q.y].map((c, k) => `<button class="pan" data-act="brainCmp" data-arg="${i}:${k}">
           <span class="expr">${brainExpr(c)}</span><span class="val" dir="ltr"></span></button>`).join('<span class="fulcrum">⚖️</span>')}
       </div>`;
     } else if (g.id === 'pick') {
       stage.innerHTML = `<div class="target">اضغط كل ما يساوي <b dir="ltr">${q.label || q.n}</b></div>
-        <div class="bcards">${q.cards.map((c, i) => `<button class="bcard" data-act="brainCard" data-arg="${i}">${brainExpr(c)}</button>`).join('')}</div>`;
+        <div class="bcards">${q.cards.map((c, k) => `<button class="bcard" data-act="brainCard" data-arg="${i}:${k}">${brainExpr(c)}</button>`).join('')}</div>`;
     } else {
       const total = q.groups ? q.groups.reduce((n, x) => n + x.count, 0) : 0;
-      const fruits = x => Array.from({ length: x.count }, (_, i) =>
-        `<i class="${x.crossed && i >= x.count - x.crossed ? 'x' : ''}">${q.fruit}</i>`).join('');
+      const fruits = x => Array.from({ length: x.count }, (_, k) =>
+        `<i class="${x.crossed && k >= x.count - x.crossed ? 'x' : ''}">${q.fruit}</i>`).join('');
       stage.innerHTML = `<p class="arr-text">${q.text}</p>
-        <div class="fruits ${total > 50 ? 'many' : ''} ${q.rows || (q.groups || []).some(x => x.label) ? 'rows' : ''}" id="bFruits">
+        <div class="fruits ${total > 50 ? 'many' : ''} ${q.rows || (q.groups || []).some(x => x.label) ? 'rows' : ''}">
           ${q.shape ? `<div class="bshape">${q.shape}</div>` : q.groups.map(x => `${x.plus ? '<span class="plus">+</span>' : ''}<div class="fgroup">
             ${x.label ? `<span class="basket">${x.label}</span>` : ''}
             <div class="fgrid" style="grid-template-columns:repeat(${x.cols},auto)">${fruits(x)}</div></div>`).join('')}
         </div>
         <div class="bchoices" dir="ltr">${q.options.map(o => (typeof o === 'object' ? o : { v: o, html: o })).map(o =>
-          `<button class="bchoice" data-act="brainChoice" data-arg="${o.v}">${o.html}</button>`).join('')}</div>`;
+          `<button class="bchoice" data-act="brainChoice" data-arg="${i}:${o.v}">${o.html}</button>`).join('')}</div>`;
       // المستويات العليا: الثمار تظهر لحظة ثم تُغطّى، فيحسب بدل أن يعدّ
-      if (q.flash) b.timeouts.push(setTimeout(() => { if (brain === b && b.q === q && !b.locked) $('bFruits').classList.add('covered'); }, q.flash));
+      if (q.flash) {
+        b.timeouts.push(setTimeout(() => {
+          if (brain === b && s.q === q && !s.locked) stage.querySelector('.fruits').classList.add('covered');
+        }, q.flash));
+      }
     }
-    b.locked = false;
+    s.locked = false;
   }
 
-  function brainAnswer(ok) {
+  function brainAnswer(i, ok) {
     const b = brain;
-    const g = b.games[b.g];
-    b.locked = true;
+    const s = b.sides[i];
+    const g = s.games[b.g];
+    s.locked = true;
     Brain.step(g, ok);
     Sound.play(ok ? 'right' : 'wrong');
-    $('feedback').textContent = ok ? ['رائع! 🎉', 'صحيح! ⭐', 'ممتاز! 🌟', 'أحسنت! 👏'][g.right % 4] : 'لا بأس، ركّز في التالي 💪';
-    brainLevel();
-    b.timeouts.push(setTimeout(brainNext, ok ? 450 : 1300));
+    $(`bFb${i}`).textContent = ok ? ['رائع! 🎉', 'صحيح! ⭐', 'ممتاز! 🌟', 'أحسنت! 👏'][g.right % 4] : 'لا بأس، ركّز في التالي 💪';
+    brainLevel(i);
+    b.timeouts.push(setTimeout(() => brainNext(i), ok ? 450 : 1300));
   }
 
   function brainEndGame() {
@@ -2139,39 +2206,85 @@
     clearInterval(b.timer);
     b.timeouts.forEach(clearTimeout);
     b.timeouts = [];
-    b.locked = true;
-    const g = b.games[b.g];
-    g.medal = Brain.medal(g.points);
+    b.sides.forEach(s => { s.locked = true; });
+    const games = b.sides.map(s => s.games[b.g]);
+    games.forEach(g => { g.medal = Brain.medal(g.points); });
+    let note;
+    if (b.duel) {
+      // يفوز باللعبة من أجاب صحيحاً أكثر (ويتشارك المتساوون)
+      const top = Math.max(...games.map(g => g.right));
+      if (top > 0) games.forEach(g => { g.won = g.right === top; });
+      const won = b.sides.filter(s => s.games[b.g].won);
+      note = won.length === 1 ? `👑 ${won[0].p.avatar} ${won[0].p.name} فاز باللعبة` : won.length ? '🤝 تعادل في هذه اللعبة' : '';
+    } else {
+      note = `${games[0].medal} ${games[0].points} نقطة`;
+    }
     if (++b.g < Brain.GAMES.length) {
-      b.phase = 'intro';
       Sound.play('coin');
-      Screens.brain();
-      toast(`${g.medal} ${g.points} نقطة`, 1800);
+      if (note) toast(note, 1800);
+      if (b.duel) {
+        b.phase = 'wait';
+        b.timeouts.push(setTimeout(() => { if (brainAlive()) brainGo(); }, 2000));
+      } else {
+        b.phase = 'intro';
+        Screens.brain();
+      }
       return;
     }
-    finishBrain();
+    b.duel ? finishBrainDuel() : finishBrain();
   }
 
   function finishBrain() {
     const b = brain;
+    const side = b.sides[0];
     abortBrain();
-    const p = Store.current();
-    const bs = Brain.state(p, b.w);
+    const p = side.p;
+    const bs = Brain.state(p, side.w);
     const coinsBefore = p.coins;
-    const grams = b.games.reduce((n, g) => n + g.points, 0);
-    const right = b.games.reduce((n, g) => n + g.right, 0);
+    const grams = side.games.reduce((n, g) => n + g.points, 0);
+    const right = side.games.reduce((n, g) => n + g.right, 0);
     p.coins += Math.floor(right * COINS.perCorrect) + COINS.roundDone;
     const newRecord = grams > bs.best && bs.best > 0;
     if (grams > bs.best) { bs.best = grams; p.coins += COINS.raceRecord; }
-    b.games.forEach(g => { bs.lv[g.id] = g.lv; });
+    side.games.forEach(g => { bs.lv[g.id] = g.lv; });
     const goalMin = Store.state.settings.goalMin;
     const summary = {
-      grams, best: bs.best, games: b.games, newRecord, coins: p.coins - coinsBefore,
+      grams, best: bs.best, games: side.games, newRecord, coins: p.coins - coinsBefore,
       goalReached: b.secsAtStart < goalMin * 60 && Journey.today(p).secs >= goalMin * 60,
     };
     Store.save();
     Sound.play(newRecord ? 'win' : 'coin');
     Screens.brainResults(summary);
+  }
+
+  // المراكز: الأكثر فوزاً بالألعاب، ثم الأكثر إجابات صحيحة، والمتساوون يتشاركون المركز
+  function finishBrainDuel() {
+    const b = brain;
+    abortBrain();
+    const list = b.sides.map(s => ({
+      p: s.p, s,
+      wins: s.games.filter(g => g.won).length,
+      right: s.games.reduce((n, g) => n + g.right, 0),
+      banners: [],
+    }));
+    const cmp = (x, y) => y.wins - x.wins || y.right - x.right;
+    const ranked = list.slice().sort(cmp);
+    ranked.forEach((x, i) => { x.place = i && cmp(ranked[i - 1], x) === 0 ? ranked[i - 1].place : i + 1; });
+    const winner = soleWinner(ranked);
+    list.forEach(x => {
+      const before = x.p.coins;
+      x.p.coins += Math.floor(x.right * COINS.perCorrect) + (x === winner ? COINS.duelWin : 0);
+      const bs = Brain.state(x.p, x.s.w);
+      x.s.games.forEach(g => { bs.lv[g.id] = g.lv; });
+      x.coins = x.p.coins - before;
+      x.out = Brain.GAMES.map((G, j) => `${G.icon} ${x.s.games[j].won ? '👑' : ''}${x.s.games[j].right}`).join(' · ');
+    });
+    Store.save();
+    Sound.play('win');
+    Screens.duelResults({
+      sides: ranked, winner, again: 'startBrainDuel',
+      note: winner ? `فاز بـ ${winner.wins} من ${Brain.GAMES.length} ألعاب` : 'نفس عدد الألعاب والإجابات الصحيحة',
+    });
   }
 
   const pinDots = buf => [0, 1, 2, 3].map(i => `<i class="${i < buf.length ? 'on' : ''}"></i>`).join('');
@@ -2413,46 +2526,59 @@
     exitRound() { if (round && !navBack()) go('camp'); },
 
     startBrain() { startBrain(); },
+    startBrainDuel() { startBrainDuel(); },
+    setDuelKind(k) { duelKind = k; Screens.duelPick(); },
     brainGo() { brainGo(); },
-    exitBrain() { if (brain && !navBack()) go('camp'); },
+    exitBrain() {
+      if (!brainAlive()) return;
+      if (brain.duel && !confirm('إيقاف المبارزة؟ لن تُحسب النتيجة.')) return;
+      if (!navBack()) go('camp');
+    },
 
-    brainCmp(i) {
-      const b = brainLive();
-      if (!b) return;
-      const { x, y } = b.q;
-      const ok = (Number(i) === 0 ? x.answer - y.answer : y.answer - x.answer) > 0;
-      app.querySelectorAll('.pan').forEach((el, j) => {
+    brainCmp(arg) {
+      const [i, k] = arg.split(':').map(Number);
+      const s = brainSide(i);
+      if (!s) return;
+      const { x, y } = s.q;
+      const ok = (k === 0 ? x.answer - y.answer : y.answer - x.answer) > 0;
+      const stage = $(`bStage${i}`);
+      stage.querySelectorAll('.pan').forEach((el, j) => {
         const c = j ? y : x;
         el.querySelector('.val').innerHTML = c.reveal || `= ${c.answer}`;
         el.classList.add((j ? y.answer > x.answer : x.answer > y.answer) ? 'heavy' : 'light');
       });
-      $('bStage').querySelector('.scale').classList.add(ok ? 'right' : 'wrong');
-      brainAnswer(ok);
+      stage.querySelector('.scale').classList.add(ok ? 'right' : 'wrong');
+      brainAnswer(i, ok);
     },
 
-    brainCard(i, el) {
-      const b = brainLive();
-      if (!b || el.classList.contains('picked')) return;
-      const c = b.q.cards[Number(i)];
-      if (c.ok) {
+    brainCard(arg, el) {
+      const [i, k] = arg.split(':').map(Number);
+      const s = brainSide(i);
+      if (!s || el.classList.contains('picked')) return;
+      const stage = $(`bStage${i}`);
+      if (s.q.cards[k].ok) {
         el.classList.add('picked');
         Sound.play('tick');
-        if (app.querySelectorAll('.bcard.picked').length === b.q.cards.filter(x => x.ok).length) brainAnswer(true);
+        if (stage.querySelectorAll('.bcard.picked').length === s.q.cards.filter(x => x.ok).length) brainAnswer(i, true);
         return;
       }
       el.classList.add('miss');
-      app.querySelectorAll('.bcard').forEach((e, j) => { if (b.q.cards[j].ok) e.classList.add('reveal'); });
-      brainAnswer(false);
+      stage.querySelectorAll('.bcard').forEach((e, j) => { if (s.q.cards[j].ok) e.classList.add('reveal'); });
+      brainAnswer(i, false);
     },
 
-    brainChoice(v, el) {
-      const b = brainLive();
-      if (!b) return;
-      const ok = v === String(b.q.answer);
-      $('bFruits').classList.remove('covered');
+    brainChoice(arg, el) {
+      const c = arg.indexOf(':');
+      const i = Number(arg.slice(0, c)), v = arg.slice(c + 1);
+      const s = brainSide(i);
+      if (!s) return;
+      const ans = String(s.q.answer);
+      const ok = v === ans;
+      const stage = $(`bStage${i}`);
+      stage.querySelector('.fruits').classList.remove('covered');
       el.classList.add(ok ? 'right' : 'wrong');
-      if (!ok) app.querySelectorAll('.bchoice').forEach(e => { if (e.dataset.arg === String(b.q.answer)) e.classList.add('right'); });
-      brainAnswer(ok);
+      if (!ok) stage.querySelectorAll('.bchoice').forEach(e => { if (e.dataset.arg === `${i}:${ans}`) e.classList.add('right'); });
+      brainAnswer(i, ok);
     },
 
     exitApp() {
