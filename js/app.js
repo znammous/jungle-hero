@@ -307,7 +307,7 @@
                 <small>${regionLabel(w, r)} · إتقان ${ltr(Math.round(m * 100) + '%')}</small>
                 ${bar(m)}
               </span>
-              <span class="region-animal ${found ? '' : 'hidden'}"><i>${r.animal.emoji}</i></span>
+              <span class="region-animal ${found ? '' : 'hidden'}"><i>${found ? r.animal.emoji : '🐾'}</i></span>
             </button>`;
           }).join('')}
         </div>
@@ -403,7 +403,7 @@
           ${w.regions.map(r => {
             const ok = found.includes(r.table);
             return `<div class="animal ${ok ? 'found' : 'hidden'}">
-              <span class="animal-emoji"><i>${r.animal.emoji}</i></span>
+              <span class="animal-emoji"><i>${ok ? r.animal.emoji : '🐾'}</i></span>
               <b>${ok ? r.animal.name : 'مَن أنا؟'}</b>
               <small>${r.icon} ${r.name} · ${regionLabel(w, r)}</small>
             </div>`;
