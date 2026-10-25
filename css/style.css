@@ -541,7 +541,25 @@ button.rank-badge { border: 0; font: inherit; font-weight: 800; cursor: pointer;
 }
 
 /* ───── سباق الإخوة: شاشة مقسومة ───── */
-.duel-btn { margin-top: 4px; }
+.group-btn {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 16px 18px;
+  border-radius: var(--radius);
+  background: linear-gradient(135deg, var(--orange), #e0512b);
+  color: #fff;
+  text-align: start;
+  box-shadow: 0 7px 0 rgba(0, 0, 0, 0.28);
+  animation: nudge 2.4s ease-in-out infinite;
+}
+.group-btn:active { transform: translateY(4px); box-shadow: 0 3px 0 rgba(0, 0, 0, 0.28); animation: none; }
+.group-icon { font-size: 2.8rem; }
+.group-info { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+.group-info b { font-size: 1.45rem; }
+.group-info small { opacity: 0.95; font-size: 0.95rem; }
+.group-go { font-size: 1.8rem; font-weight: 800; }
 .profile-card { position: relative; }
 .profile-card.picked { outline: 5px solid var(--sun); }
 .pick-no { position: absolute; top: 10px; inset-inline-start: 12px; background: var(--sun); border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; font-weight: 800; }

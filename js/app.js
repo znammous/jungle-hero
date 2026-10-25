@@ -151,7 +151,7 @@
               <b>${esc(p.name)}</b>
             </button>`).join('')}
         </div>
-        ${list.length >= 2 ? '<button class="btn orange wide duel-btn" data-act="duelSetup">⚔️ سباق الإخوة</button>' : ''}
+        ${groupBtn()}
         ${leaderboard(list)}
         ${compareCard(list, false)}
         <button class="profile-card add new-explorer" data-act="go" data-arg="newProfile">
@@ -228,6 +228,8 @@
               : 'وصلت لأعلى رتبة في الغابة! 🎉'}</p>
           </div>
         </div>
+
+        ${groupBtn()}
 
         <button class="card world-card" data-act="go" data-arg="worlds">
           <span class="world-icon">${w.icon}</span>
@@ -1547,6 +1549,13 @@
     brain: { icon: '🧠', name: 'مبارزة العقول', what: 'المبارزة', invite: 'لمبارزة العقول', max: MAX_PLAYERS },
     rope: { icon: '🪢', name: 'شدّ الحبل', what: 'الشدّ', invite: 'لشدّ الحبل', max: 2 },
   };
+  // زر اللعب الجماعي: كبير وفي أعلى الشاشة الأولى حتى يجده الأطفال فوراً
+  const groupBtn = () => Store.state.profiles.length < 2 ? '' :
+    `<button class="group-btn" data-act="duelSetup">
+      <span class="group-icon">🤝</span>
+      <span class="group-info"><b>العب مع إخوتك</b><small>${Object.values(DUEL_KINDS).map(x => `${x.icon} ${x.name}`).join(' · ')}</small></span>
+      <span class="group-go">${ltr('‹')}</span>
+    </button>`;
   const duelKindOf = d => DUEL_KINDS[(d && d.kind) || 'race'] || DUEL_KINDS.race;
   // شدّ الحبل: يفوز فوراً من يتقدّم بهذا العدد من الإجابات الصحيحة
   const ROPE_LEAD = 6;
@@ -2796,7 +2805,11 @@
     duelSetup() {
       // عدة أجهزة هو الوضع الافتراضي، إلا إذا لم تكن المزامنة جاهزة على هذا الجهاز
       duelMode = Sync.duel.ready() ? 'net' : 'local';
-      duelPicks = duelPicks.filter(id => Store.state.profiles.some(p => p.id === id)).slice(0, duelMode === 'net' ? 1 : MAX_LOCAL);
+      duelPicks = duelPicks.filter(id => Store.state.profiles.some(p => p.id === id));
+      // من يبدأ من مخيّمه يكون مختاراً تلقائياً
+      const me = Store.current();
+      if (me && !duelPicks.includes(me.id)) duelPicks.unshift(me.id);
+      duelPicks = duelPicks.slice(0, duelMode === 'net' ? 1 : MAX_LOCAL);
       Screens.duelPick();
     },
     duelPick(id) {
