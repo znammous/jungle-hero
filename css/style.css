@@ -577,11 +577,13 @@ button.rank-badge { border: 0; font: inherit; font-weight: 800; cursor: pointer;
 .duel.stack .key, .duel.face .key { height: min(64px, calc(12.5vh - 24px)); }
 
 .duel-lock { position: fixed; inset: 0; z-index: 5; background: rgba(0, 0, 0, 0.55); display: flex; align-items: center; justify-content: center; padding: 16px; }
-.duel-modes { align-self: center; }
+/* الاختيارات بعرض الشاشة كالبطاقات تحتها، وأزرار كل مجموعة متساوية */
+.duel-modes button { flex: 1; padding: 10px 18px; font-size: 1.05rem; }
 /* الجهاز ونوع التحدي في صف واحد، وينزل الثاني تحت الأول على الشاشة الضيقة */
-.duel-opts { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
-.duel-modes button { padding: 10px 18px; font-size: 1.05rem; }
-.duel-lands { flex-wrap: wrap; justify-content: center; }
+.duel-opts { display: flex; flex-wrap: wrap; gap: 10px; }
+.duel-opts .seg { flex: 1 1 280px; }
+.duel-lands { flex-wrap: wrap; }
+.duel-lands button { flex: 1 1 auto; }
 .wait-spin { animation: spin 2s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 
