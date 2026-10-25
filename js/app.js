@@ -2042,6 +2042,8 @@
       p: { avatar: o.avatar, name: o.name }, right: o.right, goal: o.goal, reachedAt: o.reachedMs || 0,
       coins: null, banners: [], out: o.left ? '🏳️ انسحب قبل النهاية' : !o.done ? '📡 انقطع اتصاله' : '',
     }));
+    // المنسحبون ومن انقطع اتصاله يُعرضون بعد الترتيب (ropeResults تضع out لكل من في الترتيب)
+    const gone = others.filter(x => x.out);
     const ranked = rankSides([mine, ...others.filter(x => !x.out)], rope);
     const winner = soleWinner(ranked);
     (rope ? settleRope : settleSide)(mine, winner === mine);
@@ -2049,13 +2051,13 @@
     Sound.play('win');
     if (rope) {
       const res = ropeResults(ranked, winner, { net: true, again: 'duelSetup' });
-      res.sides = ranked.concat(others.filter(x => x.out));
+      res.sides = ranked.concat(gone);
       if (ranked.length < 2) res.note = 'انسحب المنافس، فلا فائز هذه المرة';
       Screens.duelResults(res);
       return;
     }
     Screens.duelResults({
-      sides: ranked.concat(others.filter(x => x.out)), winner, net: true,
+      sides: ranked.concat(gone), winner, net: true,
       note: ranked.length < 2 ? 'لم يُكمل المنافسون السباق، فلا فائز هذه المرة' : '',
     });
   }
