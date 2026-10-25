@@ -524,6 +524,7 @@
           <h2 class="topbar-title">⚔️ سباق الإخوة</h2>
           <span></span>
         </header>
+        <div class="duel-opts">
         <div class="seg duel-modes">
           <button class="${net ? '' : 'on'}" data-act="setDuelMode" data-arg="local">📱 جهاز واحد</button>
           <button class="${net ? 'on' : ''}" data-act="setDuelMode" data-arg="net">🌐 عدة أجهزة</button>
@@ -531,6 +532,7 @@
         <div class="seg duel-modes">
           <button class="${brainKind ? '' : 'on'}" data-act="setDuelKind" data-arg="race">🏃 سباق النهر</button>
           <button class="${brainKind ? 'on' : ''}" data-act="setDuelKind" data-arg="brain">🧠 مبارزة العقول</button>
+        </div>
         </div>
         <div class="seg duel-modes duel-lands">${duelLands().map(w =>
           `<button class="${w.id === duelLand ? 'on' : ''}" data-act="setDuelLand" data-arg="${w.id}">${w.icon} ${w.name}</button>`).join('')}</div>
