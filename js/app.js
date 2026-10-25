@@ -20,6 +20,7 @@
   let parentKid = null;
   let kidPinShown = false; // ولي الأمر أظهر رمز الطفل المختار
   let parentWorld = 'mul'; // الغابة المعروضة في تقرير الطفل
+  let boardWorld = 'mul';  // الغابة المعروضة في لوحة المتصدرين
 
   // رمز دخول الطفل: { mode: 'login'|'create'|'change', id, name, avatar, stage: 'enter'|'old'|'new'|'confirm', buf, first }
   let kidPin = null;
@@ -29,6 +30,7 @@
   const ltr = s => `<span dir="ltr">${s}</span>`;
   const $ = id => document.getElementById(id);
   const allItems = () => ITEMS.concat(RARE_ITEMS);
+  const any = list => list[Math.floor(Math.random() * list.length)];
 
   // الشريط السفلي للتنقل بين الشاشات الرئيسية (لا يظهر في الجولات والسباقات)
   const TABS = [
@@ -356,12 +358,11 @@
         <div class="shop-grid">
           ${ITEMS.map(i => {
             const owned = p.items.includes(i.id);
-            const region = REGIONS[i.region];
-            if (!owned && i.region >= p.unlocked) {
+            if (!owned && i.region >= reached(p)) {
               return `<button class="item locked" data-act="buy" data-arg="${i.id}">
                 <span class="item-emoji">🔒</span>
                 <b>${i.name}</b>
-                <small>يُفتح في ${region.icon} ${region.name}</small>
+                <small>يُفتح بعد فتح ${newRegions(i.region)}</small>
               </button>`;
             }
             const cant = !owned && p.coins < i.price;
@@ -544,7 +545,7 @@
           const i = duelPicks.indexOf(p.id);
           return `<button class="profile-card ${i >= 0 ? 'picked' : ''}" data-act="duelPick" data-arg="${p.id}">
             <span class="avatar">${p.avatar}</span><b>${esc(p.name)}</b>
-            <small>${brainKind ? `${Engine.current(p).icon} ${Engine.current(p).name}` : `🏝️ هدفه ${ltr(duelGoal(p))}`}</small>
+            <small>${brainKind ? `${Engine.current(p).icon} ${Engine.current(p).name}` : `${Engine.world(duelWorld(p)).icon} 🏝️ هدفه ${ltr(duelGoal(p))}`}</small>
             ${i >= 0 && !net ? `<span class="pick-no">${ltr(i + 1)}</span>` : ''}
           </button>`;
         }).join('')}</div>
@@ -598,7 +599,7 @@
         </div>
         <div class="profile-grid">${list.map(p => `<button class="profile-card" data-act="netJoin" data-arg="${p.id}">
             <span class="avatar">${p.avatar}</span><b>${esc(p.name)}</b>
-            <small>${d.kind === 'brain' ? `${Engine.current(p).icon} ${Engine.current(p).name}` : `🏝️ هدفه ${ltr(duelGoal(p))}`}</small>
+            <small>${d.kind === 'brain' ? `${Engine.current(p).icon} ${Engine.current(p).name}` : `${Engine.world(duelWorld(p)).icon} 🏝️ هدفه ${ltr(duelGoal(p))}`}</small>
           </button>`).join('')}</div>
       </section>`);
     },
@@ -1105,22 +1106,30 @@
   function leaderboard(list) {
     if (list.length < 2) return '';
     const medals = ['🥇', '🥈', '🥉'];
+    // غابات فيها سباق لأحد الأطفال على الأقل، والضرب دائماً
+    const lands = WORLDS.filter(w => w.id === 'mul' ||
+      list.some(k => Engine.isOpen(k, w) && Engine.state(k, w.id).bestRace > 0));
+    const w = lands.find(x => x.id === boardWorld) || lands.find(x => x.id === 'mul');
+    // نتيجة الطفل في الغابة، أو لا شيء إن لم يفتحها بعد
+    const best = k => (Engine.isOpen(k, w) ? Engine.state(k, w.id).bestRace : 0);
     const boards = GROUPS.map(g => {
-      const kids = list.filter(p => groupOf(p) === g.id).sort((a, b) => b.bestRace - a.bestRace);
+      const kids = list.filter(p => groupOf(p) === g.id).sort((a, b) => best(b) - best(a));
       if (!kids.length) return '';
       return `<div class="board">
         <h4>${g.name}</h4>
         <ol>${kids.map(p => {
           // المتساوون في النتيجة يتشاركون المركز
-          const place = kids.filter(k => k.bestRace > p.bestRace).length;
-          const rank = Engine.rankFor(p.bestRace);
+          const place = kids.filter(k => best(k) > best(p)).length;
+          const rank = Engine.rankFor(best(p));
           return `<li><span class="place">${medals[place] || ltr(place + 1)}</span>
-            <span class="who">${p.avatar} ${esc(p.name)}<small class="who-rank">${rank.emoji} ${rank.name}</small></span><b>${ltr(p.bestRace)}</b></li>`;
+            <span class="who">${p.avatar} ${esc(p.name)}<small class="who-rank">${rank.emoji} ${rank.name}</small></span><b>${ltr(best(p))}</b></li>`;
         }).join('')}</ol>
       </div>`;
     }).join('');
     return `<div class="card leaders">
-      <h3>🏆 المتصدرون في سباق الضرب</h3>
+      <h3>🏆 المتصدرون في سباق النهر</h3>
+      ${lands.length > 1 ? `<div class="kid-tabs">${lands.map(x =>
+        `<button class="chip ${x === w ? 'on' : ''}" data-act="boardWorld" data-arg="${x.id}">${x.icon} ${x.name}</button>`).join('')}</div>` : ''}
       <div class="boards">${boards}</div>
       <p class="muted center">أفضل عدد إجابات صحيحة في الدقيقة</p>
     </div>`;
@@ -1187,6 +1196,17 @@
     if (!w.gen) return { val: `${Journey.weekReport(p, w.id).mastered}/${w.total}`, what: 'مسألة' };
     const n = w.regions.filter(r => Engine.mastery(p, r.table, w.id) >= 1).length;
     return { val: `${n}/${w.regions.length}`, what: 'منطقة' };
+  }
+
+  // تقدّم المستكشف في كل الغابات: 1 + المناطق التي فتحها بعد الأولى في كل غابة (يفتح أدوات المتجر)
+  const reached = p => 1 + Engine.openWorlds(p).reduce((n, w) => n + Engine.state(p, w.id).unlocked - 1, 0);
+  const newRegions = n => (n === 1 ? 'منطقة جديدة' : n === 2 ? 'منطقتين جديدتين' : `${ltr(n)} مناطق جديدة`);
+
+  // الغابات التي لعب فيها المستكشف (والغابة الحالية دائماً)، دون إنشاء سجل لغابة لم يدخلها
+  function playedWorlds(p, cur) {
+    const played = w => (w.id === 'mul' ? Object.keys(p.facts).length > 0
+      : !!(p.worlds && p.worlds[w.id] && (Object.keys(p.worlds[w.id].facts).length || p.worlds[w.id].skill || p.worlds[w.id].bestRace)));
+    return Engine.openWorlds(p).filter(w => w.id === cur || played(w)).map(w => w.id);
   }
 
   const racesIn = (p, w) => p.races.filter(x => (x.w || 'mul') === w);
@@ -1437,6 +1457,9 @@
     lastRound = { mode, regionIndex };
     round = {
       mode, region, w,
+      // الإحماء يخلط الغابة الحالية مع الغابات التي لعب فيها الطفل فعلاً، فمن يركّز على غابة واحدة يبقى فيها.
+      // والسباق في الغابة الحالية لأن رتبته لها
+      pools: mode === 'warmup' ? Object.fromEntries(playedWorlds(p, w).map(x => [x, Engine.racePool(p, x)])) : null,
       pool: mode === 'race' || mode === 'warmup' ? Engine.racePool(p, w)
         : mode === 'tricky' ? trickyFacts(p, w) : Engine.tablePool(region.table, p, w),
       queue: mode === 'review' ? t.mistakes.map(m => m.slice()) : null,
@@ -1459,7 +1482,13 @@
 
   // ───── سباق الإخوة ─────
   // جزيرة كل طفل على بُعد أفضل نتيجة له وإجابتين، فيفوز من يتفوّق على نفسه
-  const duelGoal = p => Math.max(8, p.bestRace + 2);
+  // كل طفل يتسابق في غابته. الكسور والسالب تحتاج أزراراً لا تتسع لها الشاشة المقسومة،
+  // فيتسابق فيهما بالضرب وبالجمع والطرح
+  const DUEL_FALLBACK = { frac: 'mul', neg: 'add' };
+  const duelWorld = p => { const w = Engine.current(p).id; return DUEL_FALLBACK[w] || w; };
+  const duelGoal = p => Math.max(8, Engine.state(p, duelWorld(p)).bestRace + 2);
+  const duelSide = p => ({ p, w: duelWorld(p), pool: Engine.racePool(p, duelWorld(p)), goal: duelGoal(p),
+    q: null, input: '', right: 0, locked: true, reachedAt: 0, qStart: 0 });
 
   const MAX_PLAYERS = 4;
 
@@ -1490,10 +1519,7 @@
     const players = duelPicks.map(id => Store.state.profiles.find(p => p.id === id));
     if (players.length < 2 || players.some(p => !p)) { Screens.duelPick(); return; }
     duel = {
-      sides: players.map(p => ({
-        p, pool: Engine.racePool(p), goal: duelGoal(p),
-        q: null, input: '', right: 0, locked: true, reachedAt: 0, qStart: 0,
-      })),
+      sides: players.map(duelSide),
       timer: null, timeouts: [],
     };
     Screens.duel();
@@ -1545,13 +1571,13 @@
 
   function duelNext(i) {
     const side = duel.sides[i];
-    side.q = Engine.pick(side.p, side.pool, side.q && side.q.key);
+    side.q = Engine.pick(side.p, side.pool, side.q && side.q.key, side.w);
     side.input = '';
     side.locked = false;
     side.qStart = performance.now();
     const el = $(`dQ${i}`);
     el.className = 'question';
-    el.innerHTML = `<span>${side.q.a}</span><span class="op">×</span><span>${side.q.b}</span><span class="op">=</span><span id="dA${i}" class="answer">&nbsp;</span>`;
+    el.innerHTML = `<span>${side.q.a}</span><span class="op">${side.q.op}</span><span>${side.q.b}</span><span class="op">=</span><span id="dA${i}" class="answer">&nbsp;</span>`;
   }
 
   function duelKey(i, k) {
@@ -1582,7 +1608,7 @@
     } else {
       Sound.play('wrong');
       el.classList.add('wrong');
-      el.innerHTML = `<span>${q.a}</span><span class="op">×</span><span>${q.b}</span><span class="op">=</span><span class="fix">${q.answer}</span>`;
+      el.innerHTML = `<span>${q.a}</span><span class="op">${q.op}</span><span>${q.b}</span><span class="op">=</span><span class="fix">${q.answer}</span>`;
     }
     $(`dScore${i}`).textContent = side.right;
     $(`dWalker${i}`).style.setProperty('--p', Math.min(side.right / side.goal, 1));
@@ -1663,7 +1689,7 @@
   // نتيجة طفل واحد من السباق في ملفه
   function settleSide(x, won) {
     const before = x.p.coins;
-    const r = settleRace(x.p, x.right);
+    const r = settleRace(x.p, x.right, x.w);
     if (won) x.p.coins += COINS.duelWin;
     Journey.complete(x.p, 'race');
     x.banners = [];
@@ -1768,7 +1794,7 @@
     const opps = activePlayers(d).filter(x => x.device !== DEVICE).slice(0, MAX_PLAYERS - 1).map(x => Object.assign({}, x));
     if (!p || !opps.length) { go('profiles'); return; }
     duel = {
-      sides: [{ p, pool: Engine.racePool(p), goal: duelGoal(p), q: null, input: '', right: 0, locked: true, reachedAt: 0, qStart: 0 }],
+      sides: [duelSide(p)],
       net: { id: d.id, opps, finished: false },
       timer: null, timeouts: [],
     };
@@ -1940,7 +1966,8 @@
     if (round.mode === 'review') {
       round.q = Engine.fromMistake(round.queue.shift());
     } else {
-      round.q = Engine.pick(p, round.pool, round.q && round.q.key, round.w);
+      const w = round.pools ? any(Object.keys(round.pools)) : round.w;
+      round.q = Engine.pick(p, round.pools ? round.pools[w] : round.pool, round.q && round.q.key, w);
     }
     round.input = '';
     round.locked = false;
@@ -2761,9 +2788,8 @@
       const p = Store.current();
       const item = ITEMS.find(i => i.id === id);
       if (p.items.includes(id)) return;
-      if (item.region >= p.unlocked) {
-        const r = REGIONS[item.region];
-        toast(`🔒 تُفتح هذه الأداة عندما تصل إلى ${r.icon} ${r.name}`);
+      if (item.region >= reached(p)) {
+        toast(`🔒 تُفتح هذه الأداة بعد فتح ${newRegions(item.region - reached(p) + 1).replace(/<[^>]+>/g, '')} في أي غابة`);
         return;
       }
       if (p.coins < item.price) { toast(`تحتاج ${item.price - p.coins} عملة إضافية 🪙`); return; }
@@ -2919,6 +2945,7 @@
     setMax(v) { Store.state.settings.maxMin = Number(v); Store.save(); Screens.parent(); },
     parentKid(id) { parentKid = id; kidPinShown = false; Screens.parent(); },
     parentWorld(id) { parentWorld = id; Screens.parent(); },
+    boardWorld(id) { boardWorld = id; Screens.profiles(); },
     renameKid() {
       const p = Store.state.profiles.find(k => k.id === parentKid);
       if (!p || !parentOK) return;
