@@ -534,12 +534,12 @@
             <b>الفائز من يكسب ألعاباً أكثر!</b></p>
           <p class="muted">${net
             ? (canNet ? `اختر نفسك، ثم يقبل إخوتك الدعوة على أجهزتهم (حتى ${ltr(MAX_PLAYERS)} لاعبين). تحتاج الأجهزة إلى الإنترنت وحساب Google نفسه.` : '⚠️ سجّل دخول ولي الأمر بحساب Google على كل الأجهزة أولاً، مع اتصال بالإنترنت.')
-            : n === 4 ? '⚠️ أربعة على تابلت واحد: الأزرار أصغر، والأفضل تابلت كبير.' : 'ضعوا التابلت بينكم، ولكل واحد جزء من الشاشة يضغط فيه.'}</p>` : `<p>${net ? `اختر نفسك، ثم يقبل إخوتك الدعوة على أجهزتهم (حتى ${ltr(MAX_PLAYERS)} لاعبين).` : `اختر من 2 إلى ${ltr(MAX_PLAYERS)} متسابقين.`}
-            كل واحد يُسأل من جداوله، وجزيرته على بُعد أفضل نتيجة له وإجابتين.
+            : 'اختر متسابقَين اثنين، وضعا التابلت بينكما، ولكل واحد نصف الشاشة يضغط فيه.'}</p>` : `<p>${net ? `اختر نفسك، ثم يقبل إخوتك الدعوة على أجهزتهم (حتى ${ltr(MAX_PLAYERS)} لاعبين).` : 'اختر متسابقَين اثنين.'}
+            كل واحد يُسأل من غابته، وجزيرته على بُعد أفضل نتيجة له وإجابتين.
             <b>الأول من يصل إلى جزيرته أولاً!</b></p>
           <p class="muted">${net
             ? (canNet ? 'تحتاج الأجهزة إلى الإنترنت وحساب Google نفسه.' : '⚠️ سجّل دخول ولي الأمر بحساب Google على كل الأجهزة أولاً، مع اتصال بالإنترنت.')
-            : n === 4 ? '⚠️ أربعة على تابلت واحد: الأزرار أصغر، والأفضل تابلت كبير.' : 'ضعوا التابلت بينكم، ولكل واحد لوحة أرقامه.'}</p>`}
+            : 'ضعا التابلت بينكما، ولكل واحد لوحة أرقامه.'}</p>`}
         </div>
         <div class="profile-grid">${list.map(p => {
           const i = duelPicks.indexOf(p.id);
@@ -1491,6 +1491,8 @@
     q: null, input: '', right: 0, locked: true, reachedAt: 0, qStart: 0 });
 
   const MAX_PLAYERS = 4;
+  // على جهاز واحد لاعبان فقط: الشاشة لا تتسع لأكثر. حتى 4 لاعبين على عدة أجهزة
+  const MAX_LOCAL = 2;
 
   // أشكال تقسيم الشاشة حسب عدد اللاعبين، ويُحفظ الاختيار على هذا الجهاز فقط
   const DUEL_LAYOUTS = {
@@ -2638,19 +2640,20 @@
       startRound(lastRound.mode, lastRound.regionIndex);
     },
     duelSetup() {
-      duelPicks = duelPicks.filter(id => Store.state.profiles.some(p => p.id === id));
+      duelPicks = duelPicks.filter(id => Store.state.profiles.some(p => p.id === id)).slice(0, duelMode === 'net' ? 1 : MAX_LOCAL);
       Screens.duelPick();
     },
     duelPick(id) {
       const i = duelPicks.indexOf(id);
       if (i >= 0) duelPicks.splice(i, 1);
       else if (duelMode === 'net') duelPicks = [id];
-      else if (duelPicks.length < MAX_PLAYERS) duelPicks.push(id);
-      else toast(`الحد الأقصى ${MAX_PLAYERS} لاعبين`);
+      else if (duelPicks.length < MAX_LOCAL) duelPicks.push(id);
+      // الثالث يحلّ محل أقدم المختارَين
+      else { duelPicks.shift(); duelPicks.push(id); }
       Screens.duelPick();
     },
     startDuel() { startDuel(); },
-    setDuelMode(m) { duelMode = m; duelPicks = duelPicks.slice(0, m === 'net' ? 1 : MAX_PLAYERS); Screens.duelPick(); },
+    setDuelMode(m) { duelMode = m; duelPicks = duelPicks.slice(0, m === 'net' ? 1 : MAX_LOCAL); Screens.duelPick(); },
     netHost(kind) { netHost(kind); },
     netStart() { netStart(); },
     netJoin(pid) { netJoin(pid); },
