@@ -16,6 +16,10 @@
   let pinBuffer = '';
   let pinFirst = '';
   let parentKid = null;
+  let kidPinShown = false; // ولي الأمر أظهر رمز الطفل المختار
+
+  // رمز دخول الطفل: { mode: 'login'|'create'|'change', id, name, avatar, stage: 'enter'|'old'|'new'|'confirm', buf, first }
+  let kidPin = null;
 
   const esc = s => String(s).replace(/[&<>"']/g, c =>
     ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -84,7 +88,8 @@
         <div class="avatar-grid">
           ${AVATARS.map(a => `<button class="avatar-btn ${a === newAvatar ? 'selected' : ''}" data-act="pickAvatar" data-arg="${a}">${a}</button>`).join('')}
         </div>
-        <button class="btn green wide" data-act="saveProfile" data-arg="${p ? 'edit' : ''}">${p ? 'حفظ التغييرات ✅' : 'ابدأ المغامرة 🚀'}</button>
+        <button class="btn green wide" data-act="saveProfile" data-arg="${p ? 'edit' : ''}">${p ? 'حفظ التغييرات ✅' : 'التالي: الرمز السري 🔒'}</button>
+        ${p ? '<button class="link-btn dark" data-act="changeKidPin">🔑 تغيير رمز الدخول</button>' : ''}
       </div>
     </section>`);
     setTimeout(() => $('nameInput') && $('nameInput').focus(), 50);
@@ -114,6 +119,8 @@
 
     profiles() {
       const list = Store.state.profiles;
+      // من يعود إلى هنا يحتاج رمز الطفل ليدخل ملفه من جديد
+      Store.select(null);
       render(`<section class="screen">
         <header class="hero-title">
           <div class="logo">🌴🧭🌴</div>
@@ -147,6 +154,34 @@
     },
 
     newProfile() { profileForm(null); },
+
+    // رمز الطفل: للدخول إلى ملفه، أو اختياره عند الإنشاء، أو تغييره
+    kidPin() {
+      const k = kidPin;
+      const p = k.mode === 'create' ? k : Store.state.profiles.find(x => x.id === k.id);
+      if (!p) { kidPin = null; go('profiles'); return; }
+      const prompts = {
+        enter: `أهلاً يا ${esc(p.name)}! أدخل رمزك السري`,
+        old: 'أدخل رمزك الحالي',
+        new: k.mode === 'login' ? 'اختر رمزاً سرياً من 4 أرقام ليحمي ملفك 🔒' : 'اختر رمزاً سرياً من 4 أرقام تتذكّره',
+        confirm: 'أعد إدخال الرمز للتأكيد',
+      };
+      render(`<section class="screen">
+        <header class="topbar"><button class="chip" data-act="go" data-arg="${k.mode === 'change' ? 'editProfile' : 'profiles'}">→ رجوع</button></header>
+        <div class="card pin-card kid-pin">
+          <span class="avatar">${p.avatar}</span>
+          <p>${prompts[k.stage]}</p>
+          <div class="pin-dots" id="kidDots">${pinDots(k.buf)}</div>
+          <div class="numpad small" dir="ltr">
+            ${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => `<button class="key" data-act="kidPinKey" data-arg="${n}">${n}</button>`).join('')}
+            <button class="key util" data-act="kidPinKey" data-arg="del" aria-label="مسح">⌫</button>
+            <button class="key" data-act="kidPinKey" data-arg="0">0</button>
+            <span></span>
+          </div>
+          ${k.stage === 'enter' || k.stage === 'old' ? '<button class="link-btn dark" data-act="forgotKidPin">نسيت الرمز؟</button>' : ''}
+        </div>
+      </section>`);
+    },
     editProfile() { profileForm(Store.current()); },
 
     camp() {
@@ -1001,6 +1036,10 @@
         <div class="setting"><span>✏️ الاسم</span>
           <div class="reward-form rename"><input id="renameInput" maxlength="12" autocomplete="off" value="${esc(p.name)}">
             <button class="btn green" data-act="renameKid">حفظ</button></div></div>
+        <div class="setting"><span>🔑 رمز الدخول ${p.pin ? `<b dir="ltr">${kidPinShown ? p.pin : '••••'}</b>` : '<small class="muted">(لم يُختر بعد)</small>'}
+            ${p.pin ? `<button class="link-btn dark" data-act="toggleKidPin">${kidPinShown ? '🙈 إخفاء' : '👁️ إظهار'}</button>` : ''}</span>
+          <div class="reward-form rename"><input id="kidPinInput" type="tel" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="رمز جديد">
+            <button class="btn green" data-act="setKidPin">حفظ</button></div></div>
         <div class="setting"><span>🏆 لوحة المتصدرين</span>
           <div class="seg">${GROUPS.map(g => `<button class="${groupOf(p) === g.id ? 'on' : ''}" data-act="setGroup" data-arg="${g.id}">${g.name}</button>`).join('')}</div></div>
       </div>
@@ -1788,8 +1827,19 @@
     Screens.results(summary);
   }
 
+  const pinDots = buf => [0, 1, 2, 3].map(i => `<i class="${i < buf.length ? 'on' : ''}"></i>`).join('');
+
   function updatePinDots() {
-    $('pinDots').innerHTML = [0, 1, 2, 3].map(i => `<i class="${i < pinBuffer.length ? 'on' : ''}"></i>`).join('');
+    $('pinDots').innerHTML = pinDots(pinBuffer);
+  }
+
+  function enterProfile(id) {
+    kidPin = null;
+    Store.select(id);
+    const used = Journey.applyShields(Store.current());
+    if (used) Store.save();
+    go('camp');
+    if (used) toast(`🛡️ ${used === 1 ? 'درع السلسلة حمى' : `${used} دروع حمت`} سلسلتك من الانقطاع!`);
   }
 
   // ولي الأمر يؤكد تسليم الجائزة، أو يرفضها فتعود العملات للطفل
@@ -1810,12 +1860,77 @@
   const actions = {
     go: arg => go(arg),
 
+    // المستكشفون من الإصدارات السابقة بلا رمز يختارون رمزاً أول مرة
     selectProfile(id) {
-      Store.select(id);
-      const used = Journey.applyShields(Store.current());
-      if (used) Store.save();
-      go('camp');
-      if (used) toast(`🛡️ ${used === 1 ? 'درع السلسلة حمى' : `${used} دروع حمت`} سلسلتك من الانقطاع!`);
+      const p = Store.state.profiles.find(x => x.id === id);
+      if (!p) return;
+      kidPin = { mode: 'login', id, stage: p.pin ? 'enter' : 'new', buf: '', first: '' };
+      go('kidPin');
+    },
+
+    changeKidPin() {
+      const p = Store.current();
+      kidPin = { mode: 'change', id: p.id, stage: p.pin ? 'old' : 'new', buf: '', first: '' };
+      go('kidPin');
+    },
+
+    kidPinKey(key) {
+      const k = kidPin;
+      if (!k) return;
+      if (key === 'del') { k.buf = k.buf.slice(0, -1); $('kidDots').innerHTML = pinDots(k.buf); return; }
+      if (k.buf.length >= 4) return;
+      k.buf += key;
+      $('kidDots').innerHTML = pinDots(k.buf);
+      if (k.buf.length < 4) return;
+
+      const entered = k.buf;
+      k.buf = '';
+      setTimeout(() => {
+        if (kidPin !== k) return;
+        const p = Store.state.profiles.find(x => x.id === k.id);
+        if (k.stage === 'enter' || k.stage === 'old') {
+          if (p && entered === p.pin) {
+            if (k.stage === 'enter') { enterProfile(p.id); return; }
+            k.stage = 'new';
+          } else { Sound.play('wrong'); toast('الرمز غير صحيح'); }
+        } else if (k.stage === 'new') {
+          k.first = entered;
+          k.stage = 'confirm';
+        } else if (entered !== k.first) {
+          Sound.play('wrong');
+          toast('الرمزان غير متطابقين، حاول مرة أخرى');
+          k.stage = 'new';
+        } else if (k.mode === 'create') {
+          kidPin = null;
+          Store.createProfile(k.name, k.avatar, entered);
+          Sound.play('win');
+          go('camp');
+          return;
+        } else if (p) {
+          p.pin = entered;
+          Store.save();
+          toast('🔑 حُفظ الرمز، تذكّره جيداً');
+          if (k.mode === 'login') enterProfile(p.id);
+          else { kidPin = null; go('camp'); }
+          return;
+        }
+        Screens.kidPin();
+      }, 150);
+    },
+
+    forgotKidPin() { toast('اطلب من ولي الأمر أن يريك رمزك من لوحته 👨‍👩‍👧', 3500); },
+
+    toggleKidPin() { kidPinShown = !kidPinShown; Screens.parent(); },
+    setKidPin() {
+      const p = Store.state.profiles.find(k => k.id === parentKid);
+      if (!p || !parentOK) return;
+      const pin = $('kidPinInput').value.trim();
+      if (!/^[0-9]{4}$/.test(pin)) { toast('الرمز 4 أرقام'); return; }
+      p.pin = pin;
+      kidPinShown = true;
+      Store.save();
+      toast(`🔑 الرمز الجديد لـ${p.name}: ${pin}`, 3500);
+      Screens.parent();
     },
 
     // الحذف من لوحة ولي الأمر فقط، فلا يصل إليه إلا من يعرف الرمز
@@ -1846,9 +1961,8 @@
       }
       const name = $('nameInput').value.trim();
       if (!name) { toast('اكتب اسمك أولاً ✏️'); $('nameInput').focus(); return; }
-      Store.createProfile(name, newAvatar);
-      Sound.play('win');
-      go('camp');
+      kidPin = { mode: 'create', name, avatar: newAvatar, stage: 'new', buf: '', first: '' };
+      go('kidPin');
     },
 
     toggleMute() {
@@ -2056,6 +2170,7 @@
 
     leaveParent() {
       parentOK = false;
+      kidPinShown = false;
       pinStage = null;
       pinBuffer = '';
       Screens.profiles();
@@ -2120,7 +2235,7 @@
 
     setGoal(v) { Store.state.settings.goalMin = Number(v); Store.save(); Screens.parent(); },
     setMax(v) { Store.state.settings.maxMin = Number(v); Store.save(); Screens.parent(); },
-    parentKid(id) { parentKid = id; Screens.parent(); },
+    parentKid(id) { parentKid = id; kidPinShown = false; Screens.parent(); },
     renameKid() {
       const p = Store.state.profiles.find(k => k.id === parentKid);
       if (!p || !parentOK) return;
@@ -2242,6 +2357,11 @@
         return;
       }
       if (duel) return;
+      if (document.querySelector('.kid-pin')) {
+        if (/^[0-9]$/.test(k)) actions.kidPinKey(k);
+        else if (k === 'Backspace') actions.kidPinKey('del');
+        return;
+      }
       if (document.querySelector('.pin-card')) {
         if (/^[0-9]$/.test(k)) actions.pinKey(k);
         else if (k === 'Backspace') actions.pinKey('del');

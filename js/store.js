@@ -53,10 +53,11 @@ const Store = (() => {
     if (changed) onSave();
   }
 
-  function createProfile(name, avatar) {
+  function createProfile(name, avatar, pin) {
     const p = {
       id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
       name, avatar,
+      pin,           // رمز الدخول السري من 4 أرقام (يراه ولي الأمر في لوحته)
       coins: 0,
       items: [],     // معرّفات المعدّات المشتراة
       facts: {},     // سجل كل مسألة: { box, seen, right }
