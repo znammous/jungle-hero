@@ -974,3 +974,64 @@ body.tabs .toast, body.tabs .update-bar { bottom: calc(84px + env(safe-area-inse
 @media (min-width: 760px) and (orientation: landscape) {
   .choices { width: 340px; flex-shrink: 0; }
 }
+
+/* ───── تحدّي العقل ───── */
+.big-btn.pink { background: #c2457a; }
+.brain-steps { display: flex; justify-content: center; gap: 10px; }
+.brain-steps span { font-size: 1.6rem; width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.2); opacity: 0.6; }
+.brain-steps span.on { background: var(--sun); opacity: 1; animation: pop 0.4s; }
+.brain-steps span.done { background: var(--sand); opacity: 1; }
+.brain-intro { text-align: center; display: flex; flex-direction: column; gap: 10px; align-items: center; max-width: 460px; width: 100%; align-self: center; }
+.brain-icon { font-size: 4.5rem; animation: pop 0.5s; }
+.brain-lv { color: #fff; text-align: center; font-size: 1.1rem; }
+.brain-lv .dim { opacity: 0.25; }
+.brain-stage { display: flex; flex-direction: column; align-items: center; gap: 14px; min-height: 260px; }
+
+.scale { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; max-width: 560px; }
+.fulcrum { font-size: 2.6rem; }
+.pan {
+  flex: 1; min-height: 130px; border-radius: var(--radius); background: var(--sand); box-shadow: 0 7px 0 var(--sand-dark);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  font-size: 2.3rem; font-weight: 800; transition: transform 0.3s;
+}
+.pan:active { transform: translateY(4px); }
+.pan .val { font-size: 1.4rem; color: var(--muted); min-height: 1.4em; }
+.pan.heavy { transform: translateY(18px); background: #d9f5cf; }
+.pan.light { transform: translateY(-12px); }
+.scale.wrong .pan.light { background: #ffd9d3; }
+
+.target { color: #fff; font-size: 1.4rem; text-align: center; }
+.target > b { display: inline-block; background: var(--sun); color: var(--ink); border-radius: 14px; padding: 0 14px; font-size: 2.2rem; margin-inline-start: 6px; }
+.bcards { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; width: 100%; max-width: 620px; }
+.bcard { background: var(--sand); border-radius: 18px; box-shadow: 0 6px 0 var(--sand-dark); padding: 16px 8px; font-size: 1.8rem; font-weight: 800; }
+.bcard.picked { background: #d9f5cf; box-shadow: 0 6px 0 #8fd17f; animation: pop 0.25s; }
+.bcard.miss { background: #ffd9d3; animation: shake 0.4s; }
+.bcard.reveal:not(.picked) { outline: 4px dashed var(--leaf); }
+
+.arr-text { color: #fff; font-size: 1.3rem; text-align: center; }
+.fruits { position: relative; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 14px; background: var(--sand); border-radius: var(--radius); padding: 14px; box-shadow: 0 7px 0 var(--sand-dark); max-width: 100%; }
+.fruits.rows { flex-direction: column; align-items: flex-start; gap: 6px; }
+.fgroup { display: flex; align-items: center; gap: 8px; }
+.fgrid { display: grid; gap: 2px; font-size: 1.7rem; line-height: 1.1; }
+.fruits.many .fgrid { font-size: 1.2rem; }
+.fgrid i { font-style: normal; }
+.fgrid i.x { opacity: 0.35; position: relative; }
+.fgrid i.x::after { content: '✕'; position: absolute; inset: 0; color: var(--red); font-weight: 800; text-align: center; }
+.basket { font-size: 1.7rem; }
+.plus { font-size: 2.4rem; font-weight: 800; color: var(--orange); }
+.fruits.covered > * { visibility: hidden; }
+.fruits.covered::after { content: '🌿🙈🌿'; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 3rem; }
+.bchoices { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; width: 100%; max-width: 480px; }
+.bchoice { height: 68px; border-radius: 18px; background: var(--sand); box-shadow: 0 6px 0 var(--sand-dark); font-size: 2rem; font-weight: 800; }
+.bchoice.right { background: #d9f5cf; animation: pop 0.3s; }
+.bchoice.wrong { background: #ffd9d3; animation: shake 0.4s; }
+
+.brain-sum { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 460px; }
+.brain-row { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; text-align: start; }
+.brain-row b { font-size: 1.3rem; }
+.brain-row small { grid-column: 1 / -1; color: var(--muted); }
+.bshape .shape { width: 150px; height: 150px; }
+.bshape .shape.strip { width: 260px; height: 104px; }
+.bcard .shape { width: 1.6em; height: 1.6em; }
+.bcard .shape.strip { width: 3em; height: 1.2em; }
+.pan .val .shape { width: 56px; height: 56px; }
