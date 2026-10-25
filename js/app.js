@@ -6,7 +6,7 @@
   let duel = null;        // سباق الإخوة الجاري على شاشة مقسومة
   let brain = null;       // تحدّي العقل الجاري: ثلاث ألعاب قصيرة متتالية
   let duelPicks = [];     // الطفلان المختاران لسباق الإخوة
-  let duelMode = 'local'; // 'local' تابلت واحد | 'net' عدة أجهزة
+  let duelMode = 'net';   // 'net' عدة أجهزة (الافتراضي) | 'local' تابلت واحد
   let duelKind = 'race';  // 'race' سباق النهر | 'brain' مبارزة العقول (على جهاز واحد فقط)
   let netPending = null;  // دعوة سباق على عدة أجهزة قبل أن يبدأ: { id, role, pid }
   let newAvatar = AVATARS[0];
@@ -2640,6 +2640,8 @@
       startRound(lastRound.mode, lastRound.regionIndex);
     },
     duelSetup() {
+      // عدة أجهزة هو الوضع الافتراضي، إلا إذا لم تكن المزامنة جاهزة على هذا الجهاز
+      duelMode = Sync.duel.ready() ? 'net' : 'local';
       duelPicks = duelPicks.filter(id => Store.state.profiles.some(p => p.id === id)).slice(0, duelMode === 'net' ? 1 : MAX_LOCAL);
       Screens.duelPick();
     },
