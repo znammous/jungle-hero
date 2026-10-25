@@ -1075,3 +1075,13 @@ body.tabs .toast, body.tabs .update-bar { bottom: calc(84px + env(safe-area-inse
 .ogames span { background: rgba(0, 0, 0, 0.2); border-radius: 12px; padding: 2px 10px; }
 .ogames span.on { background: var(--sun); color: var(--ink); }
 .duel.brain.net .duel-half { min-height: 0; }
+
+/* ───── غابة السالب والموجب ───── */
+.numpad.signed .key.ok { grid-column: span 3; }
+.key.minus { font-size: 2.4rem; }
+.numline { width: 100%; max-width: 340px; height: auto; }
+.numline line { stroke: var(--ink); stroke-width: 2; }
+.numline .axis { stroke-width: 3; }
+.numline text { font: 700 13px "Baloo Bhaijaan 2", sans-serif; fill: var(--ink); text-anchor: middle; }
+.numline .marker { fill: var(--orange); }
+.mistake-list .numline, .tricky .numline, .feedback .numline { width: 6em; vertical-align: middle; }

@@ -1915,10 +1915,13 @@
     }, 100);
   }
 
-  const numpad = () => `<div class="numpad" dir="ltr">
+  // minus: لوحة غابة السالب والموجب، فيها مفتاح يقلب إشارة الجواب
+  const numpad = (minus = false) => `<div class="numpad ${minus ? 'signed' : ''}" dir="ltr">
     ${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => `<button class="key" data-key="${n}">${n}</button>`).join('')}
-    <button class="key util" data-key="del" aria-label="مسح">⌫</button>
+    ${minus ? '<button class="key util minus" data-key="minus" aria-label="سالب">−</button>' : ''}
+    ${minus ? '' : '<button class="key util" data-key="del" aria-label="مسح">⌫</button>'}
     <button class="key" data-key="0">0</button>
+    ${minus ? '<button class="key util" data-key="del" aria-label="مسح">⌫</button>' : ''}
     <button class="key ok" data-key="ok" aria-label="تأكيد">✓</button>
   </div>`;
 
@@ -1948,20 +1951,24 @@
     el.innerHTML = q.html || `<span>${q.a}</span><span class="op">${q.op}</span><span>${q.b}</span><span class="op">=</span><span id="answer" class="answer">&nbsp;</span>`;
     el.classList.toggle('rich', !!q.html);
     $('feedback').textContent = '';
-    if (q.choices) $('pad').innerHTML = choicePad(q);
-    else if (!$('pad').querySelector('.numpad')) $('pad').innerHTML = numpad();
+    const kind = q.choices ? 'choice' : q.minus ? 'signed' : 'plain';
+    if (q.choices || round.pad !== kind) $('pad').innerHTML = q.choices ? choicePad(q) : numpad(!!q.minus);
+    round.pad = kind;
   }
 
   function pressKey(k) {
     if (!round || round.locked) return;
     // في أسئلة الاختيار: الأرقام 1، 2، 3 على لوحة اللابتوب تختار الجواب
     if (round.q.choices) { const c = round.q.choices[Number(k) - 1]; if (c) choose(c.v); return; }
-    if (k === 'del') round.input = round.input.slice(0, -1);
-    else if (k === 'ok') { if (round.input) submit(); return; }
-    else if (round.input.length < 3) round.input += k;
-    $('answer').innerHTML = round.input || '&nbsp;';
-    // يُصحَّح تلقائياً عند كتابة عدد الأرقام الصحيح
-    if (round.input.length === String(round.q.answer).length) submit();
+    if (k === 'minus') {
+      if (!round.q.minus) return;
+      round.input = round.input.startsWith('-') ? round.input.slice(1) : '-' + round.input;
+    } else if (k === 'del') round.input = round.input.slice(0, -1);
+    else if (k === 'ok') { if (/\d/.test(round.input)) submit(); return; }
+    else if (round.input.replace('-', '').length < 3) round.input += k;
+    $('answer').innerHTML = round.input.replace('-', '−') || '&nbsp;';
+    // يُصحَّح تلقائياً عند كتابة عدد الأرقام الصحيح (مع الإشارة إن كان سالباً)
+    if (/\d/.test(round.input) && round.input.length === String(round.q.answer).length) submit();
   }
 
   function submit() {
@@ -3057,6 +3064,7 @@
       return;
     }
     if (/^[0-9]$/.test(k)) pressKey(k);
+    else if (k === '-' || k === '−') pressKey('minus');
     else if (k === 'Backspace') pressKey('del');
     else if (k === 'Enter') pressKey('ok');
     else if (k === 'Escape') actions.exitRound();

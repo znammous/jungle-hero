@@ -61,6 +61,21 @@ const FRAC_REGIONS = [
   { table: 11, label: 'خليط الكسور',         fastMs: 10000, name: 'أعماق المحيط',   icon: '🌊', animal: { emoji: '🐋', name: 'الحوت' } },
 ];
 
+// غابة السالب والموجب: طابع الثلج والكهوف، ومسائلها تُولَّد في integers.js
+const NEG_REGIONS = [
+  { table: 1,  label: 'خط الأعداد',             fastMs: 6000,  name: 'سلّم البئر',     icon: '🪜', animal: { emoji: '🐌', name: 'الحلزون' } },
+  { table: 2,  label: 'مقارنة الأعداد',          fastMs: 5000,  name: 'كهف الجليد',     icon: '❄️', animal: { emoji: '🐻‍❄️', name: 'الدب القطبي' } },
+  { table: 3,  label: 'درجة الحرارة',           fastMs: 9000,  name: 'رجل الثلج',      icon: '⛄', animal: { emoji: '🐺', name: 'الذئب' } },
+  { table: 4,  label: 'موجب + سالب',            fastMs: 7000,  name: 'نهر الجليد',     icon: '🌨️', animal: { emoji: '🐻', name: 'الدب البني' } },
+  { table: 5,  label: 'طرح يتجاوز الصفر',        fastMs: 7000,  name: 'منجم الأحجار',   icon: '⛏️', animal: { emoji: '🦡', name: 'الغرير' } },
+  { table: 6,  label: 'سالب + سالب',            fastMs: 7000,  name: 'الكهف العميق',   icon: '🕳️', animal: { emoji: '🕷️', name: 'العنكبوت' } },
+  { table: 7,  label: 'سالب + موجب',            fastMs: 7000,  name: 'النبع الحار',    icon: '♨️', animal: { emoji: '🦥', name: 'الكسلان' } },
+  { table: 8,  label: 'طرح عدد سالب',           fastMs: 8000,  name: 'زلّاجة الوادي',  icon: '🛷', animal: { emoji: '🐆', name: 'الفهد' } },
+  { table: 9,  label: 'جمع وطرح حتى 20',        fastMs: 10000, name: 'شلال متجمّد',    icon: '🌬️', animal: { emoji: '🦬', name: 'الثور البري' } },
+  { table: 10, label: 'ضرب الأعداد الصحيحة',     fastMs: 8000,  name: 'برج الرياح',     icon: '🌪️', animal: { emoji: '🐉', name: 'التنين' } },
+  { table: 11, label: 'خليط الأعداد الصحيحة',    fastMs: 10000, name: 'قلعة الشتاء',    icon: '🏰', animal: { emoji: '🦣', name: 'الماموث' } },
+];
+
 // عالم الغابات: كل غابة عملية حسابية، مرتّبة كما في المنهج. needs = تُفتح عند فتح عدد من مناطق غابة أخرى
 // total = عدد المسائل المختلفة فيها، gen = مسائل تُولَّد عشوائياً، soon = لم تُبنَ بعد
 const WORLDS = [
@@ -74,7 +89,9 @@ const WORLDS = [
   { id: 'frac', name: 'غابة الكسور', icon: '🍕', op: '', regions: FRAC_REGIONS, skill: 'الكسور', gen: true,
     needs: { world: 'mul', regions: 4 },
     hint: 'الكسر جزء من كل: البسط فوق يقول كم جزءاً أخذنا، والمقام تحت يقول إلى كم جزءاً قسمنا.' },
-  { id: 'neg', name: 'غابة السالب والموجب', icon: '🌡️', soon: true },
+  { id: 'neg', name: 'غابة السالب والموجب', icon: '🌡️', op: '', regions: NEG_REGIONS, skill: 'السالب والموجب', gen: true,
+    needs: { world: 'add', regions: 5 },
+    hint: 'الأعداد السالبة أصغر من الصفر، مثل الحرارة تحت الصفر. على خط الأعداد: كلما ذهبت يساراً صغر العدد.' },
 ];
 
 // الرتبة تعتمد على أفضل نتيجة في سباق النهر (عدد الإجابات الصحيحة في دقيقة)

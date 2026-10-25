@@ -29,6 +29,8 @@ const Brain = (() => {
   // مسائل المناطق المفتوحة في الغابة (الكسور لها مولّداتها في آخر الملف)
   function pool(p, w) {
     if (w === 'frac') return { w };
+    // ألعابه مبنية على أعداد موجبة، فغابة السالب والموجب تأخذ مسائل غابة الجمع والطرح (مفتوحة قبلها دائماً)
+    if (w === 'neg') w = 'add';
     const W = Engine.world(w);
     const pairs = W.gen
       ? W.regions.slice(0, Engine.state(p, w).unlocked).flatMap(r => Engine.tablePool(r.table, p, w))

@@ -27,6 +27,7 @@ const Engine = (() => {
   const NEXT = {
     add: t => ADD_GEN[t](),
     frac: t => Fractions.next(t),
+    neg: t => Integers.next(t),
   };
 
   const genKey = (t, n) => `${t}:${n}`;
@@ -36,6 +37,7 @@ const Engine = (() => {
     div: (t, n) => `${t * n}/${t}`,
     add: genKey,
     frac: genKey,
+    neg: genKey,
   };
   // من المفتاح المحفوظ إلى الزوج [الجدول، العدد]
   const PAIRS = {
@@ -43,6 +45,7 @@ const Engine = (() => {
     div: k => { const [a, t] = k.split('/').map(Number); return [t, a / t]; },
     add: genPair,
     frac: genPair,
+    neg: genPair,
   };
   const MAKE = {
     mul: (t, n) => { const [a, b] = Math.random() < 0.5 ? [t, n] : [n, t]; return { a, b, answer: t * n }; },
@@ -52,6 +55,7 @@ const Engine = (() => {
       return { a: +a, b: +b, op: op === '+' ? '+' : '−', answer: op === '+' ? +a + +b : a - b };
     },
     frac: (t, n) => Fractions.make(n),
+    neg: (t, n) => Integers.make(n),
   };
 
   // المسألة: a op b = answer، أو html خاص بها (الكسور). text للقوائم بلا جواب، و solved مع الجواب
