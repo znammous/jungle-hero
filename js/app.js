@@ -402,9 +402,9 @@
           <div class="animal-grid">
           ${w.regions.map(r => {
             const ok = found.includes(r.table);
-            return `<div class="animal ${ok ? 'found' : ''}">
-              <span class="animal-emoji">${ok ? r.animal.emoji : '❓'}</span>
-              <b>${ok ? r.animal.name : '؟؟؟'}</b>
+            return `<div class="animal ${ok ? 'found' : 'hidden'}">
+              <span class="animal-emoji"><i>${r.animal.emoji}</i></span>
+              <b>${ok ? r.animal.name : 'مَن أنا؟'}</b>
               <small>${r.icon} ${r.name} · ${w.unit} ${ltr(r.table)}</small>
             </div>`;
           }).join('')}

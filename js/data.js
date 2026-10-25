@@ -30,15 +30,32 @@ const DIV_REGIONS = [
   { table: 12, name: 'جبل النسور',       icon: '🏔️', animal: { emoji: '🦅', name: 'النسر' } },
 ];
 
-// عالم الغابات: كل غابة عملية حسابية. needs = تُفتح عند فتح عدد من مناطق غابة أخرى
-// total = عدد المسائل المختلفة فيها، soon = لم تُبنَ بعد
+// غابة الجمع والطرح: كل منطقة مهارة (table = رقمها)، ومسائلها تُولَّد عشوائياً في engine.js
+// fastMs = الإجابة الصحيحة الأسرع من هذا تُحسب في الإتقان (المسائل ذات الرقمين تحتاج وقتاً أطول)
+const ADD_REGIONS = [
+  { table: 1,  label: 'جمع حتى 10',            fastMs: 5000,  name: 'مرج البداية',    icon: '🌼', animal: { emoji: '🐇', name: 'الأرنب' } },
+  { table: 2,  label: 'طرح حتى 10',            fastMs: 5000,  name: 'جذع الشجرة',     icon: '🪵', animal: { emoji: '🐿️', name: 'السنجاب' } },
+  { table: 3,  label: 'جمع حتى 20',            fastMs: 6000,  name: 'تلة الفطر',      icon: '🍄', animal: { emoji: '🦔', name: 'القنفذ' } },
+  { table: 4,  label: 'طرح حتى 20',            fastMs: 6000,  name: 'بركة الزنابق',   icon: '🪷', animal: { emoji: '🐸', name: 'الضفدع' } },
+  { table: 5,  label: 'جمع العشرات',           fastMs: 6000,  name: 'الجدول الصغير',  icon: '💧', animal: { emoji: '🦆', name: 'البطة' } },
+  { table: 6,  label: 'طرح العشرات',           fastMs: 6000,  name: 'سد القندس',      icon: '🪨', animal: { emoji: '🦫', name: 'القندس' } },
+  { table: 7,  label: 'جمع حتى 100 بلا حمل',   fastMs: 9000,  name: 'حقل البرسيم',    icon: '🍀', animal: { emoji: '🐞', name: 'الدعسوقة' } },
+  { table: 8,  label: 'طرح حتى 100 بلا استلاف', fastMs: 9000,  name: 'غابة الصنوبر',   icon: '🌲', animal: { emoji: '🦌', name: 'الغزال' } },
+  { table: 9,  label: 'جمع مع حمل',            fastMs: 12000, name: 'السهل الواسع',   icon: '🌄', animal: { emoji: '🦓', name: 'الحمار الوحشي' } },
+  { table: 10, label: 'طرح مع استلاف',         fastMs: 12000, name: 'الوادي الأحمر',  icon: '🌅', animal: { emoji: '🦘', name: 'الكنغر' } },
+  { table: 11, label: 'جمع وطرح حتى 100',      fastMs: 12000, name: 'عرين الأسد',     icon: '👑', animal: { emoji: '🦁', name: 'الأسد' } },
+];
+
+// عالم الغابات: كل غابة عملية حسابية، مرتّبة كما في المنهج. needs = تُفتح عند فتح عدد من مناطق غابة أخرى
+// total = عدد المسائل المختلفة فيها، gen = مسائل تُولَّد عشوائياً، soon = لم تُبنَ بعد
 const WORLDS = [
+  { id: 'add', name: 'غابة الجمع والطرح', icon: '➕', op: '+', regions: ADD_REGIONS, skill: 'الجمع والطرح', gen: true,
+    hint: 'ابدأ بالجمع والطرح حتى 10، ثم حتى 20، ثم حتى 100. كل إجابة صحيحة سريعة تقرّبك من إتقان المنطقة!' },
   { id: 'mul', name: 'غابة الضرب', icon: '✖️', op: '×', regions: REGIONS, unit: 'جدول', skill: 'الجداول', total: 78,
     hint: 'اختر منطقة لتتدرّب على جدولها. أتقنها لتفتح المنطقة التالية وتكتشف حيوانها!' },
   { id: 'div', name: 'غابة القسمة', icon: '➗', op: '÷', regions: DIV_REGIONS, unit: 'القسمة على', skill: 'القسمة', total: 132,
     needs: { world: 'mul', regions: 4 },
     hint: 'كل منطقة فيها القسمة على عدد. القسمة عكس الضرب: <span dir="ltr">7 × 8 = 56</span> إذن <span dir="ltr">56 ÷ 7 = 8</span>' },
-  { id: 'add', name: 'غابة الجمع والطرح', icon: '➕', soon: true },
   { id: 'frac', name: 'غابة الكسور', icon: '🍕', soon: true },
   { id: 'neg', name: 'غابة السالب والموجب', icon: '🌡️', soon: true },
 ];
@@ -116,6 +133,7 @@ const CONFIG = {
   unlockAt: 0.75,       // نسبة إتقان المنطقة لفتح التالية
   idleCapMs: 20000,     // أقصى وقت يُحسب للسؤال الواحد (حتى لا يُحسب وقت الشرود)
   chestRareChance: 0.3, // احتمال قطعة نادرة في كنز اليوم
+  skillGoal: 20,        // إجابات صحيحة سريعة (بعد طرح الأخطاء) لإتقان منطقة في الغابات ذات المسائل العشوائية
   weeklyGoal: 5,        // عدد أيام رحلة اليوم المطلوبة للجائزة الأسبوعية
 };
 
