@@ -1070,3 +1070,8 @@ body.tabs .toast, body.tabs .update-bar { bottom: calc(84px + env(safe-area-inse
 .duel.multi .bchoice { height: clamp(36px, 6vmin, 52px); font-size: 1.3rem; }
 .duel.multi .bshape .shape { width: 72px; height: 72px; }
 .duel.multi .bshape .shape.strip { width: 140px; height: 56px; }
+.duel.brain.net .opp { justify-content: space-between; }
+.ogames { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.ogames span { background: rgba(0, 0, 0, 0.2); border-radius: 12px; padding: 2px 10px; }
+.ogames span.on { background: var(--sun); color: var(--ink); }
+.duel.brain.net .duel-half { min-height: 0; }

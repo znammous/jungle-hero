@@ -512,7 +512,7 @@
       const canNet = Sync.duel.ready();
       const picked = duelPicks.map(id => list.find(p => p.id === id));
       const layout = duelLayout(n);
-      const brainKind = !net && duelKind === 'brain';
+      const brainKind = duelKind === 'brain';
       render(`<section class="screen duel-screen">
         <header class="topbar">
           <button class="chip" data-act="go" data-arg="profiles">→ رجوع</button>
@@ -523,15 +523,17 @@
           <button class="${net ? '' : 'on'}" data-act="setDuelMode" data-arg="local">📱 جهاز واحد</button>
           <button class="${net ? 'on' : ''}" data-act="setDuelMode" data-arg="net">🌐 عدة أجهزة</button>
         </div>
-        ${net ? '' : `<div class="seg duel-modes">
+        <div class="seg duel-modes">
           <button class="${brainKind ? '' : 'on'}" data-act="setDuelKind" data-arg="race">🏃 سباق النهر</button>
           <button class="${brainKind ? 'on' : ''}" data-act="setDuelKind" data-arg="brain">🧠 مبارزة العقول</button>
-        </div>`}
+        </div>
         <div class="card">
           ${brainKind ? `<p>كل واحد يُسأل من غابته، والصعوبة تتكيّف معه وحده: تصعب كلما أجاب صحيحاً.
             ثلاث ألعاب، ${ltr(Brain.DUEL_SECONDS)} ثانية لكل منها، ومن يُجب صحيحاً أكثر يفوز باللعبة.
             <b>الفائز من يكسب ألعاباً أكثر!</b></p>
-          <p class="muted">${n === 4 ? '⚠️ أربعة على تابلت واحد: الأزرار أصغر، والأفضل تابلت كبير.' : 'ضعوا التابلت بينكم، ولكل واحد جزء من الشاشة يضغط فيه.'}</p>` : `<p>${net ? `اختر نفسك، ثم يقبل إخوتك الدعوة على أجهزتهم (حتى ${ltr(MAX_PLAYERS)} لاعبين).` : `اختر من 2 إلى ${ltr(MAX_PLAYERS)} متسابقين.`}
+          <p class="muted">${net
+            ? (canNet ? `اختر نفسك، ثم يقبل إخوتك الدعوة على أجهزتهم (حتى ${ltr(MAX_PLAYERS)} لاعبين). تحتاج الأجهزة إلى الإنترنت وحساب Google نفسه.` : '⚠️ سجّل دخول ولي الأمر بحساب Google على كل الأجهزة أولاً، مع اتصال بالإنترنت.')
+            : n === 4 ? '⚠️ أربعة على تابلت واحد: الأزرار أصغر، والأفضل تابلت كبير.' : 'ضعوا التابلت بينكم، ولكل واحد جزء من الشاشة يضغط فيه.'}</p>` : `<p>${net ? `اختر نفسك، ثم يقبل إخوتك الدعوة على أجهزتهم (حتى ${ltr(MAX_PLAYERS)} لاعبين).` : `اختر من 2 إلى ${ltr(MAX_PLAYERS)} متسابقين.`}
             كل واحد يُسأل من جداوله، وجزيرته على بُعد أفضل نتيجة له وإجابتين.
             <b>الأول من يصل إلى جزيرته أولاً!</b></p>
           <p class="muted">${net
@@ -554,7 +556,7 @@
           </button>`).join('')}</div>
         </div>`}
         ${net
-          ? `<button class="btn green wide" data-act="netHost" ${n === 1 && canNet ? '' : 'disabled'}>📨 أرسل الدعوة</button>`
+          ? `<button class="btn green wide" data-act="netHost" data-arg="${brainKind ? 'brain' : 'race'}" ${n === 1 && canNet ? '' : 'disabled'}>📨 أرسل الدعوة</button>`
           : brainKind ? `<button class="btn green wide" data-act="startBrainDuel" ${n >= 2 ? '' : 'disabled'}>🧠 ابدأ المبارزة</button>`
           : `<button class="btn green wide" data-act="startDuel" ${n >= 2 ? '' : 'disabled'}>🏁 ابدأ السباق</button>`}
       </section>`);
@@ -565,15 +567,16 @@
       const d = Sync.duel.data();
       const players = d && netPending && d.id === netPending.id ? activePlayers(d) : [];
       const host = role === 'host';
+      const what = d && d.kind === 'brain' ? 'المبارزة' : 'السباق';
       render(`<section class="screen results duel-screen net-wait">
         <div class="result-hero wait-spin">⏳</div>
-        <h1>${host ? 'بانتظار المتسابقين…' : 'بانتظار بدء السباق…'}</h1>
+        <h1>${host ? 'بانتظار المتسابقين…' : `بانتظار بدء ${what}…`}</h1>
         <p class="hint">${host
           ? `افتح اللعبة على الأجهزة الأخرى واضغط «انضم» (حتى ${ltr(MAX_PLAYERS)} لاعبين).`
-          : 'يبدأ السباق عندما يضغط صاحب الدعوة «ابدأ».'}</p>
+          : `تبدأ ${what} عندما يضغط صاحب الدعوة «ابدأ».`}</p>
         <div class="net-players">${players.map(x => `<span>${x.avatar}<b>${esc(x.name)}</b></span>`).join('')}</div>
         <div class="actions">
-          ${host ? `<button class="btn green" data-act="netStart" ${players.length >= 2 ? '' : 'disabled'}>🏁 ابدأ السباق (${ltr(players.length)})</button>` : ''}
+          ${host ? `<button class="btn green" data-act="netStart" ${players.length >= 2 ? '' : 'disabled'}>🏁 ابدأ ${what} (${ltr(players.length)})</button>` : ''}
           <button class="btn orange" data-act="netCancel">✕ إلغاء</button>
         </div>
       </section>`);
@@ -590,12 +593,12 @@
           <span></span>
         </header>
         <div class="card center">
-          <p>${host.avatar} <b>${esc(host.name)}</b> يدعوك لسباق! من أنت؟</p>
+          <p>${host.avatar} <b>${esc(host.name)}</b> يدعوك ${d.kind === 'brain' ? 'لمبارزة العقول 🧠' : 'لسباق'}! من أنت؟</p>
           <div class="net-players">${taken.map(x => `<span>${x.avatar}<b>${esc(x.name)}</b></span>`).join('')}</div>
         </div>
         <div class="profile-grid">${list.map(p => `<button class="profile-card" data-act="netJoin" data-arg="${p.id}">
             <span class="avatar">${p.avatar}</span><b>${esc(p.name)}</b>
-            <small>🏝️ هدفه ${ltr(duelGoal(p))}</small>
+            <small>${d.kind === 'brain' ? `${Engine.current(p).icon} ${Engine.current(p).name}` : `🏝️ هدفه ${ltr(duelGoal(p))}`}</small>
           </button>`).join('')}</div>
       </section>`);
     },
@@ -864,6 +867,14 @@
           <span class="bmid-game">${G.icon}</span>
           <div class="timebar"><i id="timebar"></i><span id="timeText">${Brain.DUEL_SECONDS}</span></div>
         </div>`;
+      if (brain.net) {
+        render(`<section class="duel brain net">
+          ${mid}
+          <div id="bOpps">${brainOpps()}</div>
+          ${half(brain.sides[0], 0)}
+        </section>`);
+        return;
+      }
       const n = brain.sides.length;
       if (n === 2) {
         render(`<section class="duel brain ${duelLayout(2)}">${half(brain.sides[0], 0)}${mid}${half(brain.sides[1], 1)}</section>`);
@@ -1309,6 +1320,10 @@
       if (!app.querySelector('.duel-lock')) actions.exitDuel();
       return true;
     }
+    if (brain && brain.duel && app.querySelector('.duel.brain') && !nav.leaving) {
+      if (!app.querySelector('.duel-lock')) actions.exitBrain();
+      return true;
+    }
     if (nav.cur === 'parent' || nav.cur === 'parentGate') { actions.leaveParent(); return true; }
     if (nav.cur === 'welcome' && nav.stack.length) { actions.skipWelcome(); return true; }
     const prev = nav.stack[nav.stack.length - 1];
@@ -1699,17 +1714,18 @@
   const netPlayer = p => ({
     device: DEVICE, pid: p.id, name: p.name, avatar: p.avatar, goal: duelGoal(p), joinedAt: Date.now(),
     right: 0, reachedMs: 0, done: false, left: false,
+    brain: Brain.GAMES.map(() => 0), g: 0,   // مبارزة العقول: الإجابات الصحيحة في كل لعبة، واللعبة الحالية
   });
   const activePlayers = d => Object.values((d && d.players) || {})
     .filter(x => !x.left).sort((a, b) => a.joinedAt - b.joinedAt);
 
-  function netHost() {
+  function netHost(kind = 'race') {
     const p = Store.state.profiles.find(k => k.id === duelPicks[0]);
     if (!p) return;
     const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
     netPending = { id, role: 'host', pid: p.id };
     Screens.netWait('host');
-    Sync.duel.set({ id, state: 'waiting', createdAt: Date.now(), host: DEVICE, players: { [DEVICE]: netPlayer(p) } })
+    Sync.duel.set({ id, kind, state: 'waiting', createdAt: Date.now(), host: DEVICE, players: { [DEVICE]: netPlayer(p) } })
       .catch(() => {
         netPending = null;
         toast('⚠️ تعذّر إرسال الدعوة. تأكد من الإنترنت وتسجيل الدخول.', 5000);
@@ -1734,7 +1750,7 @@
     const d = Sync.duel.data();
     if (!netPending || netPending.role !== 'host' || !d || d.id !== netPending.id || activePlayers(d).length < 2) return;
     Sync.duel.update({ state: 'running' }).catch(() => {});
-    startNetDuel(d);
+    d.kind === 'brain' ? startNetBrain(d) : startNetDuel(d);
   }
 
   function netCancel() {
@@ -1830,12 +1846,12 @@
   });
   let inviteTimer;
   function showInvite(d) {
-    const ok = inviteFor(d) && !round && !duel && !netPending && inviteBar.dataset.dismissed !== d.id;
+    const ok = inviteFor(d) && !round && !duel && !brain && !netPending && inviteBar.dataset.dismissed !== d.id;
     inviteBar.hidden = !ok;
     clearTimeout(inviteTimer);
     if (!ok) return;
     const host = d.players[d.host];
-    inviteBar.innerHTML = `<span>⚔️ ${host.avatar} <b>${esc(host.name)}</b> يدعوك لسباق!</span>
+    inviteBar.innerHTML = `<span>${d.kind === 'brain' ? '🧠' : '⚔️'} ${host.avatar} <b>${esc(host.name)}</b> يدعوك ${d.kind === 'brain' ? 'لمبارزة العقول' : 'لسباق'}!</span>
       <button class="btn orange" data-invite="join">انضم</button>
       <button class="chip" data-invite="no" aria-label="تجاهل">✕</button>`;
     inviteTimer = setTimeout(() => showInvite(Sync.duel.data()), d.createdAt + INVITE_MS - Date.now());
@@ -1849,13 +1865,14 @@
       if (!d || d.id !== netPending.id) return;
       if (d.state === 'cancelled') { netPending = null; toast('أُلغيت الدعوة'); go('profiles'); return; }
       if (d.state === 'running') {
-        if (activePlayers(d).some(x => x.device === DEVICE)) startNetDuel(d);
+        if (activePlayers(d).some(x => x.device === DEVICE)) d.kind === 'brain' ? startNetBrain(d) : startNetDuel(d);
         else { netPending = null; toast('بدأ السباق قبل انضمامك'); go('profiles'); }
         return;
       }
       Screens.netWait(netPending.role);   // تحديث قائمة المنضمين
       return;
     }
+    if (brain && brain.net && d && d.id === brain.net.id) { netBrainUpdate(d); return; }
     if (!duel || !duel.net || !d || d.id !== duel.net.id) return;
     const n = duel.net;
     n.opps.forEach((o, j) => {
@@ -2050,6 +2067,31 @@
     Screens.results(summary);
   }
 
+  // إيقاف السباق أو المبارزة يحتاج رمز ولي الأمر حتى لا يوقفها الخاسر
+  let stopLock = null;   // { pin, fn }
+  function askStop(what, fn) {
+    if (!Store.state.settings.pin) {
+      if (confirm(`إيقاف ${what}؟ لن تُحسب النتيجة.`)) fn();
+      return;
+    }
+    stopLock = { pin: '', fn };
+    const lock = document.createElement('div');
+    lock.className = 'duel-lock';
+    lock.innerHTML = `<div class="card pin-card">
+      <h2>⏸️ إيقاف ${what}</h2>
+      <p>أدخل رمز ولي الأمر</p>
+      <div class="pin-dots" id="duelDots">${'<i></i>'.repeat(4)}</div>
+      <div class="numpad small" dir="ltr">
+        ${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => `<button class="key" data-act="duelPin" data-arg="${n}">${n}</button>`).join('')}
+        <button class="key util" data-act="duelPin" data-arg="del" aria-label="مسح">⌫</button>
+        <button class="key" data-act="duelPin" data-arg="0">0</button>
+        <span></span>
+      </div>
+      <button class="link-btn dark" data-act="duelPin" data-arg="cancel">↩️ متابعة ${what}</button>
+    </div>`;
+    app.querySelector('.duel').appendChild(lock);
+  }
+
   // ───── تحدّي العقل ─────
   // brain.sides: لاعب واحد من المخيّم، أو من 2 إلى 4 في مبارزة العقول على شاشة مقسومة.
   // كل لاعب يُسأل من غابته الحالية وبمستواه هو
@@ -2090,6 +2132,11 @@
 
   function abortBrain() {
     if (!brain) return;
+    if (brain.net) {
+      clearTimeout(brain.net.waitT);
+      clearTimeout(brain.net.pushT);
+      if (!brain.net.finished) Sync.duel.update({ [`${myPath}.left`]: true }).catch(() => {});
+    }
     clearInterval(brain.timer);
     brain.timeouts.forEach(clearTimeout);
     // الوقت الذي لُعب يُحسب في وقت اليوم لكل لاعب
@@ -2198,6 +2245,7 @@
     Sound.play(ok ? 'right' : 'wrong');
     $(`bFb${i}`).textContent = ok ? ['رائع! 🎉', 'صحيح! ⭐', 'ممتاز! 🌟', 'أحسنت! 👏'][g.right % 4] : 'لا بأس، ركّز في التالي 💪';
     brainLevel(i);
+    if (b.net) netBrainPush(false);
     b.timeouts.push(setTimeout(() => brainNext(i), ok ? 450 : 1300));
   }
 
@@ -2210,7 +2258,9 @@
     const games = b.sides.map(s => s.games[b.g]);
     games.forEach(g => { g.medal = Brain.medal(g.points); });
     let note;
-    if (b.duel) {
+    if (b.net) {
+      note = `✅ ${games[0].right} إجابة صحيحة`;
+    } else if (b.duel) {
       // يفوز باللعبة من أجاب صحيحاً أكثر (ويتشارك المتساوون)
       const top = Math.max(...games.map(g => g.right));
       if (top > 0) games.forEach(g => { g.won = g.right === top; });
@@ -2222,6 +2272,7 @@
     if (++b.g < Brain.GAMES.length) {
       Sound.play('coin');
       if (note) toast(note, 1800);
+      if (b.net) netBrainPush(false);
       if (b.duel) {
         b.phase = 'wait';
         b.timeouts.push(setTimeout(() => { if (brainAlive()) brainGo(); }, 2000));
@@ -2231,7 +2282,7 @@
       }
       return;
     }
-    b.duel ? finishBrainDuel() : finishBrain();
+    b.net ? netBrainFinish() : b.duel ? finishBrainDuel() : finishBrain();
   }
 
   function finishBrain() {
@@ -2258,6 +2309,13 @@
   }
 
   // المراكز: الأكثر فوزاً بالألعاب، ثم الأكثر إجابات صحيحة، والمتساوون يتشاركون المركز
+  function rankBrain(list) {
+    const cmp = (x, y) => y.wins - x.wins || y.right - x.right;
+    const ranked = list.slice().sort(cmp);
+    ranked.forEach((x, i) => { x.place = i && cmp(ranked[i - 1], x) === 0 ? ranked[i - 1].place : i + 1; });
+    return ranked;
+  }
+
   function finishBrainDuel() {
     const b = brain;
     abortBrain();
@@ -2267,9 +2325,7 @@
       right: s.games.reduce((n, g) => n + g.right, 0),
       banners: [],
     }));
-    const cmp = (x, y) => y.wins - x.wins || y.right - x.right;
-    const ranked = list.slice().sort(cmp);
-    ranked.forEach((x, i) => { x.place = i && cmp(ranked[i - 1], x) === 0 ? ranked[i - 1].place : i + 1; });
+    const ranked = rankBrain(list);
     const winner = soleWinner(ranked);
     list.forEach(x => {
       const before = x.p.coins;
@@ -2284,6 +2340,108 @@
     Screens.duelResults({
       sides: ranked, winner, again: 'startBrainDuel',
       note: winner ? `فاز بـ ${winner.wins} من ${Brain.GAMES.length} ألعاب` : 'نفس عدد الألعاب والإجابات الصحيحة',
+    });
+  }
+
+  // ───── مبارزة العقول على عدة أجهزة ─────
+  // كل جهاز يلعب الألعاب الثلاث وحده، ويرفع إجاباته الصحيحة في كل لعبة. الفائز بكل لعبة يُحسب في النهاية
+  function startNetBrain(d) {
+    const { pid } = netPending;
+    netPending = null;
+    const p = Store.state.profiles.find(k => k.id === pid);
+    const opps = activePlayers(d).filter(x => x.device !== DEVICE).slice(0, MAX_PLAYERS - 1).map(x => Object.assign({}, x));
+    if (!p || !opps.length) { go('profiles'); return; }
+    abortBrain();
+    brain = {
+      duel: true, g: 0, phase: 'play', sides: [brainSideFor(p)], timer: null, timeouts: [],
+      net: { id: d.id, opps, finished: false },
+    };
+    brainGo();
+  }
+
+  // شريط المنافسين: إجاباتهم الصحيحة في كل لعبة حتى الآن
+  const brainOpps = () => brain.net.opps.map(o => `<div class="opp">
+      <b>${o.avatar} ${esc(o.name)}</b>
+      <span class="ogames">${o.left ? '🏳️ انسحب' : Brain.GAMES.map((G, j) =>
+        `<span class="${j === (o.g || 0) && !o.done ? 'on' : ''}">${G.icon} ${ltr((o.brain || [])[j] || 0)}</span>`).join('')}</span>
+    </div>`).join('');
+
+  // نرفع التقدّم كل 0.6 ثانية على الأكثر، والنتيجة النهائية فوراً
+  function netBrainPush(final) {
+    const n = brain.net;
+    const s = brain.sides[0];
+    const send = () => {
+      n.pushT = null;
+      const data = { [`${myPath}.brain`]: s.games.map(g => g.right), [`${myPath}.g`]: Math.min(brain ? brain.g : 0, Brain.GAMES.length - 1) };
+      if (final) data[`${myPath}.done`] = true;
+      Sync.duel.update(data).catch(() => {});
+    };
+    if (final) { clearTimeout(n.pushT); send(); return; }
+    if (!n.pushT) n.pushT = setTimeout(send, 600);
+  }
+
+  function netBrainUpdate(d) {
+    const n = brain.net;
+    n.opps.forEach(o => {
+      const x = d.players && d.players[o.device];
+      if (!x) return;
+      if (x.left && !o.left && !n.finished) toast(`🏳️ انسحب ${x.name}`, 3000);
+      Object.assign(o, x);
+    });
+    if ($('bOpps')) $('bOpps').innerHTML = brainOpps();
+    if (n.finished && othersDone(n)) netBrainResolve();
+  }
+
+  function netBrainFinish() {
+    const n = brain.net;
+    n.finished = true;
+    brain.phase = 'wait';
+    netBrainPush(true);
+    const box = document.createElement('div');
+    box.className = 'duel-lock';
+    box.innerHTML = '<div class="card pin-card"><div class="result-hero wait-spin">⏳</div><h2>بانتظار نتائج المنافسين…</h2></div>';
+    app.querySelector('.duel').appendChild(box);
+    // الأجهزة لا تبدأ في اللحظة نفسها تماماً، فننتظر قليلاً، ولا ننتظر من انقطع اتصاله طويلاً
+    n.waitT = setTimeout(netBrainResolve, 15000);
+    if (othersDone(n)) netBrainResolve();
+  }
+
+  function netBrainResolve() {
+    if (!brain || !brain.net) return;
+    const b = brain;
+    const s = b.sides[0];
+    const n = b.net;
+    abortBrain();
+    const mine = { p: s.p, s, per: s.games.map(g => g.right), banners: [] };
+    const others = n.opps.map(o => ({
+      p: { avatar: o.avatar, name: o.name }, per: o.brain || Brain.GAMES.map(() => 0), coins: null, banners: [],
+      gone: o.left ? '🏳️ انسحب قبل النهاية' : !o.done ? '📡 انقطع اتصاله' : '',
+    }));
+    const playing = [mine, ...others.filter(x => !x.gone)];
+    // الفائز بكل لعبة: الأكثر إجابات صحيحة فيها
+    Brain.GAMES.forEach((G, j) => {
+      const top = Math.max(...playing.map(x => x.per[j]));
+      playing.forEach(x => { x.won = x.won || []; x.won[j] = top > 0 && x.per[j] === top; });
+    });
+    playing.concat(others).forEach(x => {
+      x.won = x.won || [];
+      x.wins = x.won.filter(Boolean).length;
+      x.right = x.per.reduce((a, c) => a + c, 0);
+      x.out = x.gone || Brain.GAMES.map((G, j) => `${G.icon} ${x.won[j] ? '👑' : ''}${x.per[j]}`).join(' · ');
+    });
+    const ranked = rankBrain(playing);
+    const winner = soleWinner(ranked);
+    const before = s.p.coins;
+    s.p.coins += Math.floor(mine.right * COINS.perCorrect) + (winner === mine ? COINS.duelWin : 0);
+    const bs = Brain.state(s.p, s.w);
+    s.games.forEach(g => { bs.lv[g.id] = g.lv; });
+    mine.coins = s.p.coins - before;
+    Store.save();
+    Sound.play('win');
+    Screens.duelResults({
+      sides: ranked.concat(others.filter(x => x.gone)), winner, net: true, again: 'duelSetup',
+      note: ranked.length < 2 ? 'لم يُكمل المنافسون المبارزة، فلا فائز هذه المرة'
+        : winner ? `فاز بـ ${winner.wins} من ${Brain.GAMES.length} ألعاب` : 'نفس عدد الألعاب والإجابات الصحيحة',
     });
   }
 
@@ -2459,7 +2617,7 @@
     },
     startDuel() { startDuel(); },
     setDuelMode(m) { duelMode = m; duelPicks = duelPicks.slice(0, m === 'net' ? 1 : MAX_PLAYERS); Screens.duelPick(); },
-    netHost() { netHost(); },
+    netHost(kind) { netHost(kind); },
     netStart() { netStart(); },
     netJoin(pid) { netJoin(pid); },
     netCancel() { netCancel(); },
@@ -2471,37 +2629,17 @@
     },
     // إيقاف سباق الإخوة يحتاج رمز ولي الأمر حتى لا يوقفه الخاسر
     exitDuel() {
-      if (!duelAlive()) return;
-      if (!Store.state.settings.pin) {
-        if (confirm('إيقاف السباق؟ لن تُحسب النتيجة.')) stopDuel();
-        return;
-      }
-      duel.pin = '';
-      const lock = document.createElement('div');
-      lock.className = 'duel-lock';
-      lock.innerHTML = `<div class="card pin-card">
-        <h2>⏸️ إيقاف السباق</h2>
-        <p>أدخل رمز ولي الأمر</p>
-        <div class="pin-dots" id="duelDots">${'<i></i>'.repeat(4)}</div>
-        <div class="numpad small" dir="ltr">
-          ${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => `<button class="key" data-act="duelPin" data-arg="${n}">${n}</button>`).join('')}
-          <button class="key util" data-act="duelPin" data-arg="del" aria-label="مسح">⌫</button>
-          <button class="key" data-act="duelPin" data-arg="0">0</button>
-          <span></span>
-        </div>
-        <button class="link-btn dark" data-act="duelPin" data-arg="cancel">↩️ متابعة السباق</button>
-      </div>`;
-      app.querySelector('.duel').appendChild(lock);
+      if (duelAlive()) askStop('السباق', stopDuel);
     },
     duelPin(k) {
-      if (!duelAlive()) return;
       const lock = app.querySelector('.duel-lock');
-      if (k === 'cancel') { lock.remove(); return; }
-      duel.pin = k === 'del' ? duel.pin.slice(0, -1) : (duel.pin + k).slice(0, 4);
-      $('duelDots').innerHTML = [0, 1, 2, 3].map(i => `<i class="${i < duel.pin.length ? 'on' : ''}"></i>`).join('');
-      if (duel.pin.length < 4) return;
-      if (duel.pin === Store.state.settings.pin) { stopDuel(); return; }
-      duel.pin = '';
+      if (!stopLock || !lock || !lock.querySelector('#duelDots')) return;
+      if (k === 'cancel') { lock.remove(); stopLock = null; return; }
+      stopLock.pin = k === 'del' ? stopLock.pin.slice(0, -1) : (stopLock.pin + k).slice(0, 4);
+      $('duelDots').innerHTML = [0, 1, 2, 3].map(i => `<i class="${i < stopLock.pin.length ? 'on' : ''}"></i>`).join('');
+      if (stopLock.pin.length < 4) return;
+      if (stopLock.pin === Store.state.settings.pin) { const fn = stopLock.fn; stopLock = null; fn(); return; }
+      stopLock.pin = '';
       toast('❌ الرمز غير صحيح');
       setTimeout(() => { if ($('duelDots')) $('duelDots').innerHTML = '<i></i>'.repeat(4); }, 250);
     },
@@ -2531,8 +2669,12 @@
     brainGo() { brainGo(); },
     exitBrain() {
       if (!brainAlive()) return;
-      if (brain.duel && !confirm('إيقاف المبارزة؟ لن تُحسب النتيجة.')) return;
-      if (!navBack()) go('camp');
+      const stop = () => {
+        nav.leaving = true;
+        try { if (!navBack()) go('camp'); } finally { nav.leaving = false; }
+      };
+      if (brain.duel) askStop('المبارزة', stop);
+      else stop();
     },
 
     brainCmp(arg) {
@@ -2881,7 +3023,11 @@
 
     if (!round) {
       if (brain) {
-        if (k === 'Escape') actions.exitBrain();
+        if (document.querySelector('.duel-lock')) {
+          if (/^[0-9]$/.test(k)) actions.duelPin(k);
+          else if (k === 'Backspace') actions.duelPin('del');
+          else if (k === 'Escape') actions.duelPin('cancel');
+        } else if (k === 'Escape') actions.exitBrain();
         return;
       }
       if (document.querySelector('.duel-lock')) {
