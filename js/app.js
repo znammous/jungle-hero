@@ -624,12 +624,7 @@
           <span id="dWalker${i}" class="walker" style="--p:0">${side.p.avatar}</span>
         </div>
         <div id="dQ${i}" class="question" dir="ltr"></div>
-        <div class="numpad" dir="ltr">
-          ${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => `<button class="key" data-dkey="${n}">${n}</button>`).join('')}
-          <button class="key util" data-dkey="del" aria-label="مسح">⌫</button>
-          <button class="key" data-dkey="0">0</button>
-          <button class="key ok" data-dkey="ok" aria-label="تأكيد">✓</button>
-        </div>
+        <div id="dPad${i}" class="pad">${duelPad(null)}</div>
       </div>`;
       const mid = `<div class="duel-mid">
           <button class="chip" data-act="exitDuel" aria-label="خروج">✕</button>
@@ -1585,6 +1580,15 @@
     document.body.classList.remove('bgrest');
   }
 
+  // لوحة كل متسابق: أرقام (مع مفتاح السالب في غابته)، أو أزرار اختيار في أسئلة الكسور والسالب
+  function duelPad(q) {
+    if (q && q.choices) {
+      return `<div class="choices" dir="ltr">${q.choices.map(c => `<button class="choice" data-dchoice="${c.v}">${c.html}</button>`).join('')}</div>`;
+    }
+    const minus = !!(q && q.minus);
+    return numpad(minus).replace(/data-key=/g, 'data-dkey=');
+  }
+
   function duelNext(i) {
     const side = duel.sides[i];
     side.q = Engine.pick(side.p, side.pool, side.q && side.q.key, side.w);
@@ -1592,27 +1596,51 @@
     side.locked = false;
     side.qStart = performance.now();
     const el = $(`dQ${i}`);
-    el.className = 'question';
-    el.innerHTML = `<span>${side.q.a}</span><span class="op">${side.q.op}</span><span>${side.q.b}</span><span class="op">=</span><span id="dA${i}" class="answer">&nbsp;</span>`;
+    const q = side.q;
+    el.className = q.html ? 'question rich' : 'question';
+    el.innerHTML = q.html ? q.html.replace('id="answer"', `id="dA${i}"`)
+      : `<span>${q.a}</span><span class="op">${q.op}</span><span>${q.b}</span><span class="op">=</span><span id="dA${i}" class="answer">&nbsp;</span>`;
+    const kind = q.choices ? 'choice' : q.minus ? 'signed' : 'plain';
+    if (q.choices || side.pad !== kind) $(`dPad${i}`).innerHTML = duelPad(q);
+    side.pad = kind;
+  }
+
+  function duelChoose(i, v) {
+    if (!duelAlive()) return;
+    const side = duel.sides[i];
+    if (side.locked || !side.q.choices) return;
+    side.input = v;
+    duelSubmit(i);
   }
 
   function duelKey(i, k) {
     if (!duelAlive()) return;
     const side = duel.sides[i];
     if (side.locked) return;
-    if (k === 'del') side.input = side.input.slice(0, -1);
-    else if (k === 'ok') { if (side.input) duelSubmit(i); return; }
-    else if (side.input.length < 3) side.input += k;
-    $(`dA${i}`).innerHTML = side.input || '&nbsp;';
-    if (side.input.length === String(side.q.answer).length) duelSubmit(i);
+    // أسئلة الاختيار: الأرقام 1، 2، 3 على لوحة اللابتوب تختار الجواب
+    if (side.q.choices) { const c = side.q.choices[Number(k) - 1]; if (c) duelChoose(i, c.v); return; }
+    if (k === 'minus') {
+      if (!side.q.minus) return;
+      side.input = side.input.startsWith('-') ? side.input.slice(1) : '-' + side.input;
+    } else if (k === 'del') side.input = side.input.slice(0, -1);
+    else if (k === 'ok') { if (/\d/.test(side.input)) duelSubmit(i); return; }
+    else if (side.input.replace('-', '').length < 3) side.input += k;
+    $(`dA${i}`).innerHTML = side.input.replace('-', '−') || '&nbsp;';
+    if (/\d/.test(side.input) && side.input.length === String(side.q.answer).length) duelSubmit(i);
   }
 
   function duelSubmit(i) {
     const side = duel.sides[i];
     const q = side.q;
-    const ok = Number(side.input) === q.answer;
+    const ok = q.choices ? side.input === q.answer : Number(side.input) === q.answer;
     const ms = performance.now() - side.qStart;
     side.locked = true;
+    if (q.choices) {
+      $(`dPad${i}`).querySelectorAll('.choice').forEach(b => {
+        if (b.dataset.dchoice === q.answer) b.classList.add('right');
+        else if (b.dataset.dchoice === side.input) b.classList.add('wrong');
+      });
+    }
     Engine.record(side.p, q, ok, ms);
     Journey.addAnswer(side.p, q, ok, ms);
     const el = $(`dQ${i}`);
@@ -1624,7 +1652,8 @@
     } else {
       Sound.play('wrong');
       el.classList.add('wrong');
-      el.innerHTML = `<span>${q.a}</span><span class="op">${q.op}</span><span>${q.b}</span><span class="op">=</span><span class="fix">${q.answer}</span>`;
+      el.innerHTML = q.html ? `<span class="fix">${q.solved}</span>`
+        : `<span>${q.a}</span><span class="op">${q.op}</span><span>${q.b}</span><span class="op">=</span><span class="fix">${q.answer}</span>`;
     }
     $(`dScore${i}`).textContent = side.right;
     $(`dWalker${i}`).style.setProperty('--p', Math.min(side.right / side.goal, 1));
@@ -3062,6 +3091,8 @@
       duelKey(Number(d.closest('.duel-half').dataset.side), d.dataset.dkey);
       return;
     }
+    const dc = e.target.closest('[data-dchoice]');
+    if (dc) { e.preventDefault(); duelChoose(Number(dc.closest('.duel-half').dataset.side), dc.dataset.dchoice); return; }
     const c = e.target.closest('[data-choice]');
     if (c) { e.preventDefault(); choose(c.dataset.choice); return; }
     const k = e.target.closest('[data-key]');
@@ -3095,6 +3126,7 @@
       }
       if (duel && duel.net) {
         if (/^[0-9]$/.test(k)) duelKey(0, k);
+        else if (k === '-' || k === '−') duelKey(0, 'minus');
         else if (k === 'Backspace') duelKey(0, 'del');
         else if (k === 'Enter') duelKey(0, 'ok');
         return;

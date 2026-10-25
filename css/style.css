@@ -826,6 +826,8 @@ button.rank-badge { border: 0; font: inherit; font-weight: 800; cursor: pointer;
 .seg button.on { background: var(--leaf); color: #fff; }
 .kid-tabs { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
 .kid-tabs .chip.on { background: var(--sun); color: var(--ink); }
+/* داخل البطاقات الفاتحة (اختيار الغابة، لوحة المتصدرين): الأزرار غير المختارة بيضاء بإطار */
+.card .kid-tabs .chip:not(.on) { background: #fff; color: var(--ink); border: 2px solid var(--sand-dark); }
 .compare { width: 100%; border-collapse: separate; border-spacing: 0 6px; margin-top: 8px; text-align: center; }
 .compare th { font-size: 0.8rem; color: var(--muted); font-weight: 700; padding: 0 4px; }
 .compare tr[data-act] { cursor: pointer; }
@@ -1089,3 +1091,14 @@ body.tabs .toast, body.tabs .update-bar { bottom: calc(84px + env(safe-area-inse
 .bshape .numline { width: min(340px, 78vw); }
 .duel .bshape .numline { width: min(260px, 100%); }
 .bshape { direction: ltr; }
+
+/* سباق الإخوة في غابتي الكسور والسالب: الرسوم وأزرار الاختيار بحجم نصف الشاشة */
+.duel .question.rich { row-gap: 2px; }
+.duel .question .q-prompt { font-size: 0.95rem; }
+.duel .question .shape { width: clamp(56px, 12vmin, 96px); height: clamp(56px, 12vmin, 96px); }
+.duel .question .shape.strip { width: clamp(112px, 24vmin, 192px); height: clamp(45px, 9.6vmin, 77px); }
+.duel .question .numline { max-width: 260px; }
+.duel .question .fix .shape, .duel .question .fix .numline { width: 3em; height: auto; }
+.duel .choices { max-width: 330px; gap: 8px; }
+.duel .choice { height: clamp(48px, 10vmin, 76px); font-size: 1.8rem; border-radius: 14px; }
+.duel.stack .choices, .duel.face .choices { grid-column: 2; grid-row: 1 / 4; width: 100%; max-width: none; align-self: center; }
