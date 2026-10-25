@@ -603,7 +603,10 @@
     netJoin(d) {
       duelLand = d.world || 'mul';
       const taken = activePlayers(d);
-      const list = Store.state.profiles.filter(p => !taken.some(x => x.pid === p.id || x.name === p.name));
+      const avail = Store.state.profiles.filter(p => !taken.some(x => x.pid === p.id || x.name === p.name));
+      // المستكشف المسجّل على هذا الجهاز يقبل بضغطة واحدة، والبقية تحت «لست أنت؟»
+      const me = avail.find(p => p.id === Store.state.currentId);
+      const list = avail.filter(p => p !== me);
       const host = d.players[d.host];
       render(`<section class="screen duel-screen">
         <header class="topbar">
@@ -612,9 +615,11 @@
           <span></span>
         </header>
         <div class="card center">
-          <p>${host.avatar} <b>${esc(host.name)}</b> يدعوك ${duelKindOf(d).invite} ${duelKindOf(d).icon} في ${landName(d.world || 'mul')}! من أنت؟</p>
+          <p>${host.avatar} <b>${esc(host.name)}</b> يدعوك ${duelKindOf(d).invite} ${duelKindOf(d).icon} في ${landName(d.world || 'mul')}!${me ? '' : ' من أنت؟'}</p>
           <div class="net-players">${taken.map(x => `<span>${x.avatar}<b>${esc(x.name)}</b></span>`).join('')}</div>
         </div>
+        ${me ? `<button class="btn green wide" data-act="netJoin" data-arg="${me.id}">✅ اقبل باسم ${me.avatar} ${esc(me.name)}</button>
+        ${list.length ? `<p class="muted center">لست ${esc(me.name)}؟ اختر اسمك:</p>` : ''}` : ''}
         <div class="profile-grid">${list.map(p => `<button class="profile-card" data-act="netJoin" data-arg="${p.id}">
             <span class="avatar">${p.avatar}</span><b>${esc(p.name)}</b>
             <small>${d.kind === 'brain' || d.kind === 'rope' ? landName(duelLand) : `${landIcon(duelLand)} 🏝️ هدفه ${ltr(duelGoal(p))}`}</small>
