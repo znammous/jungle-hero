@@ -127,17 +127,11 @@
           <h1>بطل الغابة</h1>
           <p>من المستكشف اليوم؟</p>
         </header>
-        <div class="profile-grid">
-          ${list.map(p => {
-            const r = Engine.rankFor(p.bestRace);
-            const st = Journey.streak(p);
-            return `<button class="profile-card" data-act="selectProfile" data-arg="${p.id}">
-                <span class="avatar">${p.avatar}</span>
-                <b>${esc(p.name)}</b>
-                <small>${r.emoji} ${r.name}</small>
-                <small>🪙 ${p.coins}${st.count ? ` · 🔥 ${st.count}` : ''}</small>
-              </button>`;
-          }).join('')}
+        <div class="profile-grid compact">
+          ${list.map(p => `<button class="profile-card" data-act="selectProfile" data-arg="${p.id}">
+              <span class="avatar">${p.avatar}</span>
+              <b>${esc(p.name)}</b>
+            </button>`).join('')}
         </div>
         ${list.length >= 2 ? '<button class="btn orange wide duel-btn" data-act="duelSetup">⚔️ سباق الإخوة</button>' : ''}
         ${leaderboard(list)}
