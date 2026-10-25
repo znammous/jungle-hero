@@ -978,7 +978,8 @@ body.tabs .toast, body.tabs .update-bar { bottom: calc(84px + env(safe-area-inse
 /* ───── تحدّي العقل ───── */
 .big-btn.pink { background: #c2457a; }
 .brain-steps { display: flex; justify-content: center; gap: 10px; }
-.brain-steps span { font-size: 1.6rem; width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.2); opacity: 0.6; }
+/* الأيقونات رمادية (مثل الميزان)، فتحتاج خلفية فاتحة لتظهر على الغابة الداكنة */
+.brain-steps span { font-size: 1.6rem; width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: rgba(251, 243, 220, 0.45); }
 .brain-steps span.on { background: var(--sun); opacity: 1; animation: pop 0.4s; }
 .brain-steps span.done { background: var(--sand); opacity: 1; }
 .brain-intro { text-align: center; display: flex; flex-direction: column; gap: 10px; align-items: center; max-width: 460px; width: 100%; align-self: center; }
@@ -988,7 +989,7 @@ body.tabs .toast, body.tabs .update-bar { bottom: calc(84px + env(safe-area-inse
 .brain-stage { display: flex; flex-direction: column; align-items: center; gap: 14px; min-height: 260px; }
 
 .scale { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; max-width: 560px; }
-.fulcrum { font-size: 2.6rem; }
+.fulcrum { font-size: 2.2rem; width: 60px; height: 60px; flex-shrink: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--sun); box-shadow: 0 5px 0 rgba(0, 0, 0, 0.22); }
 .pan {
   flex: 1; min-height: 130px; border-radius: var(--radius); background: var(--sand); box-shadow: 0 7px 0 var(--sand-dark);
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
@@ -1042,7 +1043,7 @@ body.tabs .toast, body.tabs .update-bar { bottom: calc(84px + env(safe-area-inse
 .duel .brain-stage { min-height: 0; width: 100%; gap: 8px; flex: 1; justify-content: center; }
 .duel .brain-lv { font-size: 0.95rem; }
 .duel .pan { min-height: 80px; font-size: clamp(1.3rem, 4vmin, 2.1rem); }
-.duel .fulcrum { font-size: 1.8rem; }
+.duel .fulcrum { font-size: 1.6rem; width: 44px; height: 44px; }
 .duel .bcards { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .duel .bcard { font-size: clamp(1.05rem, 3.4vmin, 1.6rem); padding: 10px 4px; }
 .duel .fruits { padding: 8px; gap: 8px; }
@@ -1054,7 +1055,7 @@ body.tabs .toast, body.tabs .update-bar { bottom: calc(84px + env(safe-area-inse
 .duel .arr-text, .duel .target { font-size: 1.05rem; }
 .duel .target > b { font-size: 1.6rem; }
 .duel .feedback { font-size: 1rem; min-height: 1.4em; }
-.bmid-game { font-size: 1.8rem; }
+.bmid-game { font-size: 1.6rem; width: 46px; height: 46px; flex-shrink: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--sun); }
 .bgame { color: #fff; text-align: center; font-size: 1.4rem; font-weight: 800; display: flex; flex-direction: column; }
 .bgame small { font-size: 1rem; font-weight: 400; opacity: 0.85; }
 .duel .brain-stage { justify-content: safe center; overflow: hidden; }

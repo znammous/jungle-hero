@@ -6,6 +6,7 @@
   let duel = null;        // سباق الإخوة الجاري على شاشة مقسومة
   let brain = null;       // تحدّي العقل الجاري: ثلاث ألعاب قصيرة متتالية
   let duelPicks = [];     // الطفلان المختاران لسباق الإخوة
+  let duelLand = 'mul';    // غابة سباق الإخوة ومبارزة العقول: يختارها من يبدأ التحدي، والكل يلعب فيها
   let duelMode = 'net';   // 'net' عدة أجهزة (الافتراضي) | 'local' تابلت واحد
   let duelKind = 'race';  // 'race' سباق النهر | 'brain' مبارزة العقول (على جهاز واحد فقط)
   let netPending = null;  // دعوة سباق على عدة أجهزة قبل أن يبدأ: { id, role, pid }
@@ -508,6 +509,7 @@
     // ───── سباق الإخوة ─────
     duelPick() {
       const list = Store.state.profiles;
+      if (!duelLands().some(w => w.id === duelLand)) duelLand = 'mul';
       const net = duelMode === 'net';
       const n = duelPicks.length;
       const canNet = Sync.duel.ready();
@@ -529,13 +531,19 @@
           <button class="${brainKind ? 'on' : ''}" data-act="setDuelKind" data-arg="brain">🧠 مبارزة العقول</button>
         </div>
         <div class="card">
-          ${brainKind ? `<p>كل واحد يُسأل من غابته، والصعوبة تتكيّف معه وحده: تصعب كلما أجاب صحيحاً.
+          <h3>🌍 غابة التحدي</h3>
+          <div class="kid-tabs">${duelLands().map(w =>
+            `<button class="chip ${w.id === duelLand ? 'on' : ''}" data-act="setDuelLand" data-arg="${w.id}">${w.icon} ${w.name}</button>`).join('')}</div>
+          <p class="muted">${net ? 'يختارها من يرسل الدعوة، ويلعب فيها الجميع.' : 'تلعبان كلاكما فيها.'}</p>
+        </div>
+        <div class="card">
+          ${brainKind ? `<p>الجميع يُسأل من الغابة المختارة، والصعوبة تتكيّف معه وحده: تصعب كلما أجاب صحيحاً.
             ثلاث ألعاب، ${ltr(Brain.DUEL_SECONDS)} ثانية لكل منها، ومن يُجب صحيحاً أكثر يفوز باللعبة.
             <b>الفائز من يكسب ألعاباً أكثر!</b></p>
           <p class="muted">${net
             ? (canNet ? `اختر نفسك، ثم يقبل إخوتك الدعوة على أجهزتهم (حتى ${ltr(MAX_PLAYERS)} لاعبين). تحتاج الأجهزة إلى الإنترنت وحساب Google نفسه.` : '⚠️ سجّل دخول ولي الأمر بحساب Google على كل الأجهزة أولاً، مع اتصال بالإنترنت.')
             : 'اختر متسابقَين اثنين، وضعا التابلت بينكما، ولكل واحد نصف الشاشة يضغط فيه.'}</p>` : `<p>${net ? `اختر نفسك، ثم يقبل إخوتك الدعوة على أجهزتهم (حتى ${ltr(MAX_PLAYERS)} لاعبين).` : 'اختر متسابقَين اثنين.'}
-            كل واحد يُسأل من غابته، وجزيرته على بُعد أفضل نتيجة له وإجابتين.
+            الجميع يُسأل من الغابة المختارة، وجزيرة كل واحد على بُعد أفضل نتيجة له وإجابتين.
             <b>الأول من يصل إلى جزيرته أولاً!</b></p>
           <p class="muted">${net
             ? (canNet ? 'تحتاج الأجهزة إلى الإنترنت وحساب Google نفسه.' : '⚠️ سجّل دخول ولي الأمر بحساب Google على كل الأجهزة أولاً، مع اتصال بالإنترنت.')
@@ -545,7 +553,7 @@
           const i = duelPicks.indexOf(p.id);
           return `<button class="profile-card ${i >= 0 ? 'picked' : ''}" data-act="duelPick" data-arg="${p.id}">
             <span class="avatar">${p.avatar}</span><b>${esc(p.name)}</b>
-            <small>${brainKind ? `${Engine.current(p).icon} ${Engine.current(p).name}` : `${Engine.world(duelWorld(p)).icon} 🏝️ هدفه ${ltr(duelGoal(p))}`}</small>
+            <small>${brainKind ? `${Engine.world(duelLand).icon} ${Engine.world(duelLand).name}` : `${Engine.world(duelLand).icon} 🏝️ هدفه ${ltr(duelGoal(p))}`}</small>
             ${i >= 0 && !net ? `<span class="pick-no">${ltr(i + 1)}</span>` : ''}
           </button>`;
         }).join('')}</div>
@@ -584,6 +592,7 @@
     },
 
     netJoin(d) {
+      duelLand = d.world || 'mul';
       const taken = activePlayers(d);
       const list = Store.state.profiles.filter(p => !taken.some(x => x.pid === p.id || x.name === p.name));
       const host = d.players[d.host];
@@ -594,12 +603,12 @@
           <span></span>
         </header>
         <div class="card center">
-          <p>${host.avatar} <b>${esc(host.name)}</b> يدعوك ${d.kind === 'brain' ? 'لمبارزة العقول 🧠' : 'لسباق'}! من أنت؟</p>
+          <p>${host.avatar} <b>${esc(host.name)}</b> يدعوك ${d.kind === 'brain' ? 'لمبارزة العقول 🧠' : 'لسباق'} في ${Engine.world(d.world || 'mul').icon} ${Engine.world(d.world || 'mul').name}! من أنت؟</p>
           <div class="net-players">${taken.map(x => `<span>${x.avatar}<b>${esc(x.name)}</b></span>`).join('')}</div>
         </div>
         <div class="profile-grid">${list.map(p => `<button class="profile-card" data-act="netJoin" data-arg="${p.id}">
             <span class="avatar">${p.avatar}</span><b>${esc(p.name)}</b>
-            <small>${d.kind === 'brain' ? `${Engine.current(p).icon} ${Engine.current(p).name}` : `${Engine.world(duelWorld(p)).icon} 🏝️ هدفه ${ltr(duelGoal(p))}`}</small>
+            <small>${d.kind === 'brain' ? `${Engine.world(duelLand).icon} ${Engine.world(duelLand).name}` : `${Engine.world(duelLand).icon} 🏝️ هدفه ${ltr(duelGoal(p))}`}</small>
           </button>`).join('')}</div>
       </section>`);
     },
@@ -1482,13 +1491,18 @@
 
   // ───── سباق الإخوة ─────
   // جزيرة كل طفل على بُعد أفضل نتيجة له وإجابتين، فيفوز من يتفوّق على نفسه
-  // كل طفل يتسابق في غابته. الكسور والسالب تحتاج أزراراً لا تتسع لها الشاشة المقسومة،
-  // فيتسابق فيهما بالضرب وبالجمع والطرح
-  const DUEL_FALLBACK = { frac: 'mul', neg: 'add' };
-  const duelWorld = p => { const w = Engine.current(p).id; return DUEL_FALLBACK[w] || w; };
-  const duelGoal = p => Math.max(8, Engine.state(p, duelWorld(p)).bestRace + 2);
-  const duelSide = p => ({ p, w: duelWorld(p), pool: Engine.racePool(p, duelWorld(p)), goal: duelGoal(p),
+  // الجميع في الغابة التي اختارها من بدأ التحدي، وهدف كل طفل من أفضل سباق له فيها
+  // (من لم يفتح الغابة بعد يُسأل من منطقتها الأولى)
+  const duelGoal = p => Math.max(8, Engine.state(p, duelLand).bestRace + 2);
+  const duelSide = p => ({ p, w: duelLand, pool: Engine.racePool(p, duelLand), goal: duelGoal(p),
     q: null, input: '', right: 0, locked: true, reachedAt: 0, qStart: 0 });
+
+  // الغابات المتاحة للتحدي: المفتوحة لمن يبدأه (أو لأي طفل قبل أن يختار أحد)
+  function duelLands() {
+    const host = Store.state.profiles.find(k => k.id === duelPicks[0]);
+    const kids = host ? [host] : Store.state.profiles;
+    return WORLDS.filter(w => !w.soon && kids.some(k => Engine.isOpen(k, w)));
+  }
 
   const MAX_PLAYERS = 4;
   // على جهاز واحد لاعبان فقط: الشاشة لا تتسع لأكثر. حتى 4 لاعبين على عدة أجهزة
@@ -1753,7 +1767,7 @@
     const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
     netPending = { id, role: 'host', pid: p.id };
     Screens.netWait('host');
-    Sync.duel.set({ id, kind, state: 'waiting', createdAt: Date.now(), host: DEVICE, players: { [DEVICE]: netPlayer(p) } })
+    Sync.duel.set({ id, kind, world: duelLand, state: 'waiting', createdAt: Date.now(), host: DEVICE, players: { [DEVICE]: netPlayer(p) } })
       .catch(() => {
         netPending = null;
         toast('⚠️ تعذّر إرسال الدعوة. تأكد من الإنترنت وتسجيل الدخول.', 5000);
@@ -1765,6 +1779,7 @@
     const d = Sync.duel.data();
     const p = Store.state.profiles.find(k => k.id === pid);
     if (!p || !inviteFor(d)) { toast('انتهت الدعوة أو اكتمل العدد'); go('profiles'); return; }
+    duelLand = d.world || 'mul';
     netPending = { id: d.id, role: 'guest', pid };
     Screens.netWait('guest');
     Sync.duel.update({ [myPath]: netPlayer(p) }).catch(() => {
@@ -1790,6 +1805,7 @@
   }
 
   function startNetDuel(d) {
+    duelLand = d.world || 'mul';
     const { pid } = netPending;
     netPending = null;
     const p = Store.state.profiles.find(k => k.id === pid);
@@ -1879,7 +1895,7 @@
     clearTimeout(inviteTimer);
     if (!ok) return;
     const host = d.players[d.host];
-    inviteBar.innerHTML = `<span>${d.kind === 'brain' ? '🧠' : '⚔️'} ${host.avatar} <b>${esc(host.name)}</b> يدعوك ${d.kind === 'brain' ? 'لمبارزة العقول' : 'لسباق'}!</span>
+    inviteBar.innerHTML = `<span>${d.kind === 'brain' ? '🧠' : '⚔️'} ${host.avatar} <b>${esc(host.name)}</b> يدعوك ${d.kind === 'brain' ? 'لمبارزة العقول' : 'لسباق'} في ${Engine.world(d.world || 'mul').icon} ${Engine.world(d.world || 'mul').name}!</span>
       <button class="btn orange" data-invite="join">انضم</button>
       <button class="chip" data-invite="no" aria-label="تجاهل">✕</button>`;
     inviteTimer = setTimeout(() => showInvite(Sync.duel.data()), d.createdAt + INVITE_MS - Date.now());
@@ -2132,8 +2148,7 @@
   // ───── تحدّي العقل ─────
   // brain.sides: لاعب واحد من المخيّم، أو من 2 إلى 4 في مبارزة العقول على شاشة مقسومة.
   // كل لاعب يُسأل من غابته الحالية وبمستواه هو
-  function brainSideFor(p) {
-    const w = Engine.current(p).id;
+  function brainSideFor(p, w = Engine.current(p).id) {
     const bs = Brain.state(p, w);
     return {
       p, w, P: null, q: null, locked: true,
@@ -2156,7 +2171,7 @@
     const players = duelPicks.map(id => Store.state.profiles.find(p => p.id === id));
     if (players.length < 2 || players.some(p => !p)) { Screens.duelPick(); return; }
     abortBrain();
-    brain = { duel: true, g: 0, phase: 'play', sides: players.map(brainSideFor), timer: null, timeouts: [] };
+    brain = { duel: true, g: 0, phase: 'play', sides: players.map(p => brainSideFor(p, duelLand)), timer: null, timeouts: [] };
     brainGo();
   }
 
@@ -2383,6 +2398,7 @@
   // ───── مبارزة العقول على عدة أجهزة ─────
   // كل جهاز يلعب الألعاب الثلاث وحده، ويرفع إجاباته الصحيحة في كل لعبة. الفائز بكل لعبة يُحسب في النهاية
   function startNetBrain(d) {
+    duelLand = d.world || 'mul';
     const { pid } = netPending;
     netPending = null;
     const p = Store.state.profiles.find(k => k.id === pid);
@@ -2390,7 +2406,7 @@
     if (!p || !opps.length) { go('profiles'); return; }
     abortBrain();
     brain = {
-      duel: true, g: 0, phase: 'play', sides: [brainSideFor(p)], timer: null, timeouts: [],
+      duel: true, g: 0, phase: 'play', sides: [brainSideFor(p, duelLand)], timer: null, timeouts: [],
       net: { id: d.id, opps, finished: false },
     };
     brainGo();
@@ -2656,6 +2672,7 @@
       Screens.duelPick();
     },
     startDuel() { startDuel(); },
+    setDuelLand(id) { duelLand = id; Screens.duelPick(); },
     setDuelMode(m) { duelMode = m; duelPicks = duelPicks.slice(0, m === 'net' ? 1 : MAX_LOCAL); Screens.duelPick(); },
     netHost(kind) { netHost(kind); },
     netStart() { netStart(); },
