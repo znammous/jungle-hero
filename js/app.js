@@ -171,7 +171,7 @@
     kidPin() {
       const k = kidPin;
       const p = k.mode === 'create' ? k : Store.state.profiles.find(x => x.id === k.id);
-      if (!p) { kidPin = null; go('profiles'); return; }
+      if (!p) { kidPin = null; go('home'); return; }
       const prompts = {
         enter: `أهلاً يا ${esc(p.name)}! أدخل رمزك السري`,
         old: 'أدخل رمزك الحالي',
@@ -518,7 +518,7 @@
       const brainKind = duelKind === 'brain';
       render(`<section class="screen duel-screen">
         <header class="topbar">
-          <button class="chip" data-act="go" data-arg="profiles">→ رجوع</button>
+          <button class="chip" data-act="go" data-arg="home">→ رجوع</button>
           <h2 class="topbar-title">⚔️ سباق الإخوة</h2>
           <span></span>
         </header>
@@ -594,7 +594,7 @@
       const host = d.players[d.host];
       render(`<section class="screen duel-screen">
         <header class="topbar">
-          <button class="chip" data-act="go" data-arg="profiles">→ رجوع</button>
+          <button class="chip" data-act="go" data-arg="home">→ رجوع</button>
           <h2 class="topbar-title">⚔️ دعوة لسباق</h2>
           <span></span>
         </header>
@@ -675,7 +675,7 @@
           ${res.again
             ? `<button class="btn orange" data-act="${res.again}">🧠 مبارزة أخرى</button>`
             : `<button class="btn orange" data-act="${res.net ? 'duelSetup' : 'startDuel'}">⚔️ سباق آخر</button>`}
-          <button class="btn green" data-act="go" data-arg="profiles">🏠 الرئيسية</button>
+          <button class="btn green" data-act="go" data-arg="home">🏠 الرئيسية</button>
         </div>
       </section>`);
     },
@@ -1463,7 +1463,9 @@
     });
   })();
 
+  // «الرئيسية» هي شاشة المستكشف الذي دخل، وتبقى كذلك حتى يضغط «تغيير»
   function go(name, arg) {
+    if (name === 'home') name = Store.current() ? 'camp' : 'profiles';
     if (round) abortRound();
     abortDuel();
     abortBrain();
@@ -1826,14 +1828,14 @@
   function netJoin(pid) {
     const d = Sync.duel.data();
     const p = Store.state.profiles.find(k => k.id === pid);
-    if (!p || !inviteFor(d)) { toast('انتهت الدعوة أو اكتمل العدد'); go('profiles'); return; }
+    if (!p || !inviteFor(d)) { toast('انتهت الدعوة أو اكتمل العدد'); go('home'); return; }
     duelLand = d.world || 'mul';
     netPending = { id: d.id, role: 'guest', pid };
     Screens.netWait('guest');
     Sync.duel.update({ [myPath]: netPlayer(p) }).catch(() => {
       netPending = null;
       toast('⚠️ تعذّر الانضمام. تأكد من الإنترنت.', 5000);
-      go('profiles');
+      go('home');
     });
   }
 
@@ -1849,7 +1851,7 @@
       Sync.duel.update(netPending.role === 'host' ? { state: 'cancelled' } : { [`${myPath}.left`]: true }).catch(() => {});
       netPending = null;
     }
-    go('profiles');
+    go('home');
   }
 
   function startNetDuel(d) {
@@ -1858,7 +1860,7 @@
     netPending = null;
     const p = Store.state.profiles.find(k => k.id === pid);
     const opps = activePlayers(d).filter(x => x.device !== DEVICE).slice(0, MAX_PLAYERS - 1).map(x => Object.assign({}, x));
-    if (!p || !opps.length) { go('profiles'); return; }
+    if (!p || !opps.length) { go('home'); return; }
     duel = {
       sides: [duelSide(p)],
       net: { id: d.id, opps, finished: false },
@@ -1955,10 +1957,10 @@
       // انتظار: لا نتابع إلا إذا كانت شاشة الانتظار ما زالت ظاهرة
       if (!app.querySelector('.net-wait')) { netPending = null; return; }
       if (!d || d.id !== netPending.id) return;
-      if (d.state === 'cancelled') { netPending = null; toast('أُلغيت الدعوة'); go('profiles'); return; }
+      if (d.state === 'cancelled') { netPending = null; toast('أُلغيت الدعوة'); go('home'); return; }
       if (d.state === 'running') {
         if (activePlayers(d).some(x => x.device === DEVICE)) d.kind === 'brain' ? startNetBrain(d) : startNetDuel(d);
-        else { netPending = null; toast('بدأ السباق قبل انضمامك'); go('profiles'); }
+        else { netPending = null; toast('بدأ السباق قبل انضمامك'); go('home'); }
         return;
       }
       Screens.netWait(netPending.role);   // تحديث قائمة المنضمين
@@ -2460,7 +2462,7 @@
     netPending = null;
     const p = Store.state.profiles.find(k => k.id === pid);
     const opps = activePlayers(d).filter(x => x.device !== DEVICE).slice(0, MAX_PLAYERS - 1).map(x => Object.assign({}, x));
-    if (!p || !opps.length) { go('profiles'); return; }
+    if (!p || !opps.length) { go('home'); return; }
     abortBrain();
     brain = {
       duel: true, g: 0, phase: 'play', sides: [brainSideFor(p, duelLand)], timer: null, timeouts: [],
@@ -3240,7 +3242,7 @@
     const apply = () => {
       if (!ready) return;
       if (manual) { reload(); return; }
-      const idle = !round && !duel && !netPending && (nav.cur === 'profiles' || nav.cur === 'welcome');
+      const idle = !round && !duel && !netPending && (nav.cur === 'profiles' || nav.cur === 'camp' || nav.cur === 'welcome');
       if (idle) reload();
       else updateBar.hidden = false;
     };
@@ -3255,6 +3257,8 @@
   }
 
   Store.load();
-  Screens.profiles();
+  // يبقى المستكشف داخلاً بين مرات فتح اللعبة، ولا يُطلب رمزه إلا بعد «تغيير»
+  if (Store.current()) enterProfile(Store.state.currentId);
+  else Screens.profiles();
   Sync.start();
 })();
