@@ -1,4 +1,4 @@
-// بطل الغابة — الشاشات والتفاعل
+// أبطال الغابة — الشاشات والتفاعل
 (() => {
   const app = document.getElementById('app');
   let round = null;       // الجولة الجارية (تدريب، إحماء، سباق، مراجعة)
@@ -117,7 +117,7 @@
       render(`<section class="screen welcome">
         <header class="hero-title">
           <div class="logo">🌴🧭🌴</div>
-          <h1>بطل الغابة</h1>
+          <h1>أبطال الغابة</h1>
         </header>
         <div class="card welcome-card">
           <div class="welcome-icon">☁️</div>
@@ -139,7 +139,7 @@
       render(`<section class="screen">
         <header class="hero-title">
           <div class="logo">🌴🧭🌴</div>
-          <h1>بطل الغابة</h1>
+          <h1>أبطال الغابة</h1>
           <p>من المستكشف اليوم؟</p>
         </header>
         <div class="profile-grid compact">
@@ -435,7 +435,7 @@
             <p class="muted">أفضل نتيجة: ${ltr(best)} في الدقيقة</p>
             ${next ? `${bar((best - prev) / (next.min - prev))}
               <p class="muted">باقي ${ltr(next.min - best)} لتصبح ${next.emoji} ${next.name}</p>`
-              : '<p class="muted">فتحت كل الرتب! أنت بطل الغابة 🎉</p>'}
+              : '<p class="muted">فتحت كل الرتب! أنت من أبطال الغابة 🎉</p>'}
           </div>
         </div>
         <ol class="rank-path">
