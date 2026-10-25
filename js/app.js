@@ -532,6 +532,76 @@
         </div>
         <div class="seg duel-modes duel-lands">${duelLands().map(w =>
           `<button class="${w.id === duelLand ? 'on' : ''}" data-act="setDuelLand" data-arg="${w.id}">${w.icon} ${w.name}</button>`).join('')}</div>
+        <div class="card">
+          ${brainKind ? `<p>الجميع يُسأل من الغابة المختارة، والصعوبة تتكيّف معه وحده: تصعب كلما أجاب صحيحاً.
+            ثلاث ألعاب، ${ltr(Brain.DUEL_SECONDS)} ثانية لكل منها، ومن يُجب صحيحاً أكثر يفوز باللعبة.
+            <b>الفائز من يكسب ألعاباً أكثر!</b></p>
+          <p class="muted">${net
+            ? (canNet ? `اختر نفسك، ثم يقبل إخوتك الدعوة على أجهزتهم (حتى ${ltr(MAX_PLAYERS)} لاعبين). تحتاج الأجهزة إلى الإنترنت وحساب Google نفسه.` : '⚠️ سجّل دخول ولي الأمر بحساب Google على كل الأجهزة أولاً، مع اتصال بالإنترنت.')
+            : 'اختر متسابقَين اثنين، وضعا التابلت بينكما، ولكل واحد نصف الشاشة يضغط فيه.'}</p>` : `<p>${net ? `اختر نفسك، ثم يقبل إخوتك الدعوة على أجهزتهم (حتى ${ltr(MAX_PLAYERS)} لاعبين).` : 'اختر متسابقَين اثنين.'}
+            الجميع يُسأل من الغابة المختارة، وجزيرة كل واحد على بُعد أفضل نتيجة له وإجابتين.
+            <b>الأول من يصل إلى جزيرته أولاً!</b></p>
+          <p class="muted">${net
+            ? (canNet ? 'تحتاج الأجهزة إلى الإنترنت وحساب Google نفسه.' : '⚠️ سجّل دخول ولي الأمر بحساب Google على كل الأجهزة أولاً، مع اتصال بالإنترنت.')
+            : 'ضعا التابلت بينكما، ولكل واحد لوحة أرقامه.'}</p>`}
+        </div>
+        <div class="profile-grid">${list.map(p => {
+          const i = duelPicks.indexOf(p.id);
+          return `<button class="profile-card ${i >= 0 ? 'picked' : ''}" data-act="duelPick" data-arg="${p.id}">
+            <span class="avatar">${p.avatar}</span><b>${esc(p.name)}</b>
+            <small>${brainKind ? `${Engine.world(duelLand).icon} ${Engine.world(duelLand).name}` : `${Engine.world(duelLand).icon} 🏝️ هدفه ${ltr(duelGoal(p))}`}</small>
+            ${i >= 0 && !net ? `<span class="pick-no">${ltr(i + 1)}</span>` : ''}
+          </button>`;
+        }).join('')}</div>
+        ${net || n < 2 ? '' : `<div class="card">
+          <h3>📱 شكل الشاشة</h3>
+          <div class="layouts">${duelLayouts(n).map(l => `<button class="layout-opt ${l.id === layout ? 'on' : ''}" data-act="setDuelLayout" data-arg="${l.id}">
+            <span class="mini ${l.id}">${picked.map(p => `<i>${p.avatar}</i>`).join('')}</span>
+            <b>${l.name}</b><small>${l.hint}</small>
+          </button>`).join('')}</div>
+        </div>`}
+        ${net
+          ? `<button class="btn green wide" data-act="netHost" data-arg="${brainKind ? 'brain' : 'race'}" ${n === 1 && canNet ? '' : 'disabled'}>📨 أرسل الدعوة</button>`
+          : brainKind ? `<button class="btn green wide" data-act="startBrainDuel" ${n >= 2 ? '' : 'disabled'}>🧠 ابدأ المبارزة</button>`
+          : `<button class="btn green wide" data-act="startDuel" ${n >= 2 ? '' : 'disabled'}>🏁 ابدأ السباق</button>`}
+      </section>`);
+    },
+
+    // انتظار المتسابقين (لصاحب الدعوة) أو انتظار البدء (للمنضم)
+    netWait(role) {
+      const d = Sync.duel.data();
+      const players = d && netPending && d.id === netPending.id ? activePlayers(d) : [];
+      const host = role === 'host';
+      const what = d && d.kind === 'brain' ? 'المبارزة' : 'السباق';
+      render(`<section class="screen results duel-screen net-wait">
+        <div class="result-hero wait-spin">⏳</div>
+        <h1>${host ? 'بانتظار المتسابقين…' : `بانتظار بدء ${what}…`}</h1>
+        <p class="hint">${host
+          ? `افتح اللعبة على الأجهزة الأخرى واضغط «انضم» (حتى ${ltr(MAX_PLAYERS)} لاعبين).`
+          : `تبدأ ${what} عندما يضغط صاحب الدعوة «ابدأ».`}</p>
+        <div class="net-players">${players.map(x => `<span>${x.avatar}<b>${esc(x.name)}</b></span>`).join('')}</div>
+        <div class="actions">
+          ${host ? `<button class="btn green" data-act="netStart" ${players.length >= 2 ? '' : 'disabled'}>🏁 ابدأ ${what} (${ltr(players.length)})</button>` : ''}
+          <button class="btn orange" data-act="netCancel">✕ إلغاء</button>
+        </div>
+      </section>`);
+    },
+
+    netJoin(d) {
+      duelLand = d.world || 'mul';
+      const taken = activePlayers(d);
+      const list = Store.state.profiles.filter(p => !taken.some(x => x.pid === p.id || x.name === p.name));
+      const host = d.players[d.host];
+      render(`<section class="screen duel-screen">
+        <header class="topbar">
+          <button class="chip" data-act="go" data-arg="profiles">→ رجوع</button>
+          <h2 class="topbar-title">⚔️ دعوة لسباق</h2>
+          <span></span>
+        </header>
+        <div class="card center">
+          <p>${host.avatar} <b>${esc(host.name)}</b> يدعوك ${d.kind === 'brain' ? 'لمبارزة العقول 🧠' : 'لسباق'} في ${Engine.world(d.world || 'mul').icon} ${Engine.world(d.world || 'mul').name}! من أنت؟</p>
+          <div class="net-players">${taken.map(x => `<span>${x.avatar}<b>${esc(x.name)}</b></span>`).join('')}</div>
+        </div>
         <div class="profile-grid">${list.map(p => `<button class="profile-card" data-act="netJoin" data-arg="${p.id}">
             <span class="avatar">${p.avatar}</span><b>${esc(p.name)}</b>
             <small>${d.kind === 'brain' ? `${Engine.world(duelLand).icon} ${Engine.world(duelLand).name}` : `${Engine.world(duelLand).icon} 🏝️ هدفه ${ltr(duelGoal(p))}`}</small>
