@@ -1032,11 +1032,14 @@
         </div>` : ''}
         <div class="actions">
           ${s.chestReady ? '<button class="btn orange pulse" data-act="go" data-arg="chest">🎁 افتح كنز اليوم</button>' : ''}
+          ${s.mode === 'practice' ? '' : `
           ${s.mode !== 'review' ? '<button class="btn orange" data-act="again">🔁 مرة أخرى</button>' : ''}
-          ${s.mode === 'practice'
-            ? '<button class="btn green" data-act="go" data-arg="map">🗺️ خريطة الغابة</button>'
-            : '<button class="btn green" data-act="go" data-arg="camp">⛺ المخيّم</button>'}
+          <button class="btn green" data-act="go" data-arg="camp">⛺ المخيّم</button>`}
         </div>
+        ${s.mode === 'practice' ? `<div class="actions pair">
+          <button class="btn green" data-act="go" data-arg="map">🗺️ خريطة الغابة</button>
+          <button class="btn orange" data-act="again">🔁 مرة أخرى</button>
+        </div>` : ''}
       </section>`);
     },
 

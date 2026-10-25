@@ -713,6 +713,9 @@ button.rank-badge { border: 0; font: inherit; font-weight: 800; cursor: pointer;
 .mistake-list { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
 .mistake-list span { background: #fff; border-radius: 12px; padding: 8px 14px; font-size: 1.3rem; font-weight: 700; }
 .actions { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; margin-top: 6px; }
+/* زرّان متجاوران دائماً: الأول على اليمين */
+.actions.pair { flex-wrap: nowrap; width: 100%; max-width: 460px; align-self: center; }
+.actions.pair .btn { flex: 1; padding-inline: 12px; white-space: nowrap; }
 
 /* ───── شاشة الترحيب وتسجيل الدخول ───── */
 .welcome-card { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; max-width: 460px; width: 100%; align-self: center; }
