@@ -711,7 +711,7 @@
           ${tricky.length ? `<div class="tricky">${tricky.map(([t, n]) => {
               const f = Engine.fact(p, w.id, t, n);
               const q = Engine.make(w.id, t, n);
-              return `<span><b dir="ltr">${q.a} ${q.op} ${q.b}</b><small>${ltr(`${f.right}/${f.seen}`)}</small></span>`;
+              return `<span><b dir="ltr">${q.text}</b><small>${ltr(`${f.right}/${f.seen}`)}</small></span>`;
             }).join('')}</div>
             <button class="btn orange wide" data-act="startTricky">💪 تدرّب عليها الآن</button>`
           : '<p class="muted">لا توجد مسائل صعبة عليك الآن، أحسنت! 🌟</p>'}
@@ -787,12 +787,7 @@
             <div id="question" class="question" dir="ltr"></div>
             <div id="feedback" class="feedback"></div>
           </div>
-          <div class="numpad" dir="ltr">
-            ${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => `<button class="key" data-key="${n}">${n}</button>`).join('')}
-            <button class="key util" data-key="del" aria-label="مسح">⌫</button>
-            <button class="key" data-key="0">0</button>
-            <button class="key ok" data-key="ok" aria-label="تأكيد">✓</button>
-          </div>
+          <div id="pad" class="pad">${numpad()}</div>
         </div>
       </section>`);
     },
@@ -832,7 +827,7 @@
         ${banners.map(b => `<div class="banner">${b}</div>`).join('')}
         ${unique.length && s.mode !== 'review' ? `<div class="card mistakes">
           <h3>📝 راجع هذه المسائل</h3>
-          <div class="mistake-list">${unique.map(q => `<span dir="ltr">${q.a} ${q.op} ${q.b} = ${q.answer}</span>`).join('')}</div>
+          <div class="mistake-list">${unique.map(q => `<span dir="ltr">${q.solved}</span>`).join('')}</div>
         </div>` : ''}
         <div class="actions">
           ${s.chestReady ? '<button class="btn orange pulse" data-act="go" data-arg="chest">🎁 افتح كنز اليوم</button>' : ''}
@@ -1794,6 +1789,23 @@
     }, 100);
   }
 
+  const numpad = () => `<div class="numpad" dir="ltr">
+    ${[1, 2, 3, 4, 5, 6, 7, 8, 9].map(n => `<button class="key" data-key="${n}">${n}</button>`).join('')}
+    <button class="key util" data-key="del" aria-label="مسح">⌫</button>
+    <button class="key" data-key="0">0</button>
+    <button class="key ok" data-key="ok" aria-label="تأكيد">✓</button>
+  </div>`;
+
+  // أسئلة الاختيار (الكسور): أزرار الأجوبة مكان لوحة الأرقام
+  const choicePad = q => `<div class="choices" dir="ltr">${q.choices.map(c =>
+    `<button class="choice" data-choice="${c.v}">${c.html}</button>`).join('')}</div>`;
+
+  function choose(v) {
+    if (!round || round.locked || !round.q.choices) return;
+    round.input = v;
+    submit();
+  }
+
   function nextQuestion() {
     const p = Store.current();
     if (round.mode === 'review') {
@@ -1807,12 +1819,17 @@
     const q = round.q;
     const el = $('question');
     el.className = 'question';
-    el.innerHTML = `<span>${q.a}</span><span class="op">${q.op}</span><span>${q.b}</span><span class="op">=</span><span id="answer" class="answer">&nbsp;</span>`;
+    el.innerHTML = q.html || `<span>${q.a}</span><span class="op">${q.op}</span><span>${q.b}</span><span class="op">=</span><span id="answer" class="answer">&nbsp;</span>`;
+    el.classList.toggle('rich', !!q.html);
     $('feedback').textContent = '';
+    if (q.choices) $('pad').innerHTML = choicePad(q);
+    else if (!$('pad').querySelector('.numpad')) $('pad').innerHTML = numpad();
   }
 
   function pressKey(k) {
     if (!round || round.locked) return;
+    // في أسئلة الاختيار: الأرقام 1، 2، 3 على لوحة اللابتوب تختار الجواب
+    if (round.q.choices) { const c = round.q.choices[Number(k) - 1]; if (c) choose(c.v); return; }
     if (k === 'del') round.input = round.input.slice(0, -1);
     else if (k === 'ok') { if (round.input) submit(); return; }
     else if (round.input.length < 3) round.input += k;
@@ -1824,9 +1841,15 @@
   function submit() {
     const p = Store.current();
     const q = round.q;
-    const ok = Number(round.input) === q.answer;
+    const ok = q.choices ? round.input === q.answer : Number(round.input) === q.answer;
     const ms = performance.now() - round.qStart;
     round.locked = true;
+    if (q.choices) {
+      $('pad').querySelectorAll('.choice').forEach(b => {
+        if (b.dataset.choice === q.answer) b.classList.add('right');
+        else if (b.dataset.choice === round.input) b.classList.add('wrong');
+      });
+    }
     const facts = Engine.state(p, q.w).facts;
     if (round.undo && !(q.key in round.undo.facts)) round.undo.facts[q.key] = facts[q.key] ? Object.assign({}, facts[q.key]) : null;
     Engine.record(p, q, ok, ms);
@@ -1843,7 +1866,7 @@
       round.mistakes.push(q);
       Sound.play('wrong');
       el.classList.add('wrong');
-      $('feedback').innerHTML = `الإجابة الصحيحة: <b dir="ltr">${q.a} ${q.op} ${q.b} = ${q.answer}</b>`;
+      $('feedback').innerHTML = `الإجابة الصحيحة: <b dir="ltr">${q.solved}</b>`;
     }
 
     $('score').textContent = round.right;
@@ -2438,6 +2461,8 @@
       duelKey(Number(d.closest('.duel-half').dataset.side), d.dataset.dkey);
       return;
     }
+    const c = e.target.closest('[data-choice]');
+    if (c) { e.preventDefault(); choose(c.dataset.choice); return; }
     const k = e.target.closest('[data-key]');
     if (!k) return;
     e.preventDefault();

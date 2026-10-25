@@ -306,7 +306,7 @@ button.rank-badge { border: 0; font: inherit; font-weight: 800; cursor: pointer;
 }
 .region-animal.hidden i { filter: brightness(0) drop-shadow(0 0 5px rgba(255, 201, 60, 0.8)); opacity: 0.75; }
 .region-animal.hidden::after {
-  content: "?";
+  content: "؟";
   position: absolute;
   top: -4px;
   inset-inline-end: -4px;
@@ -408,7 +408,7 @@ button.rank-badge { border: 0; font: inherit; font-weight: 800; cursor: pointer;
 .animal-emoji i { font-style: normal; }
 .animal.hidden .animal-emoji i { filter: brightness(0) drop-shadow(0 0 6px rgba(255, 201, 60, 0.7)); opacity: 0.8; }
 .animal.hidden .animal-emoji::after {
-  content: "?";
+  content: "؟";
   position: absolute;
   top: 0;
   inset-inline-end: 0;
@@ -938,3 +938,39 @@ body.tabs .toast, body.tabs .update-bar { bottom: calc(84px + env(safe-area-inse
 .skill-row { display: grid; grid-template-columns: minmax(0, 11rem) 1fr 3rem; align-items: center; gap: 10px; }
 .skill-row small { color: var(--muted); text-align: end; }
 .legend[hidden] { display: none; }
+
+/* ───── غابة الكسور ───── */
+.pad { display: contents; }
+/* كسر: البسط فوق خط والمقام تحته */
+.fr { display: inline-flex; flex-direction: column; align-items: center; vertical-align: middle; line-height: 1; font-size: 0.75em; }
+.fr > b { font-weight: inherit; padding: 0 0.15em; }
+.fr > b:first-child { border-bottom: 0.09em solid currentColor; padding-bottom: 0.06em; }
+.fr > b:last-child { padding-top: 0.08em; }
+.fr .answer { display: inline-block; min-width: 1.2em; }
+.question.rich { flex-wrap: wrap; row-gap: 6px; }
+.question .q-prompt { flex-basis: 100%; text-align: center; font-size: 1.25rem; font-weight: 700; color: var(--muted); }
+.question .q-prompt .fr { font-size: 1.1em; color: var(--ink); }
+/* دائرة أو شريط مقسوم، الملوّن منه هو الكسر */
+.shape { width: 1.5em; height: 1.5em; vertical-align: middle; }
+.shape.bar { width: 3em; height: 1.2em; }
+.question .shape { width: 120px; height: 120px; }
+.question .shape.bar { width: 240px; height: 96px; }
+.shape .on { fill: var(--orange); }
+.shape .off { fill: #fff; }
+.shape path, .shape rect { stroke: var(--ink); stroke-width: 2; stroke-linejoin: round; }
+.choices { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; width: 100%; max-width: 380px; }
+.choice {
+  height: 96px;
+  background: var(--sand);
+  border-radius: 18px;
+  box-shadow: 0 6px 0 var(--sand-dark);
+  font-size: 2.6rem;
+  font-weight: 800;
+  color: var(--ink);
+}
+.choice:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--sand-dark); }
+.choice.right { background: #d9f5cf; box-shadow: 0 6px 0 var(--leaf); }
+.choice.wrong { background: #ffd9d3; box-shadow: 0 6px 0 var(--red); }
+@media (min-width: 760px) and (orientation: landscape) {
+  .choices { width: 340px; flex-shrink: 0; }
+}
