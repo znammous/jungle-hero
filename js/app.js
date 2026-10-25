@@ -138,6 +138,7 @@
 
     profiles() {
       const list = Store.state.profiles;
+      const pending = pendingRequests().length;
       // من يعود إلى هنا يحتاج رمز الطفل ليدخل ملفه من جديد
       Store.select(null);
       render(`<section class="screen">
@@ -146,10 +147,12 @@
           <h1>أبطال الغابة</h1>
           <p>من المستكشف اليوم؟</p>
         </header>
+        ${requestsBanner()}
         <div class="profile-grid compact">
           ${list.map(p => `<button class="profile-card" data-act="selectProfile" data-arg="${p.id}">
               <span class="avatar">${p.avatar}</span>
               <b>${esc(p.name)}</b>
+              ${isParent(p) ? `<i class="parent-tag" title="ولي الأمر">👑</i>${badge(pending)}` : ''}
             </button>`).join('')}
         </div>
         ${groupBtn()}
@@ -159,7 +162,7 @@
           <span class="avatar">➕</span><b>مستكشف جديد</b>
         </button>
         <div class="footer-links">
-          <button class="link-btn" data-act="openParent">👨‍👩‍👧 ولي الأمر</button>
+          <button class="link-btn" data-act="openParent">👨‍👩‍👧 ولي الأمر${badge(pending)}</button>
           ${Sync.status() === 'out' ? '<button class="link-btn" data-act="showWelcome">☁️ تفعيل المزامنة</button>' : ''}
         </div>
         ${appButtons()}
@@ -229,6 +232,8 @@
               : 'وصلت لأعلى رتبة في الغابة! 🎉'}</p>
           </div>
         </div>
+
+        ${isParent(p) ? requestsBanner() : ''}
 
         ${groupBtn()}
 
@@ -1168,9 +1173,26 @@
     </div>`;
   }
 
-  function pendingCard() {
+  function pendingRequests() {
     const pending = [];
     Store.state.profiles.forEach(k => requests(k).forEach(r => { if (r.status === 'pending') pending.push({ k, r }); }));
+    return pending;
+  }
+
+  // من عيّنهم ولي الأمر أولياء أمور: تظهر لهم إشعارات الطلبات عند دخولهم (يمكن أكثر من واحد)
+  const parents = () => Store.state.settings.parents || (Store.state.settings.parents = []);
+  const isParent = p => parents().includes(p.id);
+  const badge = n => n ? `<span class="notif-badge">${ltr(n)}</span>` : '';
+
+  // إشعار الطلبات المعلّقة: في الشاشة الرئيسية، وفي مخيّم ولي الأمر
+  function requestsBanner() {
+    const n = pendingRequests().length;
+    if (!n) return '';
+    return `<button class="banner requests-banner" data-act="openParent">📬 ${n === 1 ? 'طلب جائزة' : `${ltr(n)} طلبات جوائز`} بانتظار ولي الأمر ${ltr('‹')}</button>`;
+  }
+
+  function pendingCard() {
+    const pending = pendingRequests();
     if (!pending.length) return '';
     return `<div class="card pending-card">
       <h3>📬 طلبات جوائز بانتظارك</h3>
@@ -1387,6 +1409,8 @@
             <button class="btn green" data-act="setKidPin">حفظ</button></div></div>
         <div class="setting"><span>🏆 لوحة المتصدرين</span>
           <div class="seg">${GROUPS.map(g => `<button class="${groupOf(p) === g.id ? 'on' : ''}" data-act="setGroup" data-arg="${g.id}">${g.name}</button>`).join('')}</div></div>
+        <div class="setting"><span>👑 ولي أمر <small class="muted">(تظهر له إشعارات الطلبات)</small></span>
+          <div class="seg"><button class="${isParent(p) ? 'on' : ''}" data-act="setParent" data-arg="1">نعم</button><button class="${isParent(p) ? '' : 'on'}" data-act="setParent" data-arg="0">لا</button></div></div>
       </div>
 
       ${open.length > 1 ? `<div class="kid-tabs">${open.map(x =>
@@ -3478,6 +3502,13 @@
       const p = Store.state.profiles.find(k => k.id === parentKid);
       if (!p || !parentOK) return;
       p.group = g; Store.save(); Screens.parent();
+    },
+    setParent(on) {
+      const p = Store.state.profiles.find(k => k.id === parentKid);
+      if (!p || !parentOK) return;
+      const s = Store.state.settings;
+      s.parents = parents().filter(id => id !== p.id).concat(on === '1' ? [p.id] : []);
+      Store.save(); Screens.parent();
     },
 
     pickRewardEmoji(e, el) {

@@ -1248,3 +1248,9 @@ body.tabs .toast, body.tabs .update-bar { bottom: calc(84px + env(safe-area-inse
   .cert-box { max-width: none; display: block; }
   .cert { width: 297mm; height: 210mm; aspect-ratio: auto; border-radius: 0; box-shadow: none; padding: 7mm; }
 }
+
+/* إشعار طلبات الجوائز المعلّقة لولي الأمر */
+.requests-banner { display: block; margin: 0 auto 14px; text-align: center; cursor: pointer; }
+.notif-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 22px; padding: 0 6px; margin-inline-start: 6px; border-radius: 11px; background: var(--red); color: #fff; font-size: 0.85rem; font-weight: 800; vertical-align: middle; }
+.profile-card .notif-badge { position: absolute; top: 6px; inset-inline-end: 6px; margin: 0; }
+.profile-card .parent-tag { position: absolute; top: 6px; inset-inline-start: 8px; font-style: normal; font-size: 1.1rem; }
