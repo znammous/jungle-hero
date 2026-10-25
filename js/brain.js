@@ -1,4 +1,4 @@
-// تحدّي العقل: أربع ألعاب قصيرة (مثل Big Brain Academy) تُختار من ثماني ألعاب، وتُبنى من مسائل الغابة الحالية
+// تحدّي العقل: ثماني ألعاب قصيرة (مثل Big Brain Academy) يختار الطفل منها ما يريد، تُبنى من مسائل الغابة الحالية
 // كل لعبة تصعب مع الإجابات الصحيحة وتسهل مع الخطأ، والمستوى من 1 إلى 5
 const Brain = (() => {
   const rnd = (lo, hi) => lo + Math.floor(Math.random() * (hi - lo + 1));
@@ -25,15 +25,8 @@ const Brain = (() => {
     { id: 'ord', icon: '🍌', name: 'رتّب الثمار', how: 'اضغط البطاقات بالترتيب من الأصغر إلى الأكبر', pts: 12 },
   ];
 
-  // كل تحدٍّ أربع ألعاب: ثلاث لم يلعبها الطفل آخر مرة وواحدة منها، حتى تتنوّع ولا تتكرر بالترتيب نفسه
-  const PER = 4;
-  function pickGames(p, w) {
-    const last = (p && w && state(p, w).last) || [];
-    const fresh = shuffle(GAMES.filter(G => !last.includes(G.id)));
-    const old = shuffle(GAMES.filter(G => last.includes(G.id)));
-    const list = fresh.slice(0, PER - Math.min(1, old.length)).concat(old).slice(0, PER);
-    return shuffle(list).map(G => G.id);
-  }
+  // الطفل يختار الألعاب (الكل افتراضياً)، وتأتي بترتيب مختلف كل مرة
+  const pickGames = (ids = GAMES.map(G => G.id)) => shuffle(ids.filter(id => GAMES.some(G => G.id === id)));
   const game = id => GAMES.find(G => G.id === id) || GAMES[0];
 
   // ما يُحفظ في الغابة: أفضل وزن للدماغ، وآخر مستوى وصل إليه في كل لعبة
@@ -646,5 +639,5 @@ const Brain = (() => {
   // حدود الأوسمة للعبة من 60 ثانية
   const medal = pts => (pts >= 400 ? '🥇' : pts >= 240 ? '🥈' : pts >= 110 ? '🥉' : '🎖️');
 
-  return { SECONDS, DUEL_SECONDS, GAMES, PER, game, pickGames, state, pool, make, step, medal };
+  return { SECONDS, DUEL_SECONDS, GAMES, game, pickGames, state, pool, make, step, medal };
 })();

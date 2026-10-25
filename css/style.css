@@ -1161,3 +1161,20 @@ body.tabs .toast, body.tabs .update-bar { bottom: calc(84px + env(safe-area-inse
 /* رتّب الثمار: رقم الترتيب على البطاقة */
 .bcard { position: relative; }
 .ordno { position: absolute; top: -8px; inset-inline-end: -6px; background: var(--sun); color: var(--ink); border-radius: 50%; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; font-weight: 800; }
+/* تحدّي العقل بألعابه الثماني: دوائر أصغر على الهاتف */
+@media (max-width: 520px) {
+  .brain-steps { gap: 5px; }
+  .brain-steps span { width: 38px; height: 38px; font-size: 1.2rem; }
+}
+
+/* اختيار ألعاب تحدّي العقل */
+.bpick { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.bpick-all { grid-column: 1 / -1; padding: 10px; border-radius: 14px; font-weight: 800; background: var(--sand); box-shadow: 0 4px 0 var(--sand-dark); }
+.bpick-all.on { background: #d9f5cf; box-shadow: 0 4px 0 #8fd17f; }
+.bpick-g { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px 6px; border-radius: 14px; background: #fff; border: 3px solid transparent; opacity: 0.6; text-align: center; }
+.bpick-g.on { border-color: var(--leaf); background: #ecf9e6; opacity: 1; }
+.bpick-g.on::after { content: '✓'; position: absolute; }
+.bpick-g { position: relative; }
+.bpick-g.on::after { top: 4px; inset-inline-start: 8px; color: var(--leaf); font-weight: 800; }
+.bpick-icon { font-size: 1.8rem; }
+.bpick-g small { color: var(--muted); font-size: 0.8rem; line-height: 1.3; }

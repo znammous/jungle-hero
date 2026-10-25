@@ -277,7 +277,7 @@
             <span class="big-icon">🏃</span><b>سباق النهر</b><small>دقيقة واحدة!</small>
           </button>
           <button class="big-btn pink" data-act="startBrain">
-            <span class="big-icon">🧠</span><b>تحدّي العقل</b><small>${(ws.brain || {}).best ? `أفضل وزن: ${ltr(ws.brain.best)} غ` : `${ltr(Brain.PER)} ألعاب سريعة`}</small>
+            <span class="big-icon">🧠</span><b>تحدّي العقل</b><small>${(ws.brain || {}).best ? `أفضل وزن: ${ltr(ws.brain.best)} غ` : `${ltr(brainChoice(p).length)} ألعاب سريعة`}</small>
           </button>
           <button class="big-btn brown" data-act="go" data-arg="shop">
             <span class="big-icon">🎒</span><b>متجر المعدّات</b><small>اشترِ أدوات الرحلة</small>
@@ -520,7 +520,7 @@
       const layout = duelLayout(n);
       const brainKind = duelKind === 'brain', rope = duelKind === 'rope';
       // في عدة أجهزة يختار الطفل نفسه فقط (وغالباً يكون مختاراً مسبقاً)، فالزر فوق الأسماء
-      const sendBtn = `<button class="btn green wide" data-act="netHost" data-arg="${duelKind}" ${n === 1 && canNet ? '' : 'disabled'}>📨 أرسل الدعوة</button>`;
+      const sendBtn = `<button class="btn green wide" data-act="netHost" data-arg="${duelKind}" ${n === 1 && canNet && (!brainKind || duelBrainPicks().length) ? '' : 'disabled'}>📨 أرسل الدعوة</button>`;
       const netNote = canNet ? 'تحتاج الأجهزة إلى الإنترنت وحساب Google نفسه.' : '⚠️ سجّل دخول ولي الأمر بحساب Google على كل الأجهزة أولاً، مع اتصال بالإنترنت.';
       render(`<section class="screen duel-screen">
         <header class="topbar">
@@ -542,10 +542,10 @@
         <div class="card">
           ${rope ? `<p>${net ? 'اختر نفسك، ثم يقبل أخوك الدعوة على جهازه.' : 'اختر لاعبَين اثنين.'}
             حبل واحد بينكما، وكل إجابة صحيحة تشدّه نحوك خطوة. كل واحد يُسأل من الغابة المختارة بمستواه هو.
-            <b>من يشدّ الحبل ${ltr(ROPE_LEAD)} خطوات إلى جهته يفوز، أو من يكون الحبل في جهته بعد ${ltr(CONFIG.raceSeconds)} ثانية!</b></p>
+            <b>من يشدّ الحبل ${ltr(ROPE_LEAD)} خطوات إلى جهته يفوز، أو من يكون الحبل في جهته عند انتهاء الوقت (${ltr(ROPE_SECONDS)} ثانية)!</b></p>
           <p class="muted">${net ? netNote : 'ضعا التابلت بينكما، ولكل واحد لوحة أرقامه.'}</p>`
           : brainKind ? `<p>الجميع يُسأل من الغابة المختارة، والصعوبة تتكيّف معه وحده: تصعب كلما أجاب صحيحاً.
-            ${ltr(Brain.PER)} ألعاب، ${ltr(Brain.DUEL_SECONDS)} ثانية لكل منها، ومن يُجب صحيحاً أكثر يفوز باللعبة.
+            الألعاب التي تختارونها أدناه، ${ltr(Brain.DUEL_SECONDS)} ثانية لكل منها، ومن يُجب صحيحاً أكثر يفوز باللعبة.
             <b>الفائز من يكسب ألعاباً أكثر!</b></p>
           <p class="muted">${net
             ? (canNet ? `اختر نفسك، ثم يقبل إخوتك الدعوة على أجهزتهم (حتى ${ltr(MAX_PLAYERS)} لاعبين). تحتاج الأجهزة إلى الإنترنت وحساب Google نفسه.` : '⚠️ سجّل دخول ولي الأمر بحساب Google على كل الأجهزة أولاً، مع اتصال بالإنترنت.')
@@ -556,6 +556,7 @@
             ? (canNet ? 'تحتاج الأجهزة إلى الإنترنت وحساب Google نفسه.' : '⚠️ سجّل دخول ولي الأمر بحساب Google على كل الأجهزة أولاً، مع اتصال بالإنترنت.')
             : 'ضعا التابلت بينكما، ولكل واحد لوحة أرقامه.'}</p>`}
         </div>
+        ${brainKind ? `<div class="card"><h3>🎮 الألعاب</h3>${brainPickGrid(duelBrainPicks(), 'duelBrainToggle')}</div>` : ''}
         ${net ? sendBtn : ''}
         <div class="profile-grid">${list.map(p => {
           const i = duelPicks.indexOf(p.id);
@@ -573,7 +574,7 @@
           </button>`).join('')}</div>
         </div>`}
         ${net ? ''
-          : brainKind ? `<button class="btn green wide" data-act="startBrainDuel" ${n >= 2 ? '' : 'disabled'}>🧠 ابدأ المبارزة</button>`
+          : brainKind ? `<button class="btn green wide" data-act="startBrainDuel" ${n >= 2 && duelBrainPicks().length ? '' : 'disabled'}>🧠 ابدأ المبارزة</button>`
           : rope ? `<button class="btn green wide" data-act="startRope" ${n >= 2 ? '' : 'disabled'}>🪢 ابدأ الشدّ</button>`
           : `<button class="btn green wide" data-act="startDuel" ${n >= 2 ? '' : 'disabled'}>🏁 ابدأ السباق</button>`}
       </section>`);
@@ -651,7 +652,7 @@
       </div>`;
       const mid = `<div class="duel-mid">
           <button class="chip" data-act="exitDuel" aria-label="خروج">✕</button>
-          <div class="timebar"><i id="timebar"></i><span id="timeText">${CONFIG.raceSeconds}</span></div>
+          <div class="timebar"><i id="timebar"></i><span id="timeText">${duelSeconds()}</span></div>
         </div>`;
       if (duel.net) {
         render(`<section class="duel net">
@@ -861,6 +862,28 @@
       </section>`);
     },
 
+    // تحدّي العقل: يختار الطفل الألعاب أولاً (ويُحفظ اختياره)
+    brainSetup() {
+      const p = Store.current();
+      const ids = brainChoice(p);
+      const mins = Math.max(1, Math.round(ids.length * (Brain.SECONDS + 3) / 60));
+      // العدد بالعربية: لعبة، لعبتان، 3 ألعاب
+      const count = (n, one, two, many) => (n === 1 ? one : n === 2 ? two : `${ltr(n)} ${n <= 10 ? many : one}`);
+      render(`<section class="screen">
+        <header class="topbar">
+          <button class="chip" data-act="go" data-arg="camp">→ رجوع</button>
+          <h2 class="topbar-title">🧠 تحدّي العقل</h2>
+          <span></span>
+        </header>
+        <div class="card">
+          <h3>🎮 اختر ألعابك</h3>
+          ${brainPickGrid(ids, 'brainToggle', true)}
+        </div>
+        <button class="btn orange wide" data-act="brainStart" ${ids.length ? '' : 'disabled'}>ابدأ ▶ ${ids.length ? `(${count(ids.length, 'لعبة', 'لعبتان', 'ألعاب')} · ${count(mins, 'دقيقة', 'دقيقتان', 'دقائق')} تقريباً)` : ''}</button>
+        <button class="btn green wide" data-act="brainInvite">⚔️ ادعُ إخوتك لمبارزة العقول</button>
+      </section>`);
+    },
+
     // تحدّي العقل: بطاقة تعريف قبل كل لعبة، ثم شاشة اللعب
     brain() {
       const b = brain;
@@ -882,7 +905,6 @@
             <p>${G.how}</p>
             <p class="muted">${ltr(Brain.SECONDS)} ثانية، وتصعب كلما أجبت صحيحاً</p>
             <button class="btn orange wide" data-act="brainGo">ابدأ ▶</button>
-            ${b.g === 0 ? '<button class="btn green wide" data-act="brainInvite">⚔️ ادعُ إخوتك لمبارزة العقول</button>' : ''}
           </div>
         </section>`);
         return;
@@ -955,7 +977,7 @@
         ${s.newRecord ? '<div class="banner">🏆 رقم قياسي جديد لوزن الدماغ!</div>' : ''}
         ${s.goalReached ? `<div class="banner">⏱️ حقّقت هدف اليوم: ${ltr(Store.state.settings.goalMin)} دقيقة! 🎉</div>` : ''}
         <div class="actions">
-          <button class="btn orange" data-act="startBrain">🔁 مرة أخرى</button>
+          <button class="btn orange" data-act="brainStart">🔁 مرة أخرى</button>
           <button class="btn green" data-act="go" data-arg="camp">⛺ المخيّم</button>
         </div>
       </section>`);
@@ -1577,8 +1599,10 @@
       <span class="group-go">${ltr('‹')}</span>
     </button>`;
   const duelKindOf = d => DUEL_KINDS[(d && d.kind) || 'race'] || DUEL_KINDS.race;
-  // شدّ الحبل: يفوز فوراً من يتقدّم بهذا العدد من الإجابات الصحيحة
-  const ROPE_LEAD = 6;
+  // شدّ الحبل: يفوز فوراً من يتقدّم بهذا العدد من الإجابات الصحيحة، وإلا فبعد دقيقتين
+  const ROPE_LEAD = 10;
+  const ROPE_SECONDS = 120;
+  const duelSeconds = () => (duel && duel.kind === 'rope' ? ROPE_SECONDS : CONFIG.raceSeconds);
 
   // أشكال تقسيم الشاشة حسب عدد اللاعبين، ويُحفظ الاختيار على هذا الجهاز فقط
   const DUEL_LAYOUTS = {
@@ -1618,7 +1642,7 @@
     if (!duelAlive()) return;
     if (n === 0) {
       Sound.play('go');
-      const total = CONFIG.raceSeconds * 1000;
+      const total = duelSeconds() * 1000;
       duel.endsAt = performance.now() + total;
       duel.timer = setInterval(() => {
         if (!duelAlive()) return;
@@ -1913,7 +1937,7 @@
     const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
     netPending = { id, role: 'host', pid: p.id };
     Screens.netWait('host');
-    const games = kind === 'brain' ? Brain.pickGames(p, duelLand === ALL_LANDS ? null : duelLand) : null;
+    const games = kind === 'brain' ? Brain.pickGames(duelBrainPicks()) : null;
     Sync.duel.set({ id, kind, world: duelLand, ...(games ? { games } : {}), state: 'waiting', createdAt: Date.now(), host: DEVICE, players: { [DEVICE]: netPlayer(p) } })
       .catch(() => {
         netPending = null;
@@ -2300,6 +2324,29 @@
   }
 
   // ───── تحدّي العقل ─────
+  // الألعاب التي اختارها الطفل (الكل إذا لم يختر بعد)
+  const allBrainIds = () => Brain.GAMES.map(G => G.id);
+  const brainChoice = p => {
+    const ids = ((p && p.brainGames) || []).filter(id => Brain.GAMES.some(G => G.id === id));
+    return p && p.brainGames ? ids : allBrainIds();
+  };
+  // في المبارزة: اختيار من يبدأها، ويمكن تغييره في شاشة التحدي
+  let brainPicks = null;
+  const duelBrainPicks = () => brainPicks || brainChoice(Store.state.profiles.find(k => k.id === duelPicks[0]));
+  // يُبدّل لعبة واحدة أو «الكل» (إذا كانت كلها مختارة يُلغيها)
+  const toggleBrainId = (ids, id) => (id === 'all'
+    ? (ids.length === Brain.GAMES.length ? [] : allBrainIds())
+    : ids.includes(id) ? ids.filter(x => x !== id) : allBrainIds().filter(x => x === id || ids.includes(x)));
+
+  function brainPickGrid(ids, act, how = false) {
+    const all = ids.length === Brain.GAMES.length;
+    return `<div class="bpick">
+      <button class="bpick-all ${all ? 'on' : ''}" data-act="${act}" data-arg="all">${all ? '☑️ إلغاء الكل' : '✅ اختر الكل'}</button>
+      ${Brain.GAMES.map(G => `<button class="bpick-g ${ids.includes(G.id) ? 'on' : ''}" data-act="${act}" data-arg="${G.id}">
+        <span class="bpick-icon">${G.icon}</span><b>${G.name}</b>${how ? `<small>${G.how}</small>` : ''}</button>`).join('')}
+    </div>`;
+  }
+
   // brain.sides: لاعب واحد من المخيّم، أو من 2 إلى 4 في مبارزة العقول على شاشة مقسومة.
   // كل لاعب يُسأل من غابته الحالية وبمستواه هو
   function brainSideFor(p, w, ids) {
@@ -2326,7 +2373,8 @@
   function startBrain() {
     const p = Store.current();
     abortBrain();
-    const w = Engine.current(p).id, ids = Brain.pickGames(p, w);
+    const w = Engine.current(p).id, ids = Brain.pickGames(brainChoice(p));
+    if (!ids.length) { Screens.brainSetup(); return; }
     brain = { duel: false, g: 0, ids, phase: 'intro', sides: [brainSideFor(p, w, ids)], timer: null, timeouts: [], secsAtStart: Journey.today(p).secs };
     Screens.brain();
   }
@@ -2336,7 +2384,8 @@
     if (players.length < 2 || players.some(p => !p)) { Screens.duelPick(); return; }
     abortBrain();
     // الألعاب نفسها للجميع، يختارها من يبدأ المبارزة
-    const ids = Brain.pickGames(players[0], duelLand === ALL_LANDS ? null : duelLand);
+    const ids = Brain.pickGames(duelBrainPicks());
+    if (!ids.length) { Screens.duelPick(); return; }
     brain = { duel: true, g: 0, ids, phase: 'play', sides: players.map(p => brainSideFor(p, duelLand, ids)), timer: null, timeouts: [] };
     brainGo();
   }
@@ -2533,7 +2582,6 @@
     const newRecord = grams > bs.best && bs.best > 0;
     if (grams > bs.best) { bs.best = grams; p.coins += COINS.raceRecord; }
     side.games.forEach(g => { bs.lv[g.id] = g.lv; });
-    bs.last = b.ids;
     const goalMin = Store.state.settings.goalMin;
     const summary = {
       grams, best: bs.best, games: side.games, newRecord, coins: p.coins - coinsBefore,
@@ -2566,7 +2614,7 @@
     list.forEach(x => {
       const before = x.p.coins;
       x.p.coins += Math.floor(x.right * COINS.perCorrect) + (x === winner ? COINS.duelWin : 0);
-      if (x.s.w !== ALL_LANDS) { const bs = Brain.state(x.p, x.s.w); x.s.games.forEach(g => { bs.lv[g.id] = g.lv; }); bs.last = b.ids; }
+      if (x.s.w !== ALL_LANDS) { const bs = Brain.state(x.p, x.s.w); x.s.games.forEach(g => { bs.lv[g.id] = g.lv; }); }
       x.coins = x.p.coins - before;
       x.out = b.ids.map((id, j) => `${Brain.game(id).icon} ${x.s.games[j].won ? '👑' : ''}${x.s.games[j].right}`).join(' · ');
     });
@@ -2590,7 +2638,7 @@
     abortBrain();
     // الألعاب كتبها صاحب الدعوة في المستند (الدعوات القديمة بلا قائمة: أول أربع ألعاب)
     const ids = (d.games || []).filter(id => Brain.GAMES.some(G => G.id === id));
-    if (!ids.length) Brain.GAMES.slice(0, Brain.PER).forEach(G => ids.push(G.id));
+    if (!ids.length) allBrainIds().slice(0, 4).forEach(id => ids.push(id));
     brain = {
       duel: true, g: 0, ids, phase: 'play', sides: [brainSideFor(p, duelLand, ids)], timer: null, timeouts: [],
       net: { id: d.id, opps, finished: false },
@@ -2672,7 +2720,7 @@
     const winner = soleWinner(ranked);
     const before = s.p.coins;
     s.p.coins += Math.floor(mine.right * COINS.perCorrect) + (winner === mine ? COINS.duelWin : 0);
-    if (s.w !== ALL_LANDS) { const bs = Brain.state(s.p, s.w); s.games.forEach(g => { bs.lv[g.id] = g.lv; }); bs.last = b.ids; }
+    if (s.w !== ALL_LANDS) { const bs = Brain.state(s.p, s.w); s.games.forEach(g => { bs.lv[g.id] = g.lv; }); }
     mine.coins = s.p.coins - before;
     Store.save();
     Sound.play('win');
@@ -2846,6 +2894,7 @@
     duelSetup() {
       // عدة أجهزة هو الوضع الافتراضي، إلا إذا لم تكن المزامنة جاهزة على هذا الجهاز
       duelMode = Sync.duel.ready() ? 'net' : 'local';
+      brainPicks = null;   // ألعاب المبارزة تبدأ من اختيار من يبدأها
       duelPicks = duelPicks.filter(id => Store.state.profiles.some(p => p.id === id));
       // من يبدأ من مخيّمه يكون مختاراً تلقائياً
       const me = Store.current();
@@ -2912,7 +2961,15 @@
     // الخروج من الجولة يعيدك إلى الشاشة التي بدأتها منها
     exitRound() { if (round && !navBack()) go('camp'); },
 
-    startBrain() { startBrain(); },
+    startBrain() { Screens.brainSetup(); },
+    brainStart() { startBrain(); },
+    brainToggle(id) {
+      const p = Store.current();
+      p.brainGames = toggleBrainId(brainChoice(p), id);
+      Store.save();
+      Screens.brainSetup();
+    },
+    duelBrainToggle(id) { brainPicks = toggleBrainId(duelBrainPicks(), id); Screens.duelPick(); },
     startBrainDuel() { startBrainDuel(); },
     setDuelKind(k) { duelKind = k; Screens.duelPick(); },
     brainGo() { brainGo(); },
