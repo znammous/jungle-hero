@@ -83,7 +83,7 @@
           // الاسم يغيّره ولي الأمر فقط من لوحته
           ? `<p class="label">اسمك: <b>${esc(p.name)}</b></p><p class="muted">لتغيير الاسم اطلب من ولي الأمر 👨‍👩‍👧</p>`
           : `<label for="nameInput">ما اسمك؟</label>
-        <input id="nameInput" maxlength="12" autocomplete="off" placeholder="اكتب اسمك هنا">`}
+        <input id="nameInput" maxlength="20" autocomplete="off" placeholder="اكتب اسمك هنا">`}
         <p class="label">اختر شخصيتك</p>
         <div class="avatar-grid">
           ${AVATARS.map(a => `<button class="avatar-btn ${a === newAvatar ? 'selected' : ''}" data-act="pickAvatar" data-arg="${a}">${a}</button>`).join('')}
@@ -1034,7 +1034,7 @@
     return `
       <div class="card">
         <div class="setting"><span>✏️ الاسم</span>
-          <div class="reward-form rename"><input id="renameInput" maxlength="12" autocomplete="off" value="${esc(p.name)}">
+          <div class="reward-form rename"><input id="renameInput" maxlength="20" autocomplete="off" value="${esc(p.name)}">
             <button class="btn green" data-act="renameKid">حفظ</button></div></div>
         <div class="setting"><span>🔑 رمز الدخول ${p.pin ? `<b dir="ltr">${kidPinShown ? p.pin : '••••'}</b>` : '<small class="muted">(لم يُختر بعد)</small>'}
             ${p.pin ? `<button class="link-btn dark" data-act="toggleKidPin">${kidPinShown ? '🙈 إخفاء' : '👁️ إظهار'}</button>` : ''}</span>
