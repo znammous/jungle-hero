@@ -1107,3 +1107,23 @@ body.tabs .toast, body.tabs .update-bar { bottom: calc(84px + env(safe-area-inse
 .duel .choices { max-width: 330px; gap: 8px; }
 .duel .choice { height: clamp(48px, 10vmin, 76px); font-size: 1.8rem; border-radius: 14px; }
 .duel.stack .choices, .duel.face .choices { grid-column: 2; grid-row: 1 / 4; width: 100%; max-width: none; align-self: center; }
+
+/* شدّ الحبل: الحبل في منتصف المسار، وكل لاعب في طرفه القريب منه (يمين الشاشة دائماً) */
+.track.rope { background: linear-gradient(#7cc47a, #4f9a52); }
+.track.rope::before { content: ''; position: absolute; inset-inline: 40px; top: 50%; height: 10px; transform: translateY(-50%); border-radius: 6px;
+  background: repeating-linear-gradient(60deg, #c8955a 0 6px, #9a6a3a 6px 10px); box-shadow: 0 2px 0 rgba(0, 0, 0, 0.2); }
+.track.rope::after { content: ''; position: absolute; left: 50%; inset-block: 6px; border-left: 3px dashed rgba(255, 255, 255, 0.8); }
+.rend { position: absolute; top: 50%; transform: translateY(-50%); font-size: 2rem; z-index: 1; filter: drop-shadow(0 3px 2px rgba(0, 0, 0, 0.3)); }
+.rend.me { right: 4px; }
+.rend.them { left: 4px; }
+.knot { position: absolute; top: 50%; left: calc(50% + var(--k, 0) * (50% - 52px)); width: 22px; height: 30px; transform: translate(-50%, -50%);
+  background: var(--red); border-radius: 8px; border: 3px solid #fff; transition: left 0.35s ease-out; z-index: 1; }
+.duel.multi .rend { font-size: 1.5rem; }
+.duel-opts .seg.duel-kinds { flex-basis: 100%; }
+.duel-kinds button { padding: 10px 6px; }
+
+/* القرد الناقص */
+.meq { display: inline-flex; align-items: center; gap: 0.3em; white-space: nowrap; }
+.monkey { font-style: normal; display: inline-block; background: var(--sun); border-radius: 12px; padding: 0 0.12em; animation: nudge 1.2s ease-in-out infinite; }
+.mq { min-height: 0; }
+.duel .mq { font-size: clamp(1.4rem, 4.5vmin, 2.4rem); padding: 8px; }

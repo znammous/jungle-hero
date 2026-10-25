@@ -4,11 +4,11 @@
   let round = null;       // الجولة الجارية (تدريب، إحماء، سباق، مراجعة)
   let lastRound = null;   // لإعادة نفس الجولة من شاشة النتائج
   let duel = null;        // سباق الإخوة الجاري على شاشة مقسومة
-  let brain = null;       // تحدّي العقل الجاري: ثلاث ألعاب قصيرة متتالية
+  let brain = null;       // تحدّي العقل الجاري: أربع ألعاب قصيرة متتالية
   let duelPicks = [];     // الطفلان المختاران لسباق الإخوة
   let duelLand = 'mul';    // غابة سباق الإخوة ومبارزة العقول: يختارها من يبدأ التحدي، والكل يلعب فيها
   let duelMode = 'net';   // 'net' عدة أجهزة (الافتراضي) | 'local' تابلت واحد
-  let duelKind = 'race';  // 'race' سباق النهر | 'brain' مبارزة العقول (على جهاز واحد فقط)
+  let duelKind = 'race';  // 'race' سباق النهر | 'brain' مبارزة العقول | 'rope' شدّ الحبل (لاعبان فقط)
   let netPending = null;  // دعوة سباق على عدة أجهزة قبل أن يبدأ: { id, role, pid }
   let newAvatar = AVATARS[0];
   let welcomeSkipped = false;   // اختار «متابعة بدون مزامنة» في هذه المرة
@@ -275,7 +275,7 @@
             <span class="big-icon">🏃</span><b>سباق النهر</b><small>دقيقة واحدة!</small>
           </button>
           <button class="big-btn pink" data-act="startBrain">
-            <span class="big-icon">🧠</span><b>تحدّي العقل</b><small>${(ws.brain || {}).best ? `أفضل وزن: ${ltr(ws.brain.best)} غ` : '3 ألعاب سريعة'}</small>
+            <span class="big-icon">🧠</span><b>تحدّي العقل</b><small>${(ws.brain || {}).best ? `أفضل وزن: ${ltr(ws.brain.best)} غ` : `${ltr(Brain.GAMES.length)} ألعاب سريعة`}</small>
           </button>
           <button class="big-btn brown" data-act="go" data-arg="shop">
             <span class="big-icon">🎒</span><b>متجر المعدّات</b><small>اشترِ أدوات الرحلة</small>
@@ -515,9 +515,10 @@
       const canNet = Sync.duel.ready();
       const picked = duelPicks.map(id => list.find(p => p.id === id));
       const layout = duelLayout(n);
-      const brainKind = duelKind === 'brain';
+      const brainKind = duelKind === 'brain', rope = duelKind === 'rope';
       // في عدة أجهزة يختار الطفل نفسه فقط (وغالباً يكون مختاراً مسبقاً)، فالزر فوق الأسماء
-      const sendBtn = `<button class="btn green wide" data-act="netHost" data-arg="${brainKind ? 'brain' : 'race'}" ${n === 1 && canNet ? '' : 'disabled'}>📨 أرسل الدعوة</button>`;
+      const sendBtn = `<button class="btn green wide" data-act="netHost" data-arg="${duelKind}" ${n === 1 && canNet ? '' : 'disabled'}>📨 أرسل الدعوة</button>`;
+      const netNote = canNet ? 'تحتاج الأجهزة إلى الإنترنت وحساب Google نفسه.' : '⚠️ سجّل دخول ولي الأمر بحساب Google على كل الأجهزة أولاً، مع اتصال بالإنترنت.';
       render(`<section class="screen duel-screen">
         <header class="topbar">
           <button class="chip" data-act="go" data-arg="home">→ رجوع</button>
@@ -529,16 +530,18 @@
           <button class="${net ? '' : 'on'}" data-act="setDuelMode" data-arg="local">📱 جهاز واحد</button>
           <button class="${net ? 'on' : ''}" data-act="setDuelMode" data-arg="net">🌐 عدة أجهزة</button>
         </div>
-        <div class="seg duel-modes">
-          <button class="${brainKind ? '' : 'on'}" data-act="setDuelKind" data-arg="race">🏃 سباق النهر</button>
-          <button class="${brainKind ? 'on' : ''}" data-act="setDuelKind" data-arg="brain">🧠 مبارزة العقول</button>
-        </div>
+        <div class="seg duel-modes duel-kinds">${Object.entries(DUEL_KINDS).map(([k, x]) =>
+          `<button class="${k === duelKind ? 'on' : ''}" data-act="setDuelKind" data-arg="${k}">${x.icon} ${x.name}</button>`).join('')}</div>
         </div>
         <div class="seg duel-modes duel-lands">${duelLands().map(w =>
           `<button class="${w.id === duelLand ? 'on' : ''}" data-act="setDuelLand" data-arg="${w.id}">${w.icon} ${w.name}</button>`).join('')}</div>
         <div class="card">
-          ${brainKind ? `<p>الجميع يُسأل من الغابة المختارة، والصعوبة تتكيّف معه وحده: تصعب كلما أجاب صحيحاً.
-            ثلاث ألعاب، ${ltr(Brain.DUEL_SECONDS)} ثانية لكل منها، ومن يُجب صحيحاً أكثر يفوز باللعبة.
+          ${rope ? `<p>${net ? 'اختر نفسك، ثم يقبل أخوك الدعوة على جهازه.' : 'اختر لاعبَين اثنين.'}
+            حبل واحد بينكما، وكل إجابة صحيحة تشدّه نحوك خطوة. كل واحد يُسأل من الغابة المختارة بمستواه هو.
+            <b>من يشدّ الحبل ${ltr(ROPE_LEAD)} خطوات إلى جهته يفوز، أو من يكون الحبل في جهته بعد ${ltr(CONFIG.raceSeconds)} ثانية!</b></p>
+          <p class="muted">${net ? netNote : 'ضعا التابلت بينكما، ولكل واحد لوحة أرقامه.'}</p>`
+          : brainKind ? `<p>الجميع يُسأل من الغابة المختارة، والصعوبة تتكيّف معه وحده: تصعب كلما أجاب صحيحاً.
+            ${ltr(Brain.GAMES.length)} ألعاب، ${ltr(Brain.DUEL_SECONDS)} ثانية لكل منها، ومن يُجب صحيحاً أكثر يفوز باللعبة.
             <b>الفائز من يكسب ألعاباً أكثر!</b></p>
           <p class="muted">${net
             ? (canNet ? `اختر نفسك، ثم يقبل إخوتك الدعوة على أجهزتهم (حتى ${ltr(MAX_PLAYERS)} لاعبين). تحتاج الأجهزة إلى الإنترنت وحساب Google نفسه.` : '⚠️ سجّل دخول ولي الأمر بحساب Google على كل الأجهزة أولاً، مع اتصال بالإنترنت.')
@@ -554,7 +557,7 @@
           const i = duelPicks.indexOf(p.id);
           return `<button class="profile-card ${i >= 0 ? 'picked' : ''}" data-act="duelPick" data-arg="${p.id}">
             <span class="avatar">${p.avatar}</span><b>${esc(p.name)}</b>
-            <small>${brainKind ? `${Engine.world(duelLand).icon} ${Engine.world(duelLand).name}` : `${Engine.world(duelLand).icon} 🏝️ هدفه ${ltr(duelGoal(p))}`}</small>
+            <small>${duelKind !== 'race' ? `${Engine.world(duelLand).icon} ${Engine.world(duelLand).name}` : `${Engine.world(duelLand).icon} 🏝️ هدفه ${ltr(duelGoal(p))}`}</small>
             ${i >= 0 && !net ? `<span class="pick-no">${ltr(i + 1)}</span>` : ''}
           </button>`;
         }).join('')}</div>
@@ -567,6 +570,7 @@
         </div>`}
         ${net ? ''
           : brainKind ? `<button class="btn green wide" data-act="startBrainDuel" ${n >= 2 ? '' : 'disabled'}>🧠 ابدأ المبارزة</button>`
+          : rope ? `<button class="btn green wide" data-act="startRope" ${n >= 2 ? '' : 'disabled'}>🪢 ابدأ الشدّ</button>`
           : `<button class="btn green wide" data-act="startDuel" ${n >= 2 ? '' : 'disabled'}>🏁 ابدأ السباق</button>`}
       </section>`);
     },
@@ -576,12 +580,13 @@
       const d = Sync.duel.data();
       const players = d && netPending && d.id === netPending.id ? activePlayers(d) : [];
       const host = role === 'host';
-      const what = d && d.kind === 'brain' ? 'المبارزة' : 'السباق';
+      const K = duelKindOf(d);
+      const what = K.what;
       render(`<section class="screen results duel-screen net-wait">
         <div class="result-hero wait-spin">⏳</div>
         <h1>${host ? 'بانتظار المتسابقين…' : `بانتظار بدء ${what}…`}</h1>
         <p class="hint">${host
-          ? `افتح اللعبة على الأجهزة الأخرى واضغط «انضم» (حتى ${ltr(MAX_PLAYERS)} لاعبين).`
+          ? `افتح اللعبة على الأجهزة الأخرى واضغط «انضم» (${K.max === 2 ? 'لاعبان فقط' : `حتى ${ltr(K.max)} لاعبين`}).`
           : `تبدأ ${what} عندما يضغط صاحب الدعوة «ابدأ».`}</p>
         <div class="net-players">${players.map(x => `<span>${x.avatar}<b>${esc(x.name)}</b></span>`).join('')}</div>
         <div class="actions">
@@ -599,30 +604,39 @@
       render(`<section class="screen duel-screen">
         <header class="topbar">
           <button class="chip" data-act="go" data-arg="home">→ رجوع</button>
-          <h2 class="topbar-title">⚔️ دعوة لسباق</h2>
+          <h2 class="topbar-title">${duelKindOf(d).icon} دعوة ${duelKindOf(d).invite}</h2>
           <span></span>
         </header>
         <div class="card center">
-          <p>${host.avatar} <b>${esc(host.name)}</b> يدعوك ${d.kind === 'brain' ? 'لمبارزة العقول 🧠' : 'لسباق'} في ${Engine.world(d.world || 'mul').icon} ${Engine.world(d.world || 'mul').name}! من أنت؟</p>
+          <p>${host.avatar} <b>${esc(host.name)}</b> يدعوك ${duelKindOf(d).invite} ${duelKindOf(d).icon} في ${Engine.world(d.world || 'mul').icon} ${Engine.world(d.world || 'mul').name}! من أنت؟</p>
           <div class="net-players">${taken.map(x => `<span>${x.avatar}<b>${esc(x.name)}</b></span>`).join('')}</div>
         </div>
         <div class="profile-grid">${list.map(p => `<button class="profile-card" data-act="netJoin" data-arg="${p.id}">
             <span class="avatar">${p.avatar}</span><b>${esc(p.name)}</b>
-            <small>${d.kind === 'brain' ? `${Engine.world(duelLand).icon} ${Engine.world(duelLand).name}` : `${Engine.world(duelLand).icon} 🏝️ هدفه ${ltr(duelGoal(p))}`}</small>
+            <small>${d.kind === 'brain' || d.kind === 'rope' ? `${Engine.world(duelLand).icon} ${Engine.world(duelLand).name}` : `${Engine.world(duelLand).icon} 🏝️ هدفه ${ltr(duelGoal(p))}`}</small>
           </button>`).join('')}</div>
       </section>`);
     },
 
     duel() {
+      const rope = duel.kind === 'rope';
+      // شدّ الحبل: كل لاعب يرى نفسه في طرف الحبل القريب منه، والعقدة تتحرك نحو من يشدّ أكثر
+      const them = i => (duel.net ? duel.net.opps : duel.sides.filter((_, j) => j !== i).map(x => x.p)).map(x => x.avatar).join('');
+      const track = (side, i) => (rope
+        ? `<div class="track rope" style="--lead:${ROPE_LEAD}">
+          <span class="rend me">${side.p.avatar}</span><span class="rend them">${them(i)}</span>
+          <span id="dKnot${i}" class="knot" style="--k:0"></span>
+        </div>`
+        : `<div class="track river">
+          <span class="goal">🏝️</span>
+          <span id="dWalker${i}" class="walker" style="--p:0">${side.p.avatar}</span>
+        </div>`);
       const half = (side, i) => `<div class="duel-half" data-side="${i}">
         <div class="duel-head">
           <b>${side.p.avatar} ${esc(side.p.name)}</b>
           <span class="chip">✅ <b id="dScore${i}">0</b></span>
         </div>
-        <div class="track river">
-          <span class="goal">🏝️</span>
-          <span id="dWalker${i}" class="walker" style="--p:0">${side.p.avatar}</span>
-        </div>
+        ${track(side, i)}
         <div id="dQ${i}" class="question" dir="ltr"></div>
         <div id="dPad${i}" class="pad">${duelPad(null)}</div>
       </div>`;
@@ -635,8 +649,8 @@
           ${mid}
           ${duel.net.opps.map((o, j) => `<div class="opp">
             <b>${o.avatar} ${esc(o.name)}</b>
-            <div class="track river"><span class="goal">🏝️</span>
-              <span id="oWalker${j}" class="walker" style="--p:0">${o.avatar}</span></div>
+            ${rope ? '' : `<div class="track river"><span class="goal">🏝️</span>
+              <span id="oWalker${j}" class="walker" style="--p:0">${o.avatar}</span></div>`}
             <span class="chip">✅ <b id="oScore${j}">0</b></span>
           </div>`).join('')}
           ${half(duel.sides[0], 0)}
@@ -677,7 +691,7 @@
         <div class="duel-cards">${res.sides.map(card).join('')}</div>
         <div class="actions">
           ${res.again
-            ? `<button class="btn orange" data-act="${res.again}">🧠 مبارزة أخرى</button>`
+            ? `<button class="btn orange" data-act="${res.again}">${res.againLabel || '🧠 مبارزة أخرى'}</button>`
             : `<button class="btn orange" data-act="${res.net ? 'duelSetup' : 'startDuel'}">⚔️ سباق آخر</button>`}
           <button class="btn green" data-act="go" data-arg="home">🏠 الرئيسية</button>
         </div>
@@ -1527,6 +1541,15 @@
   const MAX_PLAYERS = 4;
   // على جهاز واحد لاعبان فقط: الشاشة لا تتسع لأكثر. حتى 4 لاعبين على عدة أجهزة
   const MAX_LOCAL = 2;
+  // أنواع التحدي، وmax أكبر عدد للاعبين على عدة أجهزة (الحبل له طرفان فقط)
+  const DUEL_KINDS = {
+    race: { icon: '🏃', name: 'سباق النهر', what: 'السباق', invite: 'لسباق', max: MAX_PLAYERS },
+    brain: { icon: '🧠', name: 'مبارزة العقول', what: 'المبارزة', invite: 'لمبارزة العقول', max: MAX_PLAYERS },
+    rope: { icon: '🪢', name: 'شدّ الحبل', what: 'الشدّ', invite: 'لشدّ الحبل', max: 2 },
+  };
+  const duelKindOf = d => DUEL_KINDS[(d && d.kind) || 'race'] || DUEL_KINDS.race;
+  // شدّ الحبل: يفوز فوراً من يتقدّم بهذا العدد من الإجابات الصحيحة
+  const ROPE_LEAD = 6;
 
   // أشكال تقسيم الشاشة حسب عدد اللاعبين، ويُحفظ الاختيار على هذا الجهاز فقط
   const DUEL_LAYOUTS = {
@@ -1551,11 +1574,11 @@
     return ok[0].id;
   }
 
-  function startDuel() {
+  function startDuel(kind = 'race') {
     const players = duelPicks.map(id => Store.state.profiles.find(p => p.id === id));
     if (players.length < 2 || players.some(p => !p)) { Screens.duelPick(); return; }
     duel = {
-      sides: players.map(duelSide),
+      kind, sides: players.map(duelSide),
       timer: null, timeouts: [],
     };
     Screens.duel();
@@ -1681,9 +1704,35 @@
         : `<span>${q.a}</span><span class="op">${q.op}</span><span>${q.b}</span><span class="op">=</span><span class="fix">${q.answer}</span>`;
     }
     $(`dScore${i}`).textContent = side.right;
-    $(`dWalker${i}`).style.setProperty('--p', Math.min(side.right / side.goal, 1));
-    if (duel.net) netPush(false);
+    if (duel.kind === 'rope') {
+      if (duel.net) netPush(false);
+      if (ropeDraw()) { finishDuel(); return; }
+    } else {
+      $(`dWalker${i}`).style.setProperty('--p', Math.min(side.right / side.goal, 1));
+      if (duel.net) netPush(false);
+    }
     duel.timeouts.push(setTimeout(() => { if (duelAlive()) duelNext(i); }, ok ? 300 : 900));
+  }
+
+  // شدّ الحبل: الشدّة = فرق الإجابات الصحيحة (على عدة أجهزة: بيني وبين منافسي).
+  // تُرسم العقدة عند كل لاعب نحو طرفه، وتُرجع true إذا وصل أحدهم إلى الفوز
+  function ropeDraw() {
+    const rights = duel.net ? [duel.sides[0].right, ...duel.net.opps.map(o => o.right || 0)] : duel.sides.map(x => x.right);
+    const pull = rights[0] - rights[1];
+    duel.sides.forEach((_, i) => {
+      const k = Math.max(-1, Math.min(1, (i ? -pull : pull) / ROPE_LEAD));
+      const el = $(`dKnot${i}`);
+      if (el) el.style.setProperty('--k', k);
+    });
+    return Math.abs(pull) >= ROPE_LEAD;
+  }
+
+  // نتيجة شدّ الحبل في ملف الطفل: عملات فقط، ولا تُحسب سباقاً لأنه قد ينتهي قبل الوقت
+  function settleRope(x, won) {
+    const before = x.p.coins;
+    x.p.coins += Math.floor(x.right * COINS.perCorrect) + (won ? COINS.duelWin : 0);
+    x.banners = Engine.progress(x.p).map(eventBanner);
+    x.coins = x.p.coins - before;
   }
 
   // نتيجة السباق في ملف الطفل: العملات والرقم القياسي والرتبة (مشتركة مع سباق النهر)
@@ -1770,8 +1819,9 @@
   }
 
   // المراكز: من وصل إلى جزيرته أولاً، ثم الأقرب إليها. المتساوون يتشاركون المركز
-  function rankSides(list) {
-    const key = x => x.reachedAt ? [0, x.reachedAt] : [1, -(x.right / x.goal)];
+  // وفي شدّ الحبل: الأكثر إجابات صحيحة (الحبل في جهته)
+  function rankSides(list, rope = false) {
+    const key = x => rope ? [0, -x.right] : x.reachedAt ? [0, x.reachedAt] : [1, -(x.right / x.goal)];
     const cmp = (a, b) => { const [p, q] = [key(a), key(b)]; return p[0] - q[0] || p[1] - q[1]; };
     const sorted = list.slice().sort(cmp);
     sorted.forEach((x, i) => { x.place = i && cmp(sorted[i - 1], x) === 0 ? sorted[i - 1].place : i + 1; });
@@ -1785,14 +1835,24 @@
 
   function finishDuel() {
     if (duel.net) { netFinish(); return; }
-    const sides = duel.sides;
+    const { sides, kind } = duel;
     abortDuel();
-    const ranked = rankSides(sides);
+    const rope = kind === 'rope';
+    const ranked = rankSides(sides, rope);
     const winner = soleWinner(ranked);
-    sides.forEach(x => settleSide(x, x === winner));
+    sides.forEach(x => (rope ? settleRope : settleSide)(x, x === winner));
     Store.save();
     Sound.play('win');
-    Screens.duelResults({ sides: ranked, winner });
+    Screens.duelResults(rope ? ropeResults(ranked, winner, { again: 'startRope' }) : { sides: ranked, winner });
+  }
+
+  function ropeResults(ranked, winner, extra) {
+    const lead = ranked.length >= 2 ? ranked[0].right - ranked[1].right : 0;
+    ranked.forEach(x => { x.out = x.out || (x === winner ? '🪢 الحبل في جهته' : '💪 شدّ بقوة'); });
+    return Object.assign({
+      sides: ranked, winner, againLabel: '🪢 جولة أخرى',
+      note: !winner ? 'الحبل في المنتصف تماماً' : lead >= ROPE_LEAD ? 'شدّ الحبل كله إلى جهته!' : 'الحبل في جهته عند انتهاء الوقت',
+    }, extra);
   }
 
   // ───── سباق الإخوة على عدة أجهزة ─────
@@ -1863,10 +1923,10 @@
     const { pid } = netPending;
     netPending = null;
     const p = Store.state.profiles.find(k => k.id === pid);
-    const opps = activePlayers(d).filter(x => x.device !== DEVICE).slice(0, MAX_PLAYERS - 1).map(x => Object.assign({}, x));
+    const opps = activePlayers(d).filter(x => x.device !== DEVICE).slice(0, duelKindOf(d).max - 1).map(x => Object.assign({}, x));
     if (!p || !opps.length) { go('home'); return; }
     duel = {
-      sides: [duelSide(p)],
+      kind: d.kind === 'rope' ? 'rope' : 'race', sides: [duelSide(p)],
       net: { id: d.id, opps, finished: false },
       timer: null, timeouts: [],
     };
@@ -1910,18 +1970,25 @@
 
   function netResolve() {
     if (!duel || !duel.net) return;
-    const n = duel.net, s = duel.sides[0], t0 = duel.t0;
+    const n = duel.net, s = duel.sides[0], t0 = duel.t0, rope = duel.kind === 'rope';
     abortDuel();
     const mine = Object.assign(s, { reachedAt: s.reachedAt ? s.reachedAt - t0 : 0 });
     const others = n.opps.map(o => ({
       p: { avatar: o.avatar, name: o.name }, right: o.right, goal: o.goal, reachedAt: o.reachedMs || 0,
       coins: null, banners: [], out: o.left ? '🏳️ انسحب قبل النهاية' : !o.done ? '📡 انقطع اتصاله' : '',
     }));
-    const ranked = rankSides([mine, ...others.filter(x => !x.out)]);
+    const ranked = rankSides([mine, ...others.filter(x => !x.out)], rope);
     const winner = soleWinner(ranked);
-    settleSide(mine, winner === mine);
+    (rope ? settleRope : settleSide)(mine, winner === mine);
     Store.save();
     Sound.play('win');
+    if (rope) {
+      const res = ropeResults(ranked, winner, { net: true, again: 'duelSetup' });
+      res.sides = ranked.concat(others.filter(x => x.out));
+      if (ranked.length < 2) res.note = 'انسحب المنافس، فلا فائز هذه المرة';
+      Screens.duelResults(res);
+      return;
+    }
     Screens.duelResults({
       sides: ranked.concat(others.filter(x => x.out)), winner, net: true,
       note: ranked.length < 2 ? 'لم يُكمل المنافسون السباق، فلا فائز هذه المرة' : '',
@@ -1930,7 +1997,7 @@
 
   // دعوة صالحة من جهاز آخر لم ننضم إليها، وفيها مكان
   const inviteFor = d => !!(d && d.state === 'waiting' && d.players && d.host !== DEVICE && d.players[d.host] &&
-    !activePlayers(d).some(x => x.device === DEVICE) && activePlayers(d).length < MAX_PLAYERS &&
+    !activePlayers(d).some(x => x.device === DEVICE) && activePlayers(d).length < duelKindOf(d).max &&
     Date.now() - d.createdAt < INVITE_MS);
 
   const inviteBar = document.createElement('div');
@@ -1949,7 +2016,7 @@
     clearTimeout(inviteTimer);
     if (!ok) return;
     const host = d.players[d.host];
-    inviteBar.innerHTML = `<span>${d.kind === 'brain' ? '🧠' : '⚔️'} ${host.avatar} <b>${esc(host.name)}</b> يدعوك ${d.kind === 'brain' ? 'لمبارزة العقول' : 'لسباق'} في ${Engine.world(d.world || 'mul').icon} ${Engine.world(d.world || 'mul').name}!</span>
+    inviteBar.innerHTML = `<span>${duelKindOf(d).icon} ${host.avatar} <b>${esc(host.name)}</b> يدعوك ${duelKindOf(d).invite} في ${Engine.world(d.world || 'mul').icon} ${Engine.world(d.world || 'mul').name}!</span>
       <button class="btn orange" data-invite="join">انضم</button>
       <button class="chip" data-invite="no" aria-label="تجاهل">✕</button>`;
     inviteTimer = setTimeout(() => showInvite(Sync.duel.data()), d.createdAt + INVITE_MS - Date.now());
@@ -1978,12 +2045,12 @@
       if (!x) return;
       if (x.left && !o.left && !n.finished) toast(`🏳️ انسحب ${x.name}`, 3000);
       Object.assign(o, x);
-      if ($(`oWalker${j}`)) {
-        $(`oWalker${j}`).style.setProperty('--p', Math.min(x.right / x.goal, 1));
-        $(`oScore${j}`).textContent = x.right;
-      }
+      if ($(`oWalker${j}`)) $(`oWalker${j}`).style.setProperty('--p', Math.min(x.right / x.goal, 1));
+      if ($(`oScore${j}`)) $(`oScore${j}`).textContent = x.right;
     });
-    if (n.finished && othersDone(n)) netResolve();
+    if (n.finished && othersDone(n)) { netResolve(); return; }
+    // شدّ الحبل: ينتهي عندي أيضاً إذا وصل الحبل إلى طرف، أو أنهى المنافس أو انسحب
+    if (duel.kind === 'rope' && !n.finished && (ropeDraw() || n.opps.every(o => o.done || o.left))) finishDuel();
   });
 
   function countdown(n) {
@@ -2329,6 +2396,11 @@
     } else if (g.id === 'pick') {
       stage.innerHTML = `<div class="target">اضغط كل ما يساوي <b dir="ltr">${q.label || q.n}</b></div>
         <div class="bcards">${q.cards.map((c, k) => `<button class="bcard" data-act="brainCard" data-arg="${i}:${k}">${brainExpr(c)}</button>`).join('')}</div>`;
+    } else if (g.id === 'miss') {
+      stage.innerHTML = `<p class="arr-text">${q.text}</p>
+        <div class="question rich mq">${q.html}</div>
+        <div class="bchoices" dir="ltr">${q.options.map(o => (typeof o === 'object' ? o : { v: o, html: o })).map(o =>
+          `<button class="bchoice" data-act="brainChoice" data-arg="${i}:${o.v}">${o.html}</button>`).join('')}</div>`;
     } else {
       const total = q.groups ? q.groups.reduce((n, x) => n + x.count, 0) : 0;
       const fruits = x => Array.from({ length: x.count }, (_, k) =>
@@ -2459,7 +2531,7 @@
   }
 
   // ───── مبارزة العقول على عدة أجهزة ─────
-  // كل جهاز يلعب الألعاب الثلاث وحده، ويرفع إجاباته الصحيحة في كل لعبة. الفائز بكل لعبة يُحسب في النهاية
+  // كل جهاز يلعب الألعاب كلها وحده، ويرفع إجاباته الصحيحة في كل لعبة. الفائز بكل لعبة يُحسب في النهاية
   function startNetBrain(d) {
     duelLand = d.world || 'mul';
     const { pid } = netPending;
@@ -2737,6 +2809,7 @@
       Screens.duelPick();
     },
     startDuel() { startDuel(); },
+    startRope() { startDuel('rope'); },
     setDuelLand(id) { duelLand = id; Screens.duelPick(); },
     setDuelMode(m) { duelMode = m; duelPicks = duelPicks.slice(0, m === 'net' ? 1 : MAX_LOCAL); Screens.duelPick(); },
     netHost(kind) { netHost(kind); },
@@ -2751,7 +2824,7 @@
     },
     // إيقاف سباق الإخوة يحتاج رمز ولي الأمر حتى لا يوقفه الخاسر
     exitDuel() {
-      if (duelAlive()) askStop('السباق', stopDuel);
+      if (duelAlive()) askStop(duel.kind === 'rope' ? 'الشدّ' : 'السباق', stopDuel);
     },
     duelPin(k) {
       const lock = app.querySelector('.duel-lock');
@@ -2840,7 +2913,11 @@
       const ans = String(s.q.answer);
       const ok = v === ans;
       const stage = $(`bStage${i}`);
-      stage.querySelector('.fruits').classList.remove('covered');
+      const fruits = stage.querySelector('.fruits');
+      if (fruits) fruits.classList.remove('covered');
+      // القرد الناقص: يظهر الرقم المخفي مكان القرد
+      const mq = stage.querySelector('.mq');
+      if (mq) mq.innerHTML = s.q.reveal;
       el.classList.add(ok ? 'right' : 'wrong');
       if (!ok) stage.querySelectorAll('.bchoice').forEach(e => { if (e.dataset.arg === `${i}:${ans}`) e.classList.add('right'); });
       brainAnswer(i, ok);

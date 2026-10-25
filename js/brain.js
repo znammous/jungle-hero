@@ -1,4 +1,4 @@
-// تحدّي العقل: ثلاث ألعاب قصيرة (مثل Big Brain Academy) تُبنى من مسائل الغابة الحالية
+// تحدّي العقل: أربع ألعاب قصيرة (مثل Big Brain Academy) تُبنى من مسائل الغابة الحالية
 // كل لعبة تصعب مع الإجابات الصحيحة وتسهل مع الخطأ، والمستوى من 1 إلى 5
 const Brain = (() => {
   const rnd = (lo, hi) => lo + Math.floor(Math.random() * (hi - lo + 1));
@@ -18,6 +18,7 @@ const Brain = (() => {
     { id: 'cmp', icon: '⚖️', name: 'أيّهما أثقل؟', how: 'اضغط الكفّة التي ناتجها أكبر', pts: 6 },
     { id: 'pick', icon: '🧺', name: 'اجمع الثمار', how: 'اضغط كل البطاقات التي تساوي العدد', pts: 15 },
     { id: 'arr', icon: '👀', name: 'عين الصقر', how: 'انظر إلى الثمار واختر الجواب الصحيح', pts: 10 },
+    { id: 'miss', icon: '🐒', name: 'القرد الناقص', how: 'خبّأ القرد رقماً في المسألة. ما هو؟', pts: 10 },
   ];
 
   // ما يُحفظ في الغابة: أفضل وزن للدماغ، وآخر مستوى وصل إليه في كل لعبة
@@ -265,7 +266,7 @@ const Brain = (() => {
     else if (kind === 'sub') { a = rnd(0, 9); b = rnd(a + 1, 12); op = '−'; }
     else { a = nz(-9, 9); b = nz(-9, -1); op = '−'; }
     const v = op === '+' ? a + b : a - b;
-    return { answer: v, html: `<span dir="ltr">${sgn(a)} ${op} ${par(b)}</span>`, reveal: `= ${sgn(v)}` };
+    return { a, b, op, answer: v, html: `<span dir="ltr">${sgn(a)} ${op} ${par(b)}</span>`, reveal: `= ${sgn(v)}` };
   }
 
   // أيّهما أكبر: سالب وموجب، ثم سالبان متباعدان فمتقاربان (−3 أكبر من −8)، ثم عمليتان
@@ -323,10 +324,82 @@ const Brain = (() => {
     };
   }
 
+  // ── 🐒 القرد الناقص: رقم مخفي في المسألة. في البداية يختبئ الرقم الثاني، ثم أيّ رقم ──
+  const MONKEY = '<i class="monkey">🐒</i>';
+  const eq = (parts, hide) => `<span class="meq" dir="ltr">${parts.map((x, k) => (k === hide ? MONKEY : x)).join(' ')}</span>`;
+
+  function miss(P, lv) {
+    for (let i = 0; i < 60; i++) {
+      const q = any(P.qs);
+      const { a, b, op, answer: c } = q;
+      // المكان المخفي: 0 الأول، 2 الثاني، 4 الناتج (المستوى الأول فقط، لأنه مسألة عادية)
+      const hide = lv === 1 ? any([2, 4]) : lv === 2 ? 2 : any([0, 2]);
+      const h = [a, null, b, null, c][hide];
+      if (!(h > 0)) continue;
+      // الأخطاء الشائعة: العملية المعاكسة (جمع بدل طرح) والأرقام المجاورة
+      const near = [h + 1, h - 1, h + 2, h - 2];
+      if (op === '+') near.push(c + (hide ? a : b), c);
+      if (op === '−') near.push(hide === 0 ? c - b : a + c, c);
+      if (op === '×') near.push(c - (hide ? a : b), hide ? a : b);
+      if (op === '÷') near.push(hide === 0 ? Math.round(c / b) || c + b : a * c, c);
+      return {
+        text: 'ما الرقم الذي خبّأه القرد؟', answer: h,
+        html: eq([a, op, b, '=', c], hide), reveal: eq([a, op, b, '=', c], -1),
+        options: choices(h, near, lv),
+      };
+    }
+    const a = rnd(2, 9), b = rnd(2, 9);
+    return { text: 'ما الرقم الذي خبّأه القرد؟', answer: b, html: eq([a, '×', b, '=', a * b], 2), reveal: eq([a, '×', b, '=', a * b], -1), options: choices(b, [b + 1, b - 1], lv) };
+  }
+
+  // الكسور: كسر يساوي كسراً (½ = 🐒/4)، ومن المستوى الثالث جمع بنفس المقام أو مقام مخفي
+  function fracMiss(lv) {
+    const d = rnd(2, Math.min(2 + lv, 6));
+    let k = rnd(1, d - 1);
+    if (gcd(k, d) > 1) k = 1;
+    const m = rnd(2, Math.max(2, Math.floor(12 / d)));
+    const kind = lv <= 2 ? 'num' : lv === 3 ? any(['num', 'add']) : any(['num', 'den', 'add']);
+    if (kind === 'add') {
+      const D = rnd(4, maxD(lv) + 2), x = rnd(1, D - 2), y = rnd(1, D - 1 - x);
+      return {
+        text: 'ما الرقم الذي خبّأه القرد؟', answer: y,
+        html: `<span class="meq" dir="ltr">${frHtml(x, D)} + ${frHtml(MONKEY, D)} = ${frHtml(x + y, D)}</span>`,
+        reveal: `<span class="meq" dir="ltr">${frHtml(x, D)} + ${frHtml(y, D)} = ${frHtml(x + y, D)}</span>`,
+        options: choices(y, [x + y, y + 1, y - 1, x], lv),
+      };
+    }
+    const den = kind === 'den';
+    const h = den ? d * m : k * m;
+    const right = (v) => (den ? frHtml(k * m, v) : frHtml(v, d * m));
+    return {
+      text: 'ما الرقم الذي خبّأه القرد؟', answer: h,
+      html: `<span class="meq" dir="ltr">${frHtml(k, d)} = ${right(MONKEY)}</span>`,
+      reveal: `<span class="meq" dir="ltr">${frHtml(k, d)} = ${right(h)}</span>`,
+      // أشهر خطأ: إضافة الفرق بدل الضرب (½ = 3/4)
+      options: choices(h, den ? [d + k * m - k, d * m + 1, d * m - 1] : [k + d * m - d, k * m + 1, k * m - 1, k], lv),
+    };
+  }
+
+  // السالب والموجب: 3 + 🐒 = −2، والخيارات فيها عكس الإشارة دائماً
+  function negMiss(lv) {
+    let e;
+    for (let i = 0; i < 50; i++) { e = negExpr(Math.max(lv, 2)); if (e.a && e.answer) break; }
+    const hide = lv <= 3 ? 2 : any([0, 2]);
+    const h = hide ? e.b : e.a;
+    const set = new Set([h]);
+    shuffle([-h, h + 1, h - 1, h + 2, h - 2]).forEach(x => { if (set.size < 4 && x !== 0) set.add(x); });
+    const parts = [sgn(e.a), e.op, par(e.b), '=', sgn(e.answer)];
+    return {
+      text: 'ما الرقم الذي خبّأه القرد؟', answer: String(h), html: eq(parts, hide), reveal: eq(parts, -1),
+      options: shuffle([...set]).map(x => ({ v: String(x), html: sgn(x) })),
+    };
+  }
+
   const make = {
     cmp: (P, lv) => (P.w === 'frac' ? fracCompare(lv) : P.w === 'neg' ? negCompare(lv) : compare(P, lv)),
     pick: (P, lv, cap) => (P.w === 'frac' ? fracPick(lv, cap) : P.w === 'neg' ? negPick(lv, cap) : pick(P, lv, cap)),
     arr: (P, lv) => (P.w === 'frac' ? fracArr(lv) : P.w === 'neg' ? negArr(lv) : arr(P, lv)),
+    miss: (P, lv) => (P.w === 'frac' ? fracMiss(lv) : P.w === 'neg' ? negMiss(lv) : miss(P, lv)),
   };
 
   // المستوى يرتفع بعد إجابتين صحيحتين متتاليتين، وينزل مع كل خطأ
