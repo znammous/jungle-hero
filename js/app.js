@@ -17,6 +17,7 @@
   let pinFirst = '';
   let parentKid = null;
   let kidPinShown = false; // ولي الأمر أظهر رمز الطفل المختار
+  let parentWorld = 'mul'; // الغابة المعروضة في تقرير الطفل
 
   // رمز دخول الطفل: { mode: 'login'|'create'|'change', id, name, avatar, stage: 'enter'|'old'|'new'|'confirm', buf, first }
   let kidPin = null;
@@ -35,7 +36,7 @@
     { name: 'shop', icon: '🎒', label: 'المتجر' },
     { name: 'performance', icon: '📊', label: 'أدائي' },
   ];
-  const TAB_SCREENS = new Set(['camp', 'map', 'shop', 'animals', 'diary', 'performance', 'ranks']);
+  const TAB_SCREENS = new Set(['camp', 'map', 'shop', 'animals', 'diary', 'performance', 'ranks', 'worlds']);
 
   function tabBar() {
     return `<nav class="tabbar">${TABS.map(t => t.act
@@ -68,6 +69,18 @@
       <h2 class="topbar-title">${title}</h2>
       <div class="chip coins">🪙 <b>${p.coins}</b></div>
     </header>`;
+  }
+
+  // ما يظهر للطفل بعد الجولة: غابة جديدة أو منطقة جديدة أو حيوان
+  const eventBanner = e => e.type === 'world' ? `🌍 فتحت غابة جديدة: ${e.world.icon} ${e.world.name}!`
+    : e.type === 'unlock' ? `🔓 فتحت منطقة جديدة: ${e.region.icon} ${e.region.name}`
+    : `🐾 اكتشفت حيواناً جديداً: ${e.region.animal.emoji} ${e.region.animal.name}`;
+
+  // الحيوانات المكتشفة في كل الغابات (الغابة المقفلة لا تُنشأ في الملف)
+  function animalCount(p) {
+    const lands = WORLDS.filter(w => w.regions);
+    const found = lands.filter(w => Engine.isOpen(p, w)).reduce((n, w) => n + Engine.state(p, w.id).animals.length, 0);
+    return { found, total: lands.reduce((n, w) => n + w.regions.length, 0) };
   }
 
   const bar = pct => `<span class="bar"><i style="width:${Math.round(Math.min(pct, 1) * 100)}%"></i></span>`;
@@ -181,8 +194,11 @@
     camp() {
       const p = Store.current();
       const s = Store.state.settings;
-      const rank = Engine.rankFor(p.bestRace);
-      const next = RANKS.find(r => r.min > p.bestRace);
+      const w = Engine.current(p);
+      const ws = Engine.state(p, w.id);
+      const rank = Engine.rankFor(ws.bestRace);
+      const next = RANKS.find(r => r.min > ws.bestRace);
+      const zoo = animalCount(p);
       const owned = allItems().filter(i => p.items.includes(i.id));
       const t = Journey.today(p);
       const st = Journey.streak(p);
@@ -207,6 +223,12 @@
               : 'وصلت لأعلى رتبة في الغابة! 🎉'}</p>
           </div>
         </div>
+
+        <button class="card world-card" data-act="go" data-arg="worlds">
+          <span class="world-icon">${w.icon}</span>
+          <span class="world-info"><b>${w.name}</b><small>عالم الغابات: ${ltr(`${Engine.openWorlds(p).length}/${WORLDS.length}`)} مفتوحة</small></span>
+          <span class="world-go">🌍 تغيير ${ltr('‹')}</span>
+        </button>
 
         ${tired ? `<div class="banner rest">⛺ المستكشف يحتاج راحة! لعبت ${ltr(mins)} دقيقة اليوم</div>` : ''}
 
@@ -242,7 +264,7 @@
 
         <nav class="menu">
           <button class="big-btn green" data-act="go" data-arg="map">
-            <span class="big-icon">🗺️</span><b>خريطة الغابة</b><small>تدرّب على الجداول</small>
+            <span class="big-icon">🗺️</span><b>خريطة ${w.name}</b><small>تدرّب على ${w.skill}</small>
           </button>
           <button class="big-btn orange" data-act="startRace">
             <span class="big-icon">🏃</span><b>سباق النهر</b><small>دقيقة واحدة!</small>
@@ -251,13 +273,13 @@
             <span class="big-icon">🎒</span><b>متجر المعدّات</b><small>اشترِ أدوات الرحلة</small>
           </button>
           <button class="big-btn teal" data-act="go" data-arg="animals">
-            <span class="big-icon">🐾</span><b>دفتر الحيوانات</b><small>${ltr(`${p.animals.length}/${REGIONS.length}`)}</small>
+            <span class="big-icon">🐾</span><b>دفتر الحيوانات</b><small>${ltr(`${zoo.found}/${zoo.total}`)}</small>
           </button>
           <button class="big-btn purple" data-act="go" data-arg="diary">
             <span class="big-icon">📔</span><b>دفتر الرحلة</b><small>أيامك وسلسلتك</small>
           </button>
           <button class="big-btn blue" data-act="go" data-arg="performance">
-            <span class="big-icon">📊</span><b>أدائي</b><small>${ltr(`${Journey.weekReport(p).mastered}/78`)} متقنة</small>
+            <span class="big-icon">📊</span><b>أدائي</b><small>${ltr(`${Journey.weekReport(p, w.id).mastered}/${w.total}`)} متقنة</small>
           </button>
           <button class="big-btn gold" data-act="go" data-arg="ranks">
             <span class="big-icon">🏅</span><b>مسار الرتب</b><small>${ltr(`${RANKS.indexOf(rank) + 1}/${RANKS.length}`)}</small>
@@ -268,22 +290,53 @@
 
     map() {
       const p = Store.current();
+      const w = Engine.current(p);
+      const ws = Engine.state(p, w.id);
       render(`<section class="screen">
-        ${subHeader('🗺️ خريطة الغابة')}
-        <p class="hint">اختر منطقة لتتدرّب على جدولها. أتقنها لتفتح المنطقة التالية وتكتشف حيوانها!</p>
+        ${subHeader(`${w.icon} ${w.name}`)}
+        <p class="hint">${w.hint}</p>
         <div class="trail-map">
-          ${REGIONS.map((r, i) => {
-            const locked = i >= p.unlocked;
-            const m = Engine.mastery(p, r.table);
-            const found = p.animals.includes(r.table);
+          ${w.regions.map((r, i) => {
+            const locked = i >= ws.unlocked;
+            const m = Engine.mastery(p, r.table, w.id);
+            const found = ws.animals.includes(r.table);
             return `<button class="region ${locked ? 'locked' : ''} ${found ? 'done' : ''}" data-act="startPractice" data-arg="${i}">
               <span class="region-icon">${locked ? '🔒' : r.icon}</span>
               <span class="region-info">
                 <b>${r.name}</b>
-                <small>جدول ${ltr(r.table)} · إتقان ${ltr(Math.round(m * 100) + '%')}</small>
+                <small>${w.unit} ${ltr(r.table)} · إتقان ${ltr(Math.round(m * 100) + '%')}</small>
                 ${bar(m)}
               </span>
               <span class="region-animal">${found ? r.animal.emoji : '❓'}</span>
+            </button>`;
+          }).join('')}
+        </div>
+      </section>`);
+    },
+
+    // عالم الغابات: كل غابة عملية حسابية، والمستكشف يختار أين يلعب
+    worlds() {
+      const p = Store.current();
+      const cur = Engine.current(p);
+      render(`<section class="screen">
+        ${subHeader('🌍 عالم الغابات')}
+        <p class="hint">كل غابة مغامرة جديدة بمناطقها وحيواناتها. عملاتك ومعدّاتك وسلسلة أيامك تبقى معك في كل الغابات!</p>
+        <div class="world-list">
+          ${WORLDS.map(w => {
+            const open = Engine.isOpen(p, w);
+            let info;
+            if (w.soon) info = '🚧 قيد البناء، قريباً!';
+            else if (!open) {
+              const r = Engine.world(w.needs.world).regions[w.needs.regions - 1];
+              info = `🔒 تُفتح عند الوصول إلى ${r.icon} ${r.name}`;
+            } else {
+              const ws = Engine.state(p, w.id);
+              info = `🐾 ${ltr(`${ws.animals.length}/${w.regions.length}`)} · ${Engine.rankFor(ws.bestRace).emoji} ${Engine.rankFor(ws.bestRace).name}`;
+            }
+            return `<button class="world ${open ? '' : 'locked'} ${w === cur ? 'on' : ''}" data-act="selectWorld" data-arg="${w.id}">
+              <span class="world-icon">${open ? w.icon : w.soon ? '🚧' : '🔒'}</span>
+              <span class="world-info"><b>${w.name}</b><small>${info}</small></span>
+              ${w === cur ? '<span class="world-here">⭐ أنت هنا</span>' : ''}
             </button>`;
           }).join('')}
         </div>
@@ -342,29 +395,34 @@
       const p = Store.current();
       render(`<section class="screen">
         ${subHeader('🐾 دفتر الحيوانات')}
-        <p class="hint">أتقن جدول كل منطقة بالكامل لتكتشف الحيوان الذي يعيش فيها.</p>
-        <div class="animal-grid">
-          ${REGIONS.map(r => {
-            const found = p.animals.includes(r.table);
-            return `<div class="animal ${found ? 'found' : ''}">
-              <span class="animal-emoji">${found ? r.animal.emoji : '❓'}</span>
-              <b>${found ? r.animal.name : '؟؟؟'}</b>
-              <small>${r.icon} ${r.name} · جدول ${ltr(r.table)}</small>
+        <p class="hint">أتقن كل منطقة بالكامل لتكتشف الحيوان الذي يعيش فيها.</p>
+        ${WORLDS.filter(w => w.regions).map(w => {
+          const found = Engine.isOpen(p, w) ? Engine.state(p, w.id).animals : [];
+          return `<h3 class="shop-title">${w.icon} ${w.name}</h3>
+          <div class="animal-grid">
+          ${w.regions.map(r => {
+            const ok = found.includes(r.table);
+            return `<div class="animal ${ok ? 'found' : ''}">
+              <span class="animal-emoji">${ok ? r.animal.emoji : '❓'}</span>
+              <b>${ok ? r.animal.name : '؟؟؟'}</b>
+              <small>${r.icon} ${r.name} · ${w.unit} ${ltr(r.table)}</small>
             </div>`;
           }).join('')}
-        </div>
+          </div>`;
+        }).join('')}
       </section>`);
     },
 
     ranks() {
       const p = Store.current();
-      const best = p.bestRace;
+      const w = Engine.current(p);
+      const best = Engine.state(p, w.id).bestRace;
       const cur = Engine.rankFor(best);
       const next = RANKS.find(r => r.min > best);
       const prev = cur.min;
       render(`<section class="screen">
         ${subHeader('🏅 مسار الرتب')}
-        <p class="hint">كل رتبة تُفتح بعدد الإجابات الصحيحة في دقيقة واحدة في سباق النهر 🏃</p>
+        <p class="hint">${w.icon} رتبتك في ${w.name}: كل رتبة تُفتح بعدد الإجابات الصحيحة في دقيقة واحدة في سباق النهر 🏃</p>
         <div class="card rank-now">
           <span class="rank-emoji">${cur.emoji}</span>
           <div>
@@ -605,11 +663,12 @@
     // أداء الطفل مقارنة بنفسه فقط
     performance() {
       const p = Store.current();
-      const r = Journey.weekReport(p);
+      const w = Engine.current(p);
+      const r = Journey.weekReport(p, w.id);
       const st = Journey.streak(p);
-      const races = p.races.slice(-15);
+      const races = racesIn(p, w.id).slice(-15);
       const maxRace = Math.max(10, ...races.map(x => x.score));
-      const tricky = trickyFacts(p);
+      const tricky = trickyFacts(p, w.id);
 
       const lines = [];
       if (r.raceThis !== null && r.raceLast !== null) {
@@ -624,11 +683,12 @@
 
       render(`<section class="screen">
         ${subHeader('📊 أدائي')}
+        <p class="hint">${w.icon} ${w.name}</p>
 
         <div class="tiles">
           <div class="tile"><b>🔥 ${ltr(st.count)}</b><small>أيام متتالية</small></div>
-          <div class="tile"><b>${ltr(`${r.mastered}/78`)}</b><small>مسألة متقنة</small></div>
-          <div class="tile"><b>${ltr(p.bestRace)}</b><small>أفضل سباق</small></div>
+          <div class="tile"><b>${ltr(`${r.mastered}/${w.total}`)}</b><small>مسألة متقنة</small></div>
+          <div class="tile"><b>${ltr(Engine.state(p, w.id).bestRace)}</b><small>أفضل سباق</small></div>
           <div class="tile"><b>${ltr(Journey.minutesToday(p))}</b><small>دقيقة اليوم</small></div>
         </div>
 
@@ -648,9 +708,10 @@
 
         <div class="card">
           <h3>🎯 مسائل تحتاج تدريب</h3>
-          ${tricky.length ? `<div class="tricky">${tricky.map(([a, b]) => {
-              const f = Engine.fact(p, a, b);
-              return `<span><b dir="ltr">${a} × ${b}</b><small>${ltr(`${f.right}/${f.seen}`)}</small></span>`;
+          ${tricky.length ? `<div class="tricky">${tricky.map(([t, n]) => {
+              const f = Engine.fact(p, w.id, t, n);
+              const q = Engine.make(w.id, t, n);
+              return `<span><b dir="ltr">${q.a} ${q.op} ${q.b}</b><small>${ltr(`${f.right}/${f.seen}`)}</small></span>`;
             }).join('')}</div>
             <button class="btn orange wide" data-act="startTricky">💪 تدرّب عليها الآن</button>`
           : '<p class="muted">لا توجد مسائل صعبة عليك الآن، أحسنت! 🌟</p>'}
@@ -659,7 +720,7 @@
         <div class="card">
           <h3>🗺️ خريطة الإتقان</h3>
           <p class="muted">كل مربع مسألة. اجعل الخريطة كلها خضراء!</p>
-          ${masteryMap(p)}
+          ${masteryMap(p, w.id)}
           <div class="legend">
             <span><i class="hm l0"></i>لم تجرّبها</span>
             <span><i class="hm l1"></i>تحتاج تدريب</span>
@@ -702,6 +763,7 @@
       const r = round;
       const p = Store.current();
       const race = r.mode === 'race';
+      const best = Engine.state(p, r.w).bestRace;
       const titles = { race: '🏃 سباق النهر', warmup: '🏕️ الإحماء', review: '📝 المراجعة', tricky: '🎯 مسائل تحتاج تدريب' };
       const title = titles[r.mode] || `${r.region.icon} ${r.region.name}`;
       render(`<section class="screen play">
@@ -713,7 +775,7 @@
 
         <div class="track ${race ? 'river' : 'trail'}">
           <span class="goal">${race ? '🏝️' : '💎'}</span>
-          ${race && p.bestRace ? `<span class="best-flag" style="--p:${Math.min(p.bestRace / r.goal, 1)}" title="أفضل نتيجة">🚩</span>` : ''}
+          ${race && best ? `<span class="best-flag" style="--p:${Math.min(best / r.goal, 1)}" title="أفضل نتيجة">🚩</span>` : ''}
           <span id="walker" class="walker" style="--p:0">${p.avatar}</span>
         </div>
         ${race
@@ -755,11 +817,9 @@
       if (s.station) banners.push(`✅ أنجزت محطة ${s.station.icon} ${s.station.name} في رحلة اليوم`);
       if (s.goalReached) banners.push(`⏱️ حقّقت هدف اليوم: ${ltr(Store.state.settings.goalMin)} دقيقة! 🎉`);
       if (s.restTime) banners.push('⛺ لعبت كثيراً اليوم، حان وقت الراحة');
-      s.events.forEach(e => banners.push(e.type === 'unlock'
-        ? `🔓 فتحت منطقة جديدة: ${e.region.icon} ${e.region.name}`
-        : `🐾 اكتشفت حيواناً جديداً: ${e.region.animal.emoji} ${e.region.animal.name}`));
+      s.events.forEach(e => banners.push(eventBanner(e)));
 
-      const unique = [...new Map(s.mistakes.map(q => [q.key, q])).values()];
+      const unique = [...new Map(s.mistakes.map(q => [q.id, q])).values()];
 
       render(`<section class="screen results">
         <div class="result-hero">${hero}</div>
@@ -772,7 +832,7 @@
         ${banners.map(b => `<div class="banner">${b}</div>`).join('')}
         ${unique.length && s.mode !== 'review' ? `<div class="card mistakes">
           <h3>📝 راجع هذه المسائل</h3>
-          <div class="mistake-list">${unique.map(q => `<span dir="ltr">${q.a} × ${q.b} = ${q.answer}</span>`).join('')}</div>
+          <div class="mistake-list">${unique.map(q => `<span dir="ltr">${q.a} ${q.op} ${q.b} = ${q.answer}</span>`).join('')}</div>
         </div>` : ''}
         <div class="actions">
           ${s.chestReady ? '<button class="btn orange pulse" data-act="go" data-arg="chest">🎁 افتح كنز اليوم</button>' : ''}
@@ -947,7 +1007,7 @@
       </div>`;
     }).join('');
     return `<div class="card leaders">
-      <h3>🏆 المتصدرون في سباق النهر</h3>
+      <h3>🏆 المتصدرون في سباق الضرب</h3>
       <div class="boards">${boards}</div>
       <p class="muted center">أفضل عدد إجابات صحيحة في الدقيقة</p>
     </div>`;
@@ -960,7 +1020,9 @@
     const rows = kids.map(k => {
       const r = Journey.weekReport(k);
       const gain = r.raceThis !== null && r.raceLast !== null ? r.raceThis - r.raceLast : null;
-      return { k, vals: [r.daysPlayed, r.minutes, r.newMastered, gain] };
+      // الإتقان الجديد من كل الغابات، والتحسّن في سباق الضرب
+      const fresh = Engine.openWorlds(k).reduce((n, w) => n + Journey.weekReport(k, w.id).newMastered, 0);
+      return { k, vals: [r.daysPlayed, r.minutes, fresh, gain] };
     });
     const best = [0, 1, 2, 3].map(i => Math.max(...rows.map(x => x.vals[i] ?? -Infinity)));
     const cell = (v, i, text) => `<td class="${v !== null && v > 0 && v === best[i] ? 'top' : ''}">${text}</td>`;
@@ -978,36 +1040,47 @@
     </div>`;
   }
 
-  function masteryMap(p) {
-    let heat = '<i class="hm-head">×</i>';
-    for (let b = 1; b <= 12; b++) heat += `<i class="hm-head">${b}</i>`;
-    for (let a = 1; a <= 12; a++) {
-      heat += `<i class="hm-head">${a}</i>`;
-      for (let b = 1; b <= 12; b++) {
-        const f = Engine.fact(p, a, b);
+  // الصف = الجدول (أو المقسوم عليه)، والعمود = العدد (أو الناتج)
+  function masteryMap(p, w = 'mul') {
+    const W = Engine.world(w);
+    const nums = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+    const rows = w === 'mul' ? nums : W.regions.map(r => r.table).sort((a, b) => a - b);
+    let heat = `<i class="hm-head">${W.op}</i>`;
+    nums.forEach(n => { heat += `<i class="hm-head">${n}</i>`; });
+    rows.forEach(t => {
+      heat += `<i class="hm-head">${t}</i>`;
+      nums.forEach(n => {
+        const f = Engine.fact(p, w, t, n);
+        const q = Engine.make(w, t, n);
+        const [a, b] = w === 'mul' ? [t, n] : [q.a, q.b];
         const lvl = f.seen === 0 ? 'l0' : f.box >= CONFIG.maxBox ? 'l5' : f.box >= CONFIG.masteredBox ? 'l4' : f.box === 2 ? 'l3' : f.box === 1 ? 'l2' : 'l1';
-        heat += `<i class="hm ${lvl}" title="${a} × ${b} = ${a * b} · ${f.right}/${f.seen}"></i>`;
-      }
-    }
+        heat += `<i class="hm ${lvl}" title="${a} ${W.op} ${b} = ${q.answer} · ${f.right}/${f.seen}"></i>`;
+      });
+    });
     return `<div class="heatmap" dir="ltr">${heat}</div>`;
   }
 
+  const racesIn = (p, w) => p.races.filter(x => (x.w || 'mul') === w);
+
   // أصعب المسائل: جُرّبت 3 مرات على الأقل ولم تُتقن بعد، الأقل دقة أولاً
-  function trickyFacts(p, n = 3) {
-    return Object.entries(p.facts)
+  function trickyFacts(p, w = 'mul', n = 3) {
+    return Object.entries(Engine.state(p, w).facts)
       .filter(([, f]) => f.seen >= 3 && f.box < CONFIG.masteredBox)
       .sort((x, y) => x[1].right / x[1].seen - y[1].right / y[1].seen)
       .slice(0, n)
-      .map(([k]) => k.split('x').map(Number));
+      .map(([k]) => Engine.pairOf(w, k));
   }
 
   // تقرير طفل واحد في لوحة ولي الأمر
   function kidReport(p) {
     const s = Store.state.settings;
-    const r = Journey.weekReport(p);
+    const open = Engine.openWorlds(p);
+    const w = open.find(x => x.id === parentWorld) || open[0];
+    const r = Journey.weekReport(p, w.id);
     const st = Journey.streak(p);
     const recent = Journey.recentDays(p, 7);
-    const races = p.races.slice(-15);
+    const races = racesIn(p, w.id).slice(-15);
+    const last = p.races[p.races.length - 1];
     const maxMins = Math.max(s.goalMin, ...recent.map(d => d.mins));
     const maxRace = Math.max(10, ...races.map(x => x.score));
 
@@ -1038,11 +1111,14 @@
           <div class="seg">${GROUPS.map(g => `<button class="${groupOf(p) === g.id ? 'on' : ''}" data-act="setGroup" data-arg="${g.id}">${g.name}</button>`).join('')}</div></div>
       </div>
 
+      ${open.length > 1 ? `<div class="kid-tabs">${open.map(x =>
+        `<button class="chip ${x === w ? 'on' : ''}" data-act="parentWorld" data-arg="${x.id}">${x.icon} ${x.name}</button>`).join('')}</div>` : ''}
+
       <div class="tiles">
         <div class="tile"><b>🔥 ${ltr(st.count)}</b><small>أيام متتالية</small></div>
         <div class="tile"><b>${ltr(Journey.minutesToday(p))}</b><small>دقيقة اليوم</small></div>
-        <div class="tile"><b>${ltr(`${r.mastered}/78`)}</b><small>مسألة متقنة</small></div>
-        <div class="tile"><b>${ltr(p.bestRace)}</b><small>أفضل سباق</small></div>
+        <div class="tile"><b>${ltr(`${r.mastered}/${w.total}`)}</b><small>مسألة متقنة</small></div>
+        <div class="tile"><b>${ltr(Engine.state(p, w.id).bestRace)}</b><small>أفضل سباق</small></div>
       </div>
 
       <div class="card">
@@ -1062,18 +1138,18 @@
       </div>
 
       <div class="card">
-        <h3>🏃 نتائج سباق النهر (آخر ${ltr(races.length)})</h3>
+        <h3>🏃 نتائج سباق النهر في ${w.name} (آخر ${ltr(races.length)})</h3>
         ${races.length ? `<div class="chart races">
           ${races.map(x => `<div class="col"><span class="val">${x.score}</span>
             <i style="height:${(x.score / maxRace) * 100}%"></i></div>`).join('')}
         </div>
-        <p class="muted center">من الأقدم (يمين) إلى الأحدث (يسار)</p>
-        <button class="link-btn dark" data-act="undoRace">↩️ حذف آخر نتيجة (${ltr(races[races.length - 1].score)})</button>` : '<p class="muted">لم يلعب سباق النهر بعد.</p>'}
+        <p class="muted center">من الأقدم (يمين) إلى الأحدث (يسار)</p>` : '<p class="muted">لم يلعب سباق النهر هنا بعد.</p>'}
+        ${last ? `<button class="link-btn dark" data-act="undoRace">↩️ حذف آخر نتيجة سباق (${Engine.world(last.w || 'mul').icon} ${ltr(last.score)})</button>` : ''}
       </div>
 
       <div class="card">
         <h3>🗺️ خريطة الإتقان</h3>
-        ${masteryMap(p)}
+        ${masteryMap(p, w.id)}
         <div class="legend">
           <span><i class="hm l0"></i>لم يُجرَّب</span>
           <span><i class="hm l1"></i>ضعيف</span>
@@ -1218,23 +1294,25 @@
   // ───────────── الجولات ─────────────
   function startRound(mode, regionIndex = 0) {
     const p = Store.current();
-    const region = REGIONS[regionIndex];
+    const w = Engine.current(p).id;
+    const ws = Engine.state(p, w);
+    const region = Engine.world(w).regions[regionIndex];
     const t = Journey.today(p);
     lastRound = { mode, regionIndex };
     round = {
-      mode, region,
-      pool: mode === 'race' || mode === 'warmup' ? Engine.racePool(p)
-        : mode === 'tricky' ? trickyFacts(p) : Engine.tablePool(region.table),
+      mode, region, w,
+      pool: mode === 'race' || mode === 'warmup' ? Engine.racePool(p, w)
+        : mode === 'tricky' ? trickyFacts(p, w) : Engine.tablePool(region.table),
       queue: mode === 'review' ? t.mistakes.map(m => m.slice()) : null,
       total: null,
       asked: 0, right: 0, cleared: 0, mistakes: [],
       input: '', q: null, locked: true, timer: null,
       secsAtStart: t.secs,
-      goal: Engine.raceGoal(p.bestRace),   // الضفة الأخرى في السباق
+      goal: Engine.raceGoal(ws.bestRace),   // الضفة الأخرى في السباق
       // ما كان عليه الملف قبل السباق، ليستطيع ولي الأمر التراجع عنه إن لعبه غير الطفل
       undo: mode === 'race' ? {
-        facts: {}, coins: p.coins, bestRace: p.bestRace, unlocked: p.unlocked, animals: p.animals.slice(),
-        day: { secs: t.secs, asked: t.asked, right: t.right, mistakes: t.mistakes.map(m => Engine.key(m[0], m[1])), race: !!t.done.race },
+        w, facts: {}, coins: p.coins, bestRace: ws.bestRace, unlocked: ws.unlocked, animals: ws.animals.slice(),
+        day: { secs: t.secs, asked: t.asked, right: t.right, mistakes: t.mistakes.map(Engine.mistakeId), race: !!t.done.race },
       } : null,
     };
     round.total = mode === 'review' ? round.queue.length : mode === 'tricky' ? 9 : CONFIG.practiceLength;
@@ -1356,7 +1434,7 @@
     const ok = Number(side.input) === q.answer;
     const ms = performance.now() - side.qStart;
     side.locked = true;
-    Engine.record(side.p, q.a, q.b, ok, ms);
+    Engine.record(side.p, q, ok, ms);
     Journey.addAnswer(side.p, q, ok, ms);
     const el = $(`dQ${i}`);
     if (ok) {
@@ -1376,18 +1454,20 @@
   }
 
   // نتيجة السباق في ملف الطفل: العملات والرقم القياسي والرتبة (مشتركة مع سباق النهر)
-  function settleRace(p, right) {
+  function settleRace(p, right, w = 'mul') {
     const out = { newRecord: false, rankUp: null };
+    const ws = Engine.state(p, w);
     p.coins += Math.floor(right * COINS.perCorrect);
-    const oldRank = Engine.rankFor(p.bestRace);
-    if (right > p.bestRace) {
-      out.newRecord = p.bestRace > 0;
-      p.bestRace = right;
+    const oldRank = Engine.rankFor(ws.bestRace);
+    if (right > ws.bestRace) {
+      out.newRecord = ws.bestRace > 0;
+      ws.bestRace = right;
       p.coins += COINS.raceRecord;
     }
-    const newRank = Engine.rankFor(p.bestRace);
+    const newRank = Engine.rankFor(ws.bestRace);
     if (newRank !== oldRank) out.rankUp = newRank;
-    p.races.push({ score: right, at: Date.now() });
+    // سباقات كل الغابات في قائمة واحدة، وw تميّز غير الضرب
+    p.races.push(w === 'mul' ? { score: right, at: Date.now() } : { score: right, at: Date.now(), w });
     p.races = p.races.slice(-50);
     return out;
   }
@@ -1397,10 +1477,10 @@
     const t = Journey.today(p);
     p.races.forEach(x => delete x.undo);
     p.races[p.races.length - 1].undo = {
-      facts: u.facts, coins: p.coins - u.coins, bestRace: u.bestRace, unlocked: u.unlocked, animals: u.animals,
+      w: u.w, facts: u.facts, coins: p.coins - u.coins, bestRace: u.bestRace, unlocked: u.unlocked, animals: u.animals,
       day: {
         key: Journey.dayKey(), secs: t.secs - u.day.secs, asked: t.asked - u.day.asked, right: t.right - u.day.right,
-        added: t.mistakes.map(m => Engine.key(m[0], m[1])).filter(k => !u.day.mistakes.includes(k)), race: u.day.race,
+        added: t.mistakes.map(Engine.mistakeId).filter(k => !u.day.mistakes.includes(k)), race: u.day.race,
       },
     };
   }
@@ -1409,25 +1489,26 @@
   function undoLastRace(p) {
     const last = p.races.pop();
     const u = last.undo;
+    const ws = Engine.state(p, last.w || 'mul');
     if (u) {
-      Object.entries(u.facts).forEach(([k, f]) => { if (f) p.facts[k] = f; else delete p.facts[k]; });
+      Object.entries(u.facts).forEach(([k, f]) => { if (f) ws.facts[k] = f; else delete ws.facts[k]; });
       p.coins = Math.max(0, p.coins - u.coins);
-      p.bestRace = u.bestRace;
-      p.unlocked = u.unlocked;
-      p.animals = u.animals;
+      ws.bestRace = u.bestRace;
+      ws.unlocked = u.unlocked;
+      ws.animals = u.animals;
       const t = p.days[u.day.key];
       if (t) {
         t.secs = Math.max(0, t.secs - u.day.secs);
         t.asked = Math.max(0, t.asked - u.day.asked);
         t.right = Math.max(0, t.right - u.day.right);
-        t.mistakes = t.mistakes.filter(m => !u.day.added.includes(Engine.key(m[0], m[1])));
+        t.mistakes = t.mistakes.filter(m => !u.day.added.includes(Engine.mistakeId(m)));
         if (!u.day.race && !t.chest) delete t.done.race;
       }
       return true;
     }
-    const others = Math.max(0, ...p.races.map(x => x.score));
+    const others = Math.max(0, ...racesIn(p, last.w || 'mul').map(x => x.score));
     let coins = Math.floor(last.score * COINS.perCorrect);
-    if (p.bestRace === last.score && others < last.score) { p.bestRace = others; coins += COINS.raceRecord; }
+    if (ws.bestRace === last.score && others < last.score) { ws.bestRace = others; coins += COINS.raceRecord; }
     p.coins = Math.max(0, p.coins - coins);
     const t = p.days[Journey.dayKey(new Date(last.at))];
     const sameDay = p.races.some(x => Journey.dayKey(new Date(x.at)) === Journey.dayKey(new Date(last.at)));
@@ -1450,9 +1531,7 @@
     x.banners = [];
     if (r.newRecord) x.banners.push('🏆 رقم قياسي جديد!');
     if (r.rankUp) x.banners.push(`${r.rankUp.emoji} رتبة جديدة: ${r.rankUp.name}`);
-    Engine.progress(x.p).forEach(e => x.banners.push(e.type === 'unlock'
-      ? `🔓 منطقة جديدة: ${e.region.icon} ${e.region.name}`
-      : `🐾 حيوان جديد: ${e.region.animal.emoji} ${e.region.animal.name}`));
+    Engine.progress(x.p).forEach(e => x.banners.push(eventBanner(e)));
     x.coins = x.p.coins - before;
   }
 
@@ -1699,11 +1778,9 @@
   function nextQuestion() {
     const p = Store.current();
     if (round.mode === 'review') {
-      let [a, b] = round.queue.shift();
-      if (Math.random() < 0.5) [a, b] = [b, a];
-      round.q = { a, b, answer: a * b, key: Engine.key(a, b) };
+      round.q = Engine.fromMistake(round.queue.shift());
     } else {
-      round.q = Engine.pick(p, round.pool, round.q && round.q.key);
+      round.q = Engine.pick(p, round.pool, round.q && round.q.key, round.w);
     }
     round.input = '';
     round.locked = false;
@@ -1711,7 +1788,7 @@
     const q = round.q;
     const el = $('question');
     el.className = 'question';
-    el.innerHTML = `<span>${q.a}</span><span class="op">×</span><span>${q.b}</span><span class="op">=</span><span id="answer" class="answer">&nbsp;</span>`;
+    el.innerHTML = `<span>${q.a}</span><span class="op">${q.op}</span><span>${q.b}</span><span class="op">=</span><span id="answer" class="answer">&nbsp;</span>`;
     $('feedback').textContent = '';
   }
 
@@ -1731,8 +1808,9 @@
     const ok = Number(round.input) === q.answer;
     const ms = performance.now() - round.qStart;
     round.locked = true;
-    if (round.undo && !(q.key in round.undo.facts)) round.undo.facts[q.key] = p.facts[q.key] ? Object.assign({}, p.facts[q.key]) : null;
-    Engine.record(p, q.a, q.b, ok, ms);
+    const facts = Engine.state(p, q.w).facts;
+    if (round.undo && !(q.key in round.undo.facts)) round.undo.facts[q.key] = facts[q.key] ? Object.assign({}, facts[q.key]) : null;
+    Engine.record(p, q, ok, ms);
     Journey.addAnswer(p, q, ok, ms);
     round.asked++;
 
@@ -1746,7 +1824,7 @@
       round.mistakes.push(q);
       Sound.play('wrong');
       el.classList.add('wrong');
-      $('feedback').innerHTML = `الإجابة الصحيحة: <b dir="ltr">${q.a} × ${q.b} = ${q.answer}</b>`;
+      $('feedback').innerHTML = `الإجابة الصحيحة: <b dir="ltr">${q.a} ${q.op} ${q.b} = ${q.answer}</b>`;
     }
 
     $('score').textContent = round.right;
@@ -1760,7 +1838,7 @@
         Journey.clearMistake(p, q);
         $('steps').children[round.cleared - 1].className = 'right';
       } else {
-        round.queue.push([q.a, q.b]);
+        round.queue.push(Engine.mistakeOf(q));
       }
       progress = round.cleared / round.total;
     } else {
@@ -1794,7 +1872,7 @@
     const summary = { mode: r.mode, right: r.right, asked: r.asked, mistakes: r.mistakes, newRecord: false, rankUp: null };
 
     if (r.mode === 'race') {
-      Object.assign(summary, settleRace(p, r.right));
+      Object.assign(summary, settleRace(p, r.right, r.w));
     } else {
       p.coins += Math.floor(r.right * COINS.perCorrect);
       p.coins += COINS.roundDone;
@@ -1967,14 +2045,16 @@
 
     startPractice(i) {
       i = Number(i);
-      if (i >= Store.current().unlocked) { toast('🔒 أتقن المنطقة السابقة لتفتح هذه'); return; }
+      const p = Store.current();
+      if (i >= Engine.state(p, Engine.current(p).id).unlocked) { toast('🔒 أتقن المنطقة السابقة لتفتح هذه'); return; }
       startRound('practice', i);
     },
 
     startRace() { startRound('race'); },
 
     again() {
-      if (lastRound.mode === 'tricky' && !trickyFacts(Store.current()).length) { go('performance'); return; }
+      const p = Store.current();
+      if (lastRound.mode === 'tricky' && !trickyFacts(p, Engine.current(p).id).length) { go('performance'); return; }
       startRound(lastRound.mode, lastRound.regionIndex);
     },
     duelSetup() {
@@ -2037,7 +2117,22 @@
       toast('❌ الرمز غير صحيح');
       setTimeout(() => { if ($('duelDots')) $('duelDots').innerHTML = '<i></i>'.repeat(4); }, 250);
     },
-    startTricky() { if (trickyFacts(Store.current()).length) startRound('tricky'); },
+    startTricky() { const p = Store.current(); if (trickyFacts(p, Engine.current(p).id).length) startRound('tricky'); },
+
+    selectWorld(id) {
+      const p = Store.current();
+      const w = Engine.world(id);
+      if (w.soon) { toast(`🚧 ${w.name} قيد البناء، قريباً!`); return; }
+      if (!Engine.isOpen(p, w)) {
+        const r = Engine.world(w.needs.world).regions[w.needs.regions - 1];
+        toast(`🔒 تُفتح عندما تصل إلى ${r.icon} ${r.name} في ${Engine.world(w.needs.world).name}`, 3000);
+        return;
+      }
+      p.world = id;
+      Store.save();
+      Sound.play('coin');
+      go('camp');
+    },
 
     // الخروج من الجولة يعيدك إلى الشاشة التي بدأتها منها
     exitRound() { if (round && !navBack()) go('camp'); },
@@ -2230,6 +2325,7 @@
     setGoal(v) { Store.state.settings.goalMin = Number(v); Store.save(); Screens.parent(); },
     setMax(v) { Store.state.settings.maxMin = Number(v); Store.save(); Screens.parent(); },
     parentKid(id) { parentKid = id; kidPinShown = false; Screens.parent(); },
+    parentWorld(id) { parentWorld = id; Screens.parent(); },
     renameKid() {
       const p = Store.state.profiles.find(k => k.id === parentKid);
       if (!p || !parentOK) return;

@@ -292,6 +292,32 @@ button.rank-badge { border: 0; font: inherit; font-weight: 800; cursor: pointer;
 .bar { height: 10px; background: var(--sand-dark); border-radius: 999px; overflow: hidden; }
 .bar i { display: block; height: 100%; background: var(--leaf); border-radius: 999px; }
 
+/* ───── عالم الغابات ───── */
+.world-card, .world {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  text-align: start;
+}
+.world-card { padding: 12px 16px; }
+.world-card:active, .world:active { transform: translateY(3px); }
+.world-icon { font-size: 2.2rem; }
+.world-info { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.world-info b { font-size: 1.2rem; }
+.world-info small { color: var(--muted); }
+.world-go { color: var(--teal); font-weight: 700; white-space: nowrap; }
+.world-list { display: flex; flex-direction: column; gap: 12px; }
+.world {
+  background: var(--sand);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  box-shadow: 0 6px 0 var(--sand-dark);
+}
+.world.on { background: #fff4c2; box-shadow: 0 6px 0 var(--sun); }
+.world.locked { background: #b9c4b0; box-shadow: 0 6px 0 #97a38d; opacity: 0.85; }
+.world-here { font-weight: 700; color: var(--wood); white-space: nowrap; }
+
 /* ───── المتجر ───── */
 .shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
 .item {

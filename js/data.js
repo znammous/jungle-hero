@@ -15,6 +15,34 @@ const REGIONS = [
   { table: 12, name: 'قلب الغابة',     icon: '🌲', animal: { emoji: '🐅', name: 'النمر' } },
 ];
 
+// غابة القسمة: نفس ترتيب الجداول، وكل منطقة = القسمة على عددها (56 ÷ 7)
+const DIV_REGIONS = [
+  { table: 2,  name: 'واحة النخيل',      icon: '🏜️', animal: { emoji: '🐫', name: 'الجمل' } },
+  { table: 10, name: 'سهول السافانا',    icon: '🌾', animal: { emoji: '🦒', name: 'الزرافة' } },
+  { table: 5,  name: 'بحيرة الفلامنغو',  icon: '🏞️', animal: { emoji: '🦩', name: 'الفلامنغو' } },
+  { table: 3,  name: 'جزيرة جوز الهند',  icon: '🥥', animal: { emoji: '🦀', name: 'السلطعون' } },
+  { table: 4,  name: 'شاطئ الجليد',      icon: '🧊', animal: { emoji: '🐧', name: 'البطريق' } },
+  { table: 6,  name: 'وادي الفيلة',      icon: '🏕️', animal: { emoji: '🐘', name: 'الفيل' } },
+  { table: 11, name: 'حقل عبّاد الشمس',  icon: '🌻', animal: { emoji: '🐝', name: 'النحلة' } },
+  { table: 9,  name: 'الصحراء الحمراء',  icon: '🌵', animal: { emoji: '🦂', name: 'العقرب' } },
+  { table: 7,  name: 'غابة الضباب',      icon: '🌫️', animal: { emoji: '🦉', name: 'البومة' } },
+  { table: 8,  name: 'نهر أفراس النهر',  icon: '🛶', animal: { emoji: '🦛', name: 'فرس النهر' } },
+  { table: 12, name: 'جبل النسور',       icon: '🏔️', animal: { emoji: '🦅', name: 'النسر' } },
+];
+
+// عالم الغابات: كل غابة عملية حسابية. needs = تُفتح عند فتح عدد من مناطق غابة أخرى
+// total = عدد المسائل المختلفة فيها، soon = لم تُبنَ بعد
+const WORLDS = [
+  { id: 'mul', name: 'غابة الضرب', icon: '✖️', op: '×', regions: REGIONS, unit: 'جدول', skill: 'الجداول', total: 78,
+    hint: 'اختر منطقة لتتدرّب على جدولها. أتقنها لتفتح المنطقة التالية وتكتشف حيوانها!' },
+  { id: 'div', name: 'غابة القسمة', icon: '➗', op: '÷', regions: DIV_REGIONS, unit: 'القسمة على', skill: 'القسمة', total: 132,
+    needs: { world: 'mul', regions: 4 },
+    hint: 'كل منطقة فيها القسمة على عدد. القسمة عكس الضرب: <span dir="ltr">7 × 8 = 56</span> إذن <span dir="ltr">56 ÷ 7 = 8</span>' },
+  { id: 'add', name: 'غابة الجمع والطرح', icon: '➕', soon: true },
+  { id: 'frac', name: 'غابة الكسور', icon: '🍕', soon: true },
+  { id: 'neg', name: 'غابة السالب والموجب', icon: '🌡️', soon: true },
+];
+
 // الرتبة تعتمد على أفضل نتيجة في سباق النهر (عدد الإجابات الصحيحة في دقيقة)
 const RANKS = [
   { min: 0,  emoji: '🌱', name: 'مستكشف صغير' },

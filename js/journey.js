@@ -25,12 +25,12 @@ const Journey = (() => {
     t.secs += Math.min(ms, CONFIG.idleCapMs) / 1000;
     t.asked++;
     if (ok) t.right++;
-    else if (!t.mistakes.some(([a, b]) => Engine.key(a, b) === q.key)) t.mistakes.push([q.a, q.b]);
+    else if (!t.mistakes.some(m => Engine.mistakeId(m) === q.id)) t.mistakes.push(Engine.mistakeOf(q));
   }
 
   function clearMistake(p, q) {
     const t = today(p);
-    t.mistakes = t.mistakes.filter(([a, b]) => Engine.key(a, b) !== q.key);
+    t.mistakes = t.mistakes.filter(m => Engine.mistakeId(m) !== q.id);
   }
 
   const minutesToday = p => Math.floor(((p.days[dayKey()] || {}).secs || 0) / 60);
@@ -144,24 +144,26 @@ const Journey = (() => {
     return out;
   }
 
-  function weekReport(p) {
+  // تقرير أسبوع في غابة واحدة (الضرب إن لم تُحدَّد)
+  function weekReport(p, w = 'mul') {
     const startMs = weekStart().getTime();
     const lastMs = addDays(weekStart(), -7).getTime();
     const days = week(p);
     const avg = list => list.length ? Math.round(list.reduce((s, r) => s + r.score, 0) / list.length) : null;
-    const facts = Object.entries(p.facts);
+    const facts = Object.entries(Engine.state(p, w).facts);
+    const races = p.races.filter(r => (r.w || 'mul') === w);
     return {
       daysPlayed: days.filter(d => d.state !== 'none').length,
       minutes: days.reduce((s, d) => s + d.mins, 0),
       newMastered: facts.filter(([, f]) => f.masteredAt >= startMs).length,
       mastered: facts.filter(([, f]) => f.box >= CONFIG.masteredBox).length,
-      raceThis: avg(p.races.filter(r => r.at >= startMs)),
-      raceLast: avg(p.races.filter(r => r.at >= lastMs && r.at < startMs)),
+      raceThis: avg(races.filter(r => r.at >= startMs)),
+      raceLast: avg(races.filter(r => r.at >= lastMs && r.at < startMs)),
       hardest: facts
         .filter(([, f]) => f.seen >= 3 && f.box < CONFIG.masteredBox)
         .sort((x, y) => x[1].right / x[1].seen - y[1].right / y[1].seen)
         .slice(0, 3)
-        .map(([k, f]) => ({ text: k.replace('x', ' × '), right: f.right, seen: f.seen })),
+        .map(([k, f]) => ({ text: Engine.label(w, k), right: f.right, seen: f.seen })),
     };
   }
 
