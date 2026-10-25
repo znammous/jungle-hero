@@ -8,8 +8,8 @@ const Brain = (() => {
     return a;
   };
 
-  const SECONDS = 45;        // مدة كل لعبة
-  const DUEL_SECONDS = 30;   // مدة كل لعبة في مبارزة العقول
+  const SECONDS = 60;        // مدة كل لعبة
+  const DUEL_SECONDS = 45;   // مدة كل لعبة في مبارزة العقول
   const MAX_LV = 5;
   const FRUITS = ['🍎', '🍌', '🍓', '🥥', '🍊', '🍇', '🥭', '🍐'];
 
@@ -643,7 +643,8 @@ const Brain = (() => {
     g.top = Math.max(g.top, g.lv);
   }
 
-  const medal = pts => (pts >= 300 ? '🥇' : pts >= 180 ? '🥈' : pts >= 80 ? '🥉' : '🎖️');
+  // حدود الأوسمة للعبة من 60 ثانية
+  const medal = pts => (pts >= 400 ? '🥇' : pts >= 240 ? '🥈' : pts >= 110 ? '🥉' : '🎖️');
 
   return { SECONDS, DUEL_SECONDS, GAMES, PER, game, pickGames, state, pool, make, step, medal };
 })();
