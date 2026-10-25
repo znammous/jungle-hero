@@ -1031,7 +1031,9 @@
         <div class="actions">
           ${s.chestReady ? '<button class="btn orange pulse" data-act="go" data-arg="chest">🎁 افتح كنز اليوم</button>' : ''}
           ${s.mode !== 'review' ? '<button class="btn orange" data-act="again">🔁 مرة أخرى</button>' : ''}
-          <button class="btn green" data-act="go" data-arg="camp">⛺ المخيّم</button>
+          ${s.mode === 'practice'
+            ? '<button class="btn green" data-act="go" data-arg="map">🗺️ خريطة الغابة</button>'
+            : '<button class="btn green" data-act="go" data-arg="camp">⛺ المخيّم</button>'}
         </div>
       </section>`);
     },
