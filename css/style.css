@@ -671,6 +671,21 @@ button.rank-badge { border: 0; font: inherit; font-weight: 800; cursor: pointer;
 .duel-card.won { outline: 5px solid var(--sun); }
 .duel-card .banner { font-size: 1rem; padding: 8px 12px; }
 .duel-card .stat { background: #fff; min-width: 90px; }
+.bchart { width: 100%; max-width: 900px; text-align: start; }
+.bchart h3 { margin: 0 0 6px; text-align: center; }
+.bchart-key { display: flex; justify-content: center; gap: 18px; font-size: 0.95rem; margin-bottom: 8px; }
+.bchart-key i { display: inline-block; width: 14px; height: 14px; border-radius: 4px; margin-inline-end: 6px; vertical-align: middle; }
+.bchart-key .good, .bbar.good i { background: var(--leaf); }
+.bchart-key .bad, .bbar.bad i { background: var(--red); }
+.bchart-game { padding: 8px 0; border-top: 2px dashed var(--sand-dark); }
+.bchart-game h4 { margin: 0 0 6px; }
+.bchart-row { display: flex; align-items: center; gap: 10px; margin: 6px 0; }
+.bchart-row .who { flex: 0 0 9em; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bchart-row .bars { flex: 1; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.bbar { display: flex; align-items: center; gap: 6px; height: 16px; }
+.bbar i { display: block; height: 100%; min-width: 3px; border-radius: 8px; transition: width 0.6s ease-out; }
+.bbar b { font-size: 0.9rem; }
+@media (max-width: 520px) { .bchart-row .who { flex-basis: 6.5em; font-size: 0.9rem; } }
 
 /* ───── النتائج ───── */
 .results { align-items: center; text-align: center; padding-top: 30px; }

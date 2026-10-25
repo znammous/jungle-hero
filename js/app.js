@@ -689,6 +689,7 @@
         <b>${esc(x.p.name)}</b>
         <div class="stats">
           <div class="stat good"><b>${x.right}</b><small>صحيحة</small></div>
+          ${x.wrong == null ? '' : `<div class="stat bad"><b>${x.wrong}</b><small>خاطئة</small></div>`}
           ${x.coins === null ? '' : `<div class="stat coin"><b>${ltr('+' + x.coins)}</b><small>🪙</small></div>`}
         </div>
         <small>${x.out || (x.reachedAt ? '🏝️ وصل إلى جزيرته' : `🏝️ ${ltr(`${x.right}/${x.goal}`)}`)}</small>
@@ -699,6 +700,7 @@
         <h1>${title}</h1>
         <p class="hint">${res.note || (res.winner && res.winner.reachedAt ? 'وصل إلى جزيرته أولاً' : res.winner ? 'الأقرب إلى جزيرته' : 'وصلوا بنفس النسبة')}</p>
         <div class="duel-cards">${res.sides.map(card).join('')}</div>
+        ${res.chart ? brainChart(res.chart) : ''}
         <div class="actions">
           ${res.again
             ? `<button class="btn orange" data-act="${res.again}">${res.againLabel || '🧠 مبارزة أخرى'}</button>`
@@ -2606,6 +2608,23 @@
     Screens.brainResults(summary);
   }
 
+  // رسم نهاية مبارزة العقول: لكل لعبة شريط أخضر للصحيحة وأحمر للخاطئة لكل لاعب، والتاج لمن فاز بها
+  function brainChart({ ids, rows }) {
+    const max = Math.max(1, ...rows.flatMap(x => x.per.concat(x.perW || [])));
+    const bar = (n, cls) => `<span class="bbar ${cls}"><i style="width:calc((100% - 2.5em) * ${n / max})"></i><b>${ltr(n)}</b></span>`;
+    return `<div class="card bchart">
+      <h3>📊 الإجابات في كل لعبة</h3>
+      <div class="bchart-key"><span><i class="good"></i>صحيحة</span><span><i class="bad"></i>خاطئة</span></div>
+      ${ids.map((id, j) => `<div class="bchart-game">
+        <h4>${Brain.game(id).icon} ${Brain.game(id).name}</h4>
+        ${rows.map(x => `<div class="bchart-row">
+          <span class="who">${x.won[j] ? '👑' : ''}${x.p.avatar} ${esc(x.p.name)}</span>
+          <span class="bars">${bar(x.per[j], 'good')}${x.perW ? bar(x.perW[j], 'bad') : ''}</span>
+        </div>`).join('')}
+      </div>`).join('')}
+    </div>`;
+  }
+
   // المراكز: الأكثر فوزاً بالألعاب، ثم الأكثر إجابات صحيحة، والمتساوون يتشاركون المركز
   function rankBrain(list) {
     const cmp = (x, y) => y.wins - x.wins || y.right - x.right;
@@ -2621,6 +2640,7 @@
       p: s.p, s,
       wins: s.games.filter(g => g.won).length,
       right: s.games.reduce((n, g) => n + g.right, 0),
+      per: s.games.map(g => g.right), perW: s.games.map(g => g.wrong), won: s.games.map(g => g.won),
       banners: [],
     }));
     const ranked = rankBrain(list);
@@ -2630,12 +2650,13 @@
       x.p.coins += Math.floor(x.right * COINS.perCorrect) + (x === winner ? COINS.duelWin : 0);
       if (x.s.w !== ALL_LANDS) { const bs = Brain.state(x.p, x.s.w); x.s.games.forEach(g => { bs.lv[g.id] = g.lv; }); }
       x.coins = x.p.coins - before;
+      x.wrong = x.perW.reduce((a, c) => a + c, 0);
       x.out = b.ids.map((id, j) => `${Brain.game(id).icon} ${x.s.games[j].won ? '👑' : ''}${x.s.games[j].right}`).join(' · ');
     });
     Store.save();
     Sound.play('win');
     Screens.duelResults({
-      sides: ranked, winner, again: 'startBrainDuel',
+      sides: ranked, winner, again: 'startBrainDuel', chart: { ids: b.ids, rows: ranked },
       note: winner ? `فاز بـ ${winner.wins} من ${b.ids.length} ألعاب` : 'نفس عدد الألعاب والإجابات الصحيحة',
     });
   }
@@ -2673,7 +2694,7 @@
     const s = brain.sides[0];
     const send = () => {
       n.pushT = null;
-      const data = { [`${myPath}.brain`]: s.games.map(g => g.right), [`${myPath}.g`]: Math.min(brain.g, brain.ids.length - 1) };
+      const data = { [`${myPath}.brain`]: s.games.map(g => g.right), [`${myPath}.brainW`]: s.games.map(g => g.wrong), [`${myPath}.g`]: Math.min(brain.g, brain.ids.length - 1) };
       if (final) data[`${myPath}.done`] = true;
       Sync.duel.update(data).catch(() => {});
     };
@@ -2713,9 +2734,11 @@
     const s = b.sides[0];
     const n = b.net;
     abortBrain();
-    const mine = { p: s.p, s, per: s.games.map(g => g.right), banners: [] };
+    const mine = { p: s.p, s, per: s.games.map(g => g.right), perW: s.games.map(g => g.wrong), banners: [] };
     const others = n.opps.map(o => ({
       p: { avatar: o.avatar, name: o.name }, per: b.ids.map((_, j) => (o.brain || [])[j] || 0), coins: null, banners: [],
+      // الأجهزة بنسخة قديمة لا ترفع الأخطاء
+      perW: o.brainW ? b.ids.map((_, j) => o.brainW[j] || 0) : null,
       gone: o.left ? '🏳️ انسحب قبل النهاية' : !o.done ? '📡 انقطع اتصاله' : '',
     }));
     const playing = [mine, ...others.filter(x => !x.gone)];
@@ -2728,6 +2751,7 @@
       x.won = x.won || [];
       x.wins = x.won.filter(Boolean).length;
       x.right = x.per.reduce((a, c) => a + c, 0);
+      x.wrong = x.perW ? x.perW.reduce((a, c) => a + c, 0) : null;
       x.out = x.gone || b.ids.map((id, j) => `${Brain.game(id).icon} ${x.won[j] ? '👑' : ''}${x.per[j]}`).join(' · ');
     });
     const ranked = rankBrain(playing);
@@ -2740,6 +2764,7 @@
     Sound.play('win');
     Screens.duelResults({
       sides: ranked.concat(others.filter(x => x.gone)), winner, net: true, again: 'duelSetup',
+      chart: ranked.length > 1 ? { ids: b.ids, rows: ranked } : null,
       note: ranked.length < 2 ? 'لم يُكمل المنافسون المبارزة، فلا فائز هذه المرة'
         : winner ? `فاز بـ ${winner.wins} من ${b.ids.length} ألعاب` : 'نفس عدد الألعاب والإجابات الصحيحة',
     });
