@@ -516,6 +516,8 @@
       const picked = duelPicks.map(id => list.find(p => p.id === id));
       const layout = duelLayout(n);
       const brainKind = duelKind === 'brain';
+      // في عدة أجهزة يختار الطفل نفسه فقط (وغالباً يكون مختاراً مسبقاً)، فالزر فوق الأسماء
+      const sendBtn = `<button class="btn green wide" data-act="netHost" data-arg="${brainKind ? 'brain' : 'race'}" ${n === 1 && canNet ? '' : 'disabled'}>📨 أرسل الدعوة</button>`;
       render(`<section class="screen duel-screen">
         <header class="topbar">
           <button class="chip" data-act="go" data-arg="home">→ رجوع</button>
@@ -545,6 +547,7 @@
             ? (canNet ? 'تحتاج الأجهزة إلى الإنترنت وحساب Google نفسه.' : '⚠️ سجّل دخول ولي الأمر بحساب Google على كل الأجهزة أولاً، مع اتصال بالإنترنت.')
             : 'ضعا التابلت بينكما، ولكل واحد لوحة أرقامه.'}</p>`}
         </div>
+        ${net ? sendBtn : ''}
         <div class="profile-grid">${list.map(p => {
           const i = duelPicks.indexOf(p.id);
           return `<button class="profile-card ${i >= 0 ? 'picked' : ''}" data-act="duelPick" data-arg="${p.id}">
@@ -560,8 +563,7 @@
             <b>${l.name}</b><small>${l.hint}</small>
           </button>`).join('')}</div>
         </div>`}
-        ${net
-          ? `<button class="btn green wide" data-act="netHost" data-arg="${brainKind ? 'brain' : 'race'}" ${n === 1 && canNet ? '' : 'disabled'}>📨 أرسل الدعوة</button>`
+        ${net ? ''
           : brainKind ? `<button class="btn green wide" data-act="startBrainDuel" ${n >= 2 ? '' : 'disabled'}>🧠 ابدأ المبارزة</button>`
           : `<button class="btn green wide" data-act="startDuel" ${n >= 2 ? '' : 'disabled'}>🏁 ابدأ السباق</button>`}
       </section>`);
