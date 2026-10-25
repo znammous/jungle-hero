@@ -901,3 +901,9 @@ body.tabs .toast, body.tabs .update-bar { bottom: calc(84px + env(safe-area-inse
   .hero-title h1 { font-size: 2.1rem; }
   .avatar.xl { font-size: 3.6rem; }
 }
+
+/* إتقان مناطق الغابات ذات المسائل العشوائية: شريط لكل منطقة بدل الخريطة الحرارية */
+.skill-list { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.skill-row { display: grid; grid-template-columns: minmax(0, 11rem) 1fr 3rem; align-items: center; gap: 10px; }
+.skill-row small { color: var(--muted); text-align: end; }
+.legend[hidden] { display: none; }

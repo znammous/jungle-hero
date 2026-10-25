@@ -279,7 +279,7 @@
             <span class="big-icon">📔</span><b>دفتر الرحلة</b><small>أيامك وسلسلتك</small>
           </button>
           <button class="big-btn blue" data-act="go" data-arg="performance">
-            <span class="big-icon">📊</span><b>أدائي</b><small>${ltr(`${Journey.weekReport(p, w.id).mastered}/${w.total}`)} متقنة</small>
+            <span class="big-icon">📊</span><b>أدائي</b><small>${ltr(masteredTile(p, w).val)} متقنة</small>
           </button>
           <button class="big-btn gold" data-act="go" data-arg="ranks">
             <span class="big-icon">🏅</span><b>مسار الرتب</b><small>${ltr(`${RANKS.indexOf(rank) + 1}/${RANKS.length}`)}</small>
@@ -304,7 +304,7 @@
               <span class="region-icon">${locked ? '🔒' : r.icon}</span>
               <span class="region-info">
                 <b>${r.name}</b>
-                <small>${w.unit} ${ltr(r.table)} · إتقان ${ltr(Math.round(m * 100) + '%')}</small>
+                <small>${regionLabel(w, r)} · إتقان ${ltr(Math.round(m * 100) + '%')}</small>
                 ${bar(m)}
               </span>
               <span class="region-animal">${found ? r.animal.emoji : '❓'}</span>
@@ -405,7 +405,7 @@
             return `<div class="animal ${ok ? 'found' : 'hidden'}">
               <span class="animal-emoji"><i>${r.animal.emoji}</i></span>
               <b>${ok ? r.animal.name : 'مَن أنا؟'}</b>
-              <small>${r.icon} ${r.name} · ${w.unit} ${ltr(r.table)}</small>
+              <small>${r.icon} ${r.name} · ${regionLabel(w, r)}</small>
             </div>`;
           }).join('')}
           </div>`;
@@ -687,7 +687,7 @@
 
         <div class="tiles">
           <div class="tile"><b>🔥 ${ltr(st.count)}</b><small>أيام متتالية</small></div>
-          <div class="tile"><b>${ltr(`${r.mastered}/${w.total}`)}</b><small>مسألة متقنة</small></div>
+          <div class="tile"><b>${ltr(masteredTile(p, w).val)}</b><small>${masteredTile(p, w).what} متقنة</small></div>
           <div class="tile"><b>${ltr(Engine.state(p, w.id).bestRace)}</b><small>أفضل سباق</small></div>
           <div class="tile"><b>${ltr(Journey.minutesToday(p))}</b><small>دقيقة اليوم</small></div>
         </div>
@@ -719,9 +719,9 @@
 
         <div class="card">
           <h3>🗺️ خريطة الإتقان</h3>
-          <p class="muted">كل مربع مسألة. اجعل الخريطة كلها خضراء!</p>
+          <p class="muted">${w.gen ? 'كل شريط منطقة. املأها كلها!' : 'كل مربع مسألة. اجعل الخريطة كلها خضراء!'}</p>
           ${masteryMap(p, w.id)}
-          <div class="legend">
+          <div class="legend" ${w.gen ? 'hidden' : ''}>
             <span><i class="hm l0"></i>لم تجرّبها</span>
             <span><i class="hm l1"></i>تحتاج تدريب</span>
             <span><i class="hm l3"></i>تتحسّن</span>
@@ -1043,6 +1043,12 @@
   // الصف = الجدول (أو المقسوم عليه)، والعمود = العدد (أو الناتج)
   function masteryMap(p, w = 'mul') {
     const W = Engine.world(w);
+    if (W.gen) {
+      return `<div class="skill-list">${W.regions.map(r => {
+        const m = Engine.mastery(p, r.table, w);
+        return `<div class="skill-row"><span>${r.icon} ${r.label}</span>${bar(m)}<small>${ltr(Math.round(m * 100) + '%')}</small></div>`;
+      }).join('')}</div>`;
+    }
     const nums = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
     const rows = w === 'mul' ? nums : W.regions.map(r => r.table).sort((a, b) => a - b);
     let heat = `<i class="hm-head">${W.op}</i>`;
@@ -1060,12 +1066,23 @@
     return `<div class="heatmap" dir="ltr">${heat}</div>`;
   }
 
+  // اسم مهارة المنطقة: «جدول 7» أو «القسمة على 7» أو «جمع حتى 20»
+  const regionLabel = (w, r) => r.label || `${w.unit} ${ltr(r.table)}`;
+
+  // ما أتقنه الطفل في غابة: مسائل في الضرب والقسمة، ومناطق في الغابات ذات المسائل العشوائية
+  function masteredTile(p, w) {
+    if (!w.gen) return { val: `${Journey.weekReport(p, w.id).mastered}/${w.total}`, what: 'مسألة' };
+    const n = w.regions.filter(r => Engine.mastery(p, r.table, w.id) >= 1).length;
+    return { val: `${n}/${w.regions.length}`, what: 'منطقة' };
+  }
+
   const racesIn = (p, w) => p.races.filter(x => (x.w || 'mul') === w);
 
   // أصعب المسائل: جُرّبت 3 مرات على الأقل ولم تُتقن بعد، الأقل دقة أولاً
   function trickyFacts(p, w = 'mul', n = 3) {
     return Object.entries(Engine.state(p, w).facts)
-      .filter(([, f]) => f.seen >= 3 && f.box < CONFIG.masteredBox)
+      // المسائل العشوائية لا تُحفظ إلا إذا أخطأ فيها، فتكفي مرة واحدة
+      .filter(([, f]) => f.seen >= (Engine.world(w).gen ? 1 : 3) && f.box < CONFIG.masteredBox)
       .sort((x, y) => x[1].right / x[1].seen - y[1].right / y[1].seen)
       .slice(0, n)
       .map(([k]) => Engine.pairOf(w, k));
@@ -1117,7 +1134,7 @@
       <div class="tiles">
         <div class="tile"><b>🔥 ${ltr(st.count)}</b><small>أيام متتالية</small></div>
         <div class="tile"><b>${ltr(Journey.minutesToday(p))}</b><small>دقيقة اليوم</small></div>
-        <div class="tile"><b>${ltr(`${r.mastered}/${w.total}`)}</b><small>مسألة متقنة</small></div>
+        <div class="tile"><b>${ltr(masteredTile(p, w).val)}</b><small>${masteredTile(p, w).what} متقنة</small></div>
         <div class="tile"><b>${ltr(Engine.state(p, w.id).bestRace)}</b><small>أفضل سباق</small></div>
       </div>
 
@@ -1150,7 +1167,7 @@
       <div class="card">
         <h3>🗺️ خريطة الإتقان</h3>
         ${masteryMap(p, w.id)}
-        <div class="legend">
+        <div class="legend" ${w.gen ? 'hidden' : ''}>
           <span><i class="hm l0"></i>لم يُجرَّب</span>
           <span><i class="hm l1"></i>ضعيف</span>
           <span><i class="hm l3"></i>يتحسّن</span>
@@ -1302,7 +1319,7 @@
     round = {
       mode, region, w,
       pool: mode === 'race' || mode === 'warmup' ? Engine.racePool(p, w)
-        : mode === 'tricky' ? trickyFacts(p, w) : Engine.tablePool(region.table),
+        : mode === 'tricky' ? trickyFacts(p, w) : Engine.tablePool(region.table, p, w),
       queue: mode === 'review' ? t.mistakes.map(m => m.slice()) : null,
       total: null,
       asked: 0, right: 0, cleared: 0, mistakes: [],
@@ -1312,6 +1329,7 @@
       // ما كان عليه الملف قبل السباق، ليستطيع ولي الأمر التراجع عنه إن لعبه غير الطفل
       undo: mode === 'race' ? {
         w, facts: {}, coins: p.coins, bestRace: ws.bestRace, unlocked: ws.unlocked, animals: ws.animals.slice(),
+        skill: Engine.world(w).gen ? Object.assign({}, ws.skill) : undefined,
         day: { secs: t.secs, asked: t.asked, right: t.right, mistakes: t.mistakes.map(Engine.mistakeId), race: !!t.done.race },
       } : null,
     };
@@ -1477,7 +1495,7 @@
     const t = Journey.today(p);
     p.races.forEach(x => delete x.undo);
     p.races[p.races.length - 1].undo = {
-      w: u.w, facts: u.facts, coins: p.coins - u.coins, bestRace: u.bestRace, unlocked: u.unlocked, animals: u.animals,
+      w: u.w, facts: u.facts, coins: p.coins - u.coins, bestRace: u.bestRace, unlocked: u.unlocked, animals: u.animals, skill: u.skill,
       day: {
         key: Journey.dayKey(), secs: t.secs - u.day.secs, asked: t.asked - u.day.asked, right: t.right - u.day.right,
         added: t.mistakes.map(Engine.mistakeId).filter(k => !u.day.mistakes.includes(k)), race: u.day.race,
@@ -1496,6 +1514,7 @@
       ws.bestRace = u.bestRace;
       ws.unlocked = u.unlocked;
       ws.animals = u.animals;
+      if (u.skill) ws.skill = u.skill;
       const t = p.days[u.day.key];
       if (t) {
         t.secs = Math.max(0, t.secs - u.day.secs);
