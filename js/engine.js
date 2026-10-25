@@ -23,36 +23,50 @@ const Engine = (() => {
     11: () => ADD_GEN[rnd(7, 10)](),
   };
 
+  // الغابات ذات المسائل العشوائية: مولّد المسألة التالية لكل منطقة
+  const NEXT = {
+    add: t => ADD_GEN[t](),
+    frac: t => Fractions.next(t),
+  };
+
+  const genKey = (t, n) => `${t}:${n}`;
+  const genPair = k => { const i = k.indexOf(':'); return [Number(k.slice(0, i)), k.slice(i + 1)]; };
   const KEYS = {
     mul: key,
     div: (t, n) => `${t * n}/${t}`,
-    add: (t, n) => `${t}:${n}`,
+    add: genKey,
+    frac: genKey,
   };
   // من المفتاح المحفوظ إلى الزوج [الجدول، العدد]
   const PAIRS = {
     mul: k => k.split('x').map(Number),
     div: k => { const [a, t] = k.split('/').map(Number); return [t, a / t]; },
-    add: k => { const i = k.indexOf(':'); return [Number(k.slice(0, i)), k.slice(i + 1)]; },
+    add: genPair,
+    frac: genPair,
   };
   const MAKE = {
     mul: (t, n) => { const [a, b] = Math.random() < 0.5 ? [t, n] : [n, t]; return { a, b, answer: t * n }; },
     div: (t, n) => ({ a: t * n, b: t, answer: n }),
     add: (t, n) => {
       const [, a, op, b] = n.match(/^(\d+)([+-])(\d+)$/);
-      return { a: +a, b: +b, op: op === '+' ? '+' : '−', answer: op === '+' ? +a + +b : a - b,
-        fastMs: world('add').regions.find(r => r.table === t).fastMs };
+      return { a: +a, b: +b, op: op === '+' ? '+' : '−', answer: op === '+' ? +a + +b : a - b };
     },
+    frac: (t, n) => Fractions.make(n),
   };
 
+  // المسألة: a op b = answer، أو html خاص بها (الكسور). text للقوائم بلا جواب، و solved مع الجواب
   function make(w, t, n) {
+    const W = world(w);
     const k = KEYS[w](t, n);
-    return Object.assign({ w, t, n, op: world(w).op, key: k, id: `${w}:${k}` }, MAKE[w](t, n));
+    const q = Object.assign({ w, t, n, op: W.op, key: k, id: `${w}:${k}` }, MAKE[w](t, n));
+    if (W.gen) q.fastMs = W.regions.find(r => r.table === t).fastMs;
+    if (!q.text) q.text = `${q.a} ${q.op} ${q.b}`;
+    if (!q.solved) q.solved = `${q.text} = ${q.answer}`;
+    return q;
   }
 
   const pairOf = (w, k) => PAIRS[w](k);
-  const label = (w, k) => (w === 'add'
-    ? k.slice(k.indexOf(':') + 1).replace('+', ' + ').replace('-', ' − ')
-    : k.replace(/[x/]/, ` ${world(w).op} `));
+  const label = (w, k) => (world(w).gen ? make(w, ...pairOf(w, k)).text : k.replace(/[x/]/, ` ${world(w).op} `));
 
   // تقدّم المستكشف في غابة: غابة الضرب في الملف نفسه كما كانت، وكل غابة أخرى في p.worlds
   function state(p, w = 'mul') {
@@ -119,7 +133,7 @@ const Engine = (() => {
       .forEach(([k]) => pool.push(pairOf(w, k)));
     const seen = new Set(pool.map(x => x[1]));
     for (let i = 0; pool.length < 12 && i < 200; i++) {
-      const n = ADD_GEN[table]();
+      const n = NEXT[w](table);
       if (!seen.has(n)) { seen.add(n); pool.push([table, n]); }
     }
     return pool;

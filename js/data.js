@@ -46,6 +46,21 @@ const ADD_REGIONS = [
   { table: 11, label: 'جمع وطرح حتى 100',      fastMs: 12000, name: 'عرين الأسد',     icon: '👑', animal: { emoji: '🦁', name: 'الأسد' } },
 ];
 
+// غابة الكسور: كل منطقة مهارة، ومسائلها تُولَّد ويُرسم بعضها في fractions.js
+const FRAC_REGIONS = [
+  { table: 1,  label: 'أنصاف وأثلاث وأرباع',  fastMs: 6000,  name: 'شاطئ الأصداف',   icon: '🐚', animal: { emoji: '🐠', name: 'السمكة الملوّنة' } },
+  { table: 2,  label: 'كسور حتى الأثمان',    fastMs: 7000,  name: 'خليج المرجان',   icon: '🪸', animal: { emoji: '🐙', name: 'الأخطبوط' } },
+  { table: 3,  label: 'كسر من عدد',          fastMs: 9000,  name: 'جزيرة البطيخ',   icon: '🍉', animal: { emoji: '🦭', name: 'الفقمة' } },
+  { table: 4,  label: 'مقارنة بنفس المقام',  fastMs: 5000,  name: 'مرسى السفن',     icon: '⚓', animal: { emoji: '🦞', name: 'الكركند' } },
+  { table: 5,  label: 'مقارنة بنفس البسط',   fastMs: 6000,  name: 'كهف اللؤلؤ',     icon: '🦪', animal: { emoji: '🐡', name: 'السمكة المنتفخة' } },
+  { table: 6,  label: 'كسور متكافئة',        fastMs: 9000,  name: 'جسر الحبال',     icon: '🌉', animal: { emoji: '🐬', name: 'الدلفين' } },
+  { table: 7,  label: 'جمع كسور',            fastMs: 8000,  name: 'تلال الرمل',     icon: '🏝️', animal: { emoji: '🪼', name: 'قنديل البحر' } },
+  { table: 8,  label: 'طرح كسور',            fastMs: 8000,  name: 'دوّامة البحر',   icon: '🌀', animal: { emoji: '🦑', name: 'الحبّار' } },
+  { table: 9,  label: 'تبسيط الكسور',        fastMs: 10000, name: 'سفينة القراصنة', icon: '🏴‍☠️', animal: { emoji: '🦈', name: 'القرش' } },
+  { table: 10, label: 'مقارنة كسور مختلفة',  fastMs: 10000, name: 'جزيرة الكنز',    icon: '🪙', animal: { emoji: '🦢', name: 'البجعة' } },
+  { table: 11, label: 'خليط الكسور',         fastMs: 10000, name: 'أعماق المحيط',   icon: '🌊', animal: { emoji: '🐋', name: 'الحوت' } },
+];
+
 // عالم الغابات: كل غابة عملية حسابية، مرتّبة كما في المنهج. needs = تُفتح عند فتح عدد من مناطق غابة أخرى
 // total = عدد المسائل المختلفة فيها، gen = مسائل تُولَّد عشوائياً، soon = لم تُبنَ بعد
 const WORLDS = [
@@ -56,7 +71,9 @@ const WORLDS = [
   { id: 'div', name: 'غابة القسمة', icon: '➗', op: '÷', regions: DIV_REGIONS, unit: 'القسمة على', skill: 'القسمة', total: 132,
     needs: { world: 'mul', regions: 4 },
     hint: 'كل منطقة فيها القسمة على عدد. القسمة عكس الضرب: <span dir="ltr">7 × 8 = 56</span> إذن <span dir="ltr">56 ÷ 7 = 8</span>' },
-  { id: 'frac', name: 'غابة الكسور', icon: '🍕', soon: true },
+  { id: 'frac', name: 'غابة الكسور', icon: '🍕', op: '', regions: FRAC_REGIONS, skill: 'الكسور', gen: true,
+    needs: { world: 'mul', regions: 4 },
+    hint: 'الكسر جزء من كل: البسط فوق يقول كم جزءاً أخذنا، والمقام تحت يقول إلى كم جزءاً قسمنا.' },
   { id: 'neg', name: 'غابة السالب والموجب', icon: '🌡️', soon: true },
 ];
 

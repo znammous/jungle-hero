@@ -307,7 +307,7 @@
                 <small>${regionLabel(w, r)} · إتقان ${ltr(Math.round(m * 100) + '%')}</small>
                 ${bar(m)}
               </span>
-              <span class="region-animal">${found ? r.animal.emoji : '❓'}</span>
+              <span class="region-animal ${found ? '' : 'hidden'}"><i>${r.animal.emoji}</i></span>
             </button>`;
           }).join('')}
         </div>
