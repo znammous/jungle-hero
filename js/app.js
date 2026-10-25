@@ -1151,6 +1151,7 @@
 
         ${p ? `<div class="kid-tabs">${kids.map(k =>
             `<button class="chip ${k.id === parentKid ? 'on' : ''}" data-act="parentKid" data-arg="${k.id}">${k.avatar} ${esc(k.name)}</button>`).join('')}</div>
+          ${redeemCard(p)}
           ${kidReport(p)}`
           : '<p class="hint">لا يوجد مستكشفون بعد.</p>'}
       </section>`);
@@ -1205,6 +1206,19 @@
           <button class="btn gray small" data-act="declineReward" data-arg="${k.id}:${r.id}">↩️ رفض</button>
         </span>
       </div>`).join('')}
+    </div>`;
+  }
+
+  // ولي الأمر يخصم جائزة من رصيد الطفل مباشرة (حين يمنحها له دون طلب من المتجر)
+  function redeemCard(p) {
+    const list = rewards();
+    return `<div class="card">
+      <h3>🎁 خصم جائزة من رصيد ${p.avatar} ${esc(p.name)}</h3>
+      <p class="muted">رصيده الآن 🪙 ${ltr(p.coins)}. تُسجَّل الجائزة في طلباته على أنه حصل عليها.</p>
+      ${list.length ? `<ul class="reward-list">${list.map(r => `<li class="${p.coins < r.price ? 'cant' : ''}">
+        <span>${r.emoji} ${esc(r.name)}</span><b>🪙 ${r.price}</b>
+        <button class="btn orange small" data-act="redeemReward" data-arg="${r.id}">➖ خصم</button>
+      </li>`).join('')}</ul>` : '<p class="hint">أضف جوائز في بطاقة «جوائز العائلة» أولاً.</p>'}
     </div>`;
   }
 
@@ -3558,6 +3572,19 @@
       const s = Store.state.settings;
       s.rewards = rewards().filter(r => r.id !== id);
       Store.save();
+      stayAt(() => Screens.parent());
+    },
+
+    redeemReward(id) {
+      const p = Store.state.profiles.find(k => k.id === parentKid);
+      const r = rewards().find(x => x.id === id);
+      if (!parentOK || !p || !r) return;
+      if (p.coins < r.price) { toast(`رصيد ${p.name} ${p.coins} عملة فقط، والجائزة بـ ${r.price}`); return; }
+      if (!confirm(`خصم «${r.name}» (${r.price} عملة) من رصيد ${p.name}؟`)) return;
+      p.coins -= r.price;
+      requests(p).push({ id: Date.now().toString(36), emoji: r.emoji, name: r.name, price: r.price, at: Date.now(), status: 'given', byParent: true });
+      Store.save();
+      toast(`🎁 خُصمت ${r.price} عملة من ${p.name}`);
       stayAt(() => Screens.parent());
     },
 
