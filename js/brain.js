@@ -1,4 +1,4 @@
-// تحدّي العقل: أربع ألعاب قصيرة (مثل Big Brain Academy) تُبنى من مسائل الغابة الحالية
+// تحدّي العقل: أربع ألعاب قصيرة (مثل Big Brain Academy) تُختار من ثماني ألعاب، وتُبنى من مسائل الغابة الحالية
 // كل لعبة تصعب مع الإجابات الصحيحة وتسهل مع الخطأ، والمستوى من 1 إلى 5
 const Brain = (() => {
   const rnd = (lo, hi) => lo + Math.floor(Math.random() * (hi - lo + 1));
@@ -19,7 +19,22 @@ const Brain = (() => {
     { id: 'pick', icon: '🧺', name: 'اجمع الثمار', how: 'اضغط كل البطاقات التي تساوي العدد', pts: 15 },
     { id: 'arr', icon: '👀', name: 'عين الصقر', how: 'انظر إلى الثمار واختر الجواب الصحيح', pts: 10 },
     { id: 'miss', icon: '🐒', name: 'القرد الناقص', how: 'خبّأ القرد رقماً في المسألة. ما هو؟', pts: 10 },
+    { id: 'tf', icon: '🪨', name: 'صحّ أم خطأ؟', how: 'هل المسألة على الصخرة صحيحة؟ أجب بسرعة', pts: 4 },
+    { id: 'seq', icon: '🐾', name: 'تتبّع الأثر', how: 'اكتشف النمط في آثار الأقدام وأكمله', pts: 10 },
+    { id: 'pair', icon: '🔗', name: 'الأزواج', how: 'صِل كل مسألة بجوابها', pts: 12 },
+    { id: 'ord', icon: '🍌', name: 'رتّب الثمار', how: 'اضغط البطاقات بالترتيب من الأصغر إلى الأكبر', pts: 12 },
   ];
+
+  // كل تحدٍّ أربع ألعاب: ثلاث لم يلعبها الطفل آخر مرة وواحدة منها، حتى تتنوّع ولا تتكرر بالترتيب نفسه
+  const PER = 4;
+  function pickGames(p, w) {
+    const last = (p && w && state(p, w).last) || [];
+    const fresh = shuffle(GAMES.filter(G => !last.includes(G.id)));
+    const old = shuffle(GAMES.filter(G => last.includes(G.id)));
+    const list = fresh.slice(0, PER - Math.min(1, old.length)).concat(old).slice(0, PER);
+    return shuffle(list).map(G => G.id);
+  }
+  const game = id => GAMES.find(G => G.id === id) || GAMES[0];
 
   // ما يُحفظ في الغابة: أفضل وزن للدماغ، وآخر مستوى وصل إليه في كل لعبة
   function state(p, w) {
@@ -395,11 +410,223 @@ const Brain = (() => {
     };
   }
 
+  // ── 🪨 صحّ أم خطأ: نصف المسائل خاطئة، وخطؤها يقترب من الصحيح مع المستوى ──
+  const YES_NO = [{ v: '1', html: '✅ صحّ' }, { v: '0', html: '❌ خطأ' }];
+  const tfOut = (show, right, ok) => ({
+    text: 'هل المسألة صحيحة؟', answer: ok ? '1' : '0', two: true,
+    html: `<span class="meq" dir="ltr">${show}</span>`, reveal: `<span class="meq" dir="ltr">${right}</span>`, options: YES_NO,
+  });
+  const nearWrong = (ans, near, lv) => {
+    const list = (lv >= 3 ? near : []).filter(x => x > 0 && x !== ans);
+    if (list.length) return any(list);
+    const far = Math.max(2, Math.round(ans * (0.5 - lv * 0.07)));
+    return Math.max(1, ans + (Math.random() < 0.5 && ans > far ? -1 : 1) * rnd(1, far)) || ans + 1;
+  };
+
+  function tf(P, lv) {
+    const q = any(P.qs);
+    const { a, b, op, answer: c } = q;
+    const ok = Math.random() < 0.5;
+    const near = op === '×' ? [a * (b + 1), a * (b - 1), (a + 1) * b, c + 1, c - 1]
+      : op === '÷' ? [c + 1, c - 1, b] : [c + 1, c - 1, c + 2, c - 2, c + 10, c - 10];
+    let v = ok ? c : nearWrong(c, near, lv);
+    if (v === c && !ok) v = c + 1;
+    return tfOut(`${a} ${op} ${b} = ${v}`, `${a} ${op} ${b} = ${c}`, ok);
+  }
+
+  // الكسور: كسر يساوي كسراً، ومن المستوى الثالث جمع، وخطؤه الشهير جمع المقامين (⅓ + ⅓ = 2/6)
+  function fracTf(lv) {
+    const ok = Math.random() < 0.5;
+    if (lv >= 3 && Math.random() < 0.6) {
+      const D = rnd(3, maxD(lv) + 1), x = rnd(1, D - 2), y = rnd(1, D - 1 - x);
+      const wrong = any([[x + y, D + D], [x + y + 1, D], [x * y, D]].filter(([k, d]) => k * D !== (x + y) * d));
+      const [k, d] = ok ? [x + y, D] : wrong;
+      return tfOut(`${frHtml(x, D)} + ${frHtml(y, D)} = ${frHtml(k, d)}`, `${frHtml(x, D)} + ${frHtml(y, D)} = ${frHtml(x + y, D)}`, ok);
+    }
+    const d = rnd(2, Math.min(2 + lv, 6));
+    let k = rnd(1, d - 1);
+    if (gcd(k, d) > 1) k = 1;
+    const m = rnd(2, Math.max(2, Math.floor(12 / d)));
+    // الخطأ: إضافة الرقم نفسه للبسط والمقام بدل الضرب، أو بسط أكبر بواحد
+    const [wk, wd] = any([[k + m, d + m], [k * m + 1, d * m], [k * m, d * m + 1]]);
+    return tfOut(`${frHtml(k, d)} = ${ok ? frHtml(k * m, d * m) : frHtml(wk, wd)}`, `${frHtml(k, d)} = ${frHtml(k * m, d * m)}`, ok);
+  }
+
+  // السالب: أشهر خطأ عكس الإشارة
+  function negTf(lv) {
+    const e = negExpr(Math.max(lv, 2));
+    const ok = Math.random() < 0.5;
+    const shown = ok ? e.answer : e.answer && Math.random() < 0.6 ? -e.answer : e.answer + any([1, -1, 2, -2]);
+    const left = `${sgn(e.a)} ${e.op} ${par(e.b)}`;
+    return tfOut(`${left} = ${sgn(shown)}`, `${left} = ${sgn(e.answer)}`, ok);
+  }
+
+  // ── 🐾 تتبّع الأثر: خمسة آثار بينها خطوة ثابتة، وأحدها مخفي ──
+  const PAW = '<i class="paw">🐾</i>';
+  const seqHide = lv => (lv <= 2 ? 4 : lv === 3 ? any([3, 4]) : rnd(1, 4));
+  const seqOut = (terms, hide, shown, ans, options) => ({
+    text: 'ما الرقم المخفي في الأثر؟', answer: ans,
+    html: `<span class="meq seq" dir="ltr">${terms.map((t, k) => (k === hide ? MONKEY : shown(t))).join(PAW)}</span>`,
+    reveal: `<span class="meq seq" dir="ltr">${terms.map(shown).join(PAW)}</span>`,
+    options,
+  });
+
+  function seq(P, lv) {
+    let start, step;
+    if (P.w === 'mul') {
+      const t = any(P.tables.filter(x => x > 1).length ? P.tables.filter(x => x > 1) : [2]);
+      // المستوى الأول من أول الجدول، ثم من وسطه، والخامس تنازلي أحياناً
+      const i0 = lv <= 1 ? 1 : rnd(1, 8);
+      [start, step] = lv === 5 && Math.random() < 0.5 ? [t * (i0 + 4), -t] : [t * i0, t];
+    } else if (P.w === 'div') {
+      const t = any(P.tables);
+      [start, step] = [t * rnd(5, 12), -t];
+    } else {
+      step = lv <= 1 ? rnd(1, 2) : rnd(2, 2 + lv * 2);
+      const down = P.ops.has('−') && Math.random() < 0.5;
+      start = down ? rnd(step * 4, step * 4 + 20) : rnd(0, 20);
+      if (down) step = -step;
+    }
+    const terms = [0, 1, 2, 3, 4].map(k => start + k * step);
+    const hide = seqHide(lv);
+    const h = terms[hide];
+    const k = Math.abs(step);
+    return seqOut(terms, hide, t => t, h, choices(h, [h + 1, h - 1, h + k, h - k, h + k + 1], lv));
+  }
+
+  // الكسور: البسط يزيد واحداً (⅛، 2/8، 3/8) ثم سلسلة كسور متساوية (⅓، 2/6، 3/9)
+  function fracSeq(lv) {
+    const hide = seqHide(lv);
+    const opts = (k, d, alts) => {
+      const list = [[k, d]];
+      shuffle(alts).forEach(([a, b]) => { if (list.length < 4 && a > 0 && b > 0 && !list.some(([x, y]) => x === a && y === b)) list.push([a, b]); });
+      return shuffle(list).map(([a, b]) => ({ v: `${a}/${b}`, html: frHtml(a, b) }));
+    };
+    if (lv <= 3) {
+      const d = rnd(6, 12), k0 = rnd(1, d - 5);
+      const terms = [0, 1, 2, 3, 4].map(k => [k0 + k, d]);
+      const [k, dd] = terms[hide];
+      return seqOut(terms, hide, ([a, b]) => frHtml(a, b), `${k}/${dd}`, opts(k, dd, [[k + 1, dd], [k - 1, dd], [k, dd + 1], [k + 2, dd], [dd, k]]));
+    }
+    const d = rnd(2, 4), k0 = rnd(1, d - 1);
+    const terms = [1, 2, 3, 4, 5].map(m => [k0 * m, d * m]);
+    const [k, dd] = terms[hide];
+    return seqOut(terms, hide, ([a, b]) => frHtml(a, b), `${k}/${dd}`, opts(k, dd, [[k + 1, dd], [k, dd + 1], [k0 + hide, d + hide], [k - k0, dd]]));
+  }
+
+  // السالب: العدّ يعبر الصفر نزولاً، ومن المستوى الرابع صعوداً من السالب أيضاً
+  function negSeq(lv) {
+    const step = lv <= 1 ? 1 : lv === 2 ? 2 : rnd(2, 5);
+    const up = lv >= 4 && Math.random() < 0.5;
+    const start = up ? -rnd(step * 2, step * 4) : rnd(step, step * 2);
+    const terms = [0, 1, 2, 3, 4].map(k => start + (up ? k : -k) * step);
+    const hide = seqHide(lv);
+    const h = terms[hide];
+    const set = new Set([h]);
+    shuffle([-h, h + 1, h - 1, h + step, h - step]).forEach(x => { if (set.size < 4 && x !== h) set.add(x); });
+    return seqOut(terms, hide, sgn, String(h), shuffle([...set]).map(x => ({ v: String(x), html: sgn(x) })));
+  }
+
+  // ── 🔗 الأزواج: مسائل في عمود وأجوبتها في عمود، ومن المستوى الرابع أجوبة متقاربة ──
+  const nPairs = (lv, cap) => Math.min(lv <= 1 ? 2 : lv <= 3 ? 3 : 4, Math.floor(cap / 2));
+  const pairOut = list => ({
+    left: shuffle(list.map((x, key) => ({ key, html: x.l }))),
+    right: shuffle(list.map((x, key) => ({ key, html: x.r }))),
+    n: list.length,
+  });
+
+  function pair(P, lv, cap = 8) {
+    const n = nPairs(lv, cap);
+    const close = lv >= 4;
+    for (let i = 0; i < 40; i++) {
+      const base = any(P.qs);
+      const pool = shuffle(P.qs.filter(q => !close || Math.abs(q.answer - base.answer) <= Math.max(6, base.answer * 0.3)));
+      const list = [base];
+      pool.forEach(q => { if (list.length < n && !list.some(x => x.answer === q.answer)) list.push(q); });
+      if (list.length === n) return pairOut(list.map(q => ({ l: `<span dir="ltr">${q.a} ${q.op} ${q.b}</span>`, r: q.answer })));
+    }
+    return null;
+  }
+
+  // الكسور: الكسر برسمه، ومن المستوى الرابع بكسر يساويه
+  function fracPair(lv, cap = 8) {
+    const n = nPairs(lv, cap);
+    const list = [];
+    for (let i = 0; list.length < n && i < 100; i++) {
+      const d = rnd(2, Math.min(maxD(lv), lv >= 4 ? 6 : 8)), k = rnd(1, d - 1);
+      if (list.some(x => x.k * d === k * x.d)) continue;
+      const m = rnd(2, Math.max(2, Math.floor(12 / d)));
+      list.push({ k, d, l: frHtml(k, d), r: lv >= 4 ? frHtml(k * m, d * m) : shape(k, d, any(['pie', 'bar'])) });
+    }
+    return pairOut(list);
+  }
+
+  function negPair(lv, cap = 8) {
+    const n = nPairs(lv, cap);
+    const list = [];
+    for (let i = 0; list.length < n && i < 200; i++) {
+      const e = negExpr(Math.max(lv, 2));
+      if (!list.some(x => x.v === e.answer)) list.push({ v: e.answer, l: e.html, r: `<span dir="ltr">${sgn(e.answer)}</span>` });
+    }
+    return pairOut(list);
+  }
+
+  // ── 🍌 رتّب الثمار: ثلاث بطاقات ثم أربع، تتقارب قيمها، وفي المستوى الخامس من الأكبر إلى الأصغر أحياناً ──
+  const ordOut = (cards, lv) => {
+    const desc = lv === 5 && Math.random() < 0.5;
+    return {
+      desc, cards: shuffle(cards),
+      order: cards.map(c => c.answer).sort((x, y) => (desc ? y - x : x - y)),
+    };
+  };
+  const nOrd = (lv, cap) => Math.min(lv <= 2 ? 3 : 4, cap);
+
+  function ord(P, lv, cap = 8) {
+    const n = nOrd(lv, cap);
+    for (let i = 0; i < 60; i++) {
+      const base = any(P.qs);
+      const gap = Math.max(1, Math.round(base.answer * [0, 1, 0.6, 0.4, 0.25, 0.15][lv]));
+      const near = shuffle(P.qs.filter(q => Math.abs(q.answer - base.answer) <= gap * n));
+      const list = [base];
+      near.forEach(q => { if (list.length < n && !list.some(x => x.answer === q.answer)) list.push(q); });
+      if (list.length === n) return ordOut(list, lv);
+    }
+    return null;
+  }
+
+  function fracOrd(lv, cap = 8) {
+    const n = nOrd(lv, cap);
+    const list = [];
+    const d0 = rnd(5, 12), k0 = rnd(1, 3);
+    for (let i = 0; list.length < n && i < 200; i++) {
+      let f;
+      if (lv <= 2) f = frac(rnd(1, d0 - 1), d0);
+      else if (lv === 3) f = frac(k0, rnd(k0 + 1, 12));
+      else { const d = rnd(2, maxD(lv)); f = frac(rnd(1, d - 1), d); }
+      if (!list.some(x => equal(x, f))) list.push(f);
+    }
+    return ordOut(list, lv);
+  }
+
+  function negOrd(lv, cap = 8) {
+    const n = nOrd(lv, cap);
+    const list = [];
+    for (let i = 0; list.length < n && i < 200; i++) {
+      const x = lv <= 3 ? int(nz(-12, lv === 1 ? 6 : -1)) : negExpr(lv);
+      if (!list.some(y => y.answer === x.answer)) list.push(x);
+    }
+    return ordOut(list, lv);
+  }
+
   const make = {
     cmp: (P, lv) => (P.w === 'frac' ? fracCompare(lv) : P.w === 'neg' ? negCompare(lv) : compare(P, lv)),
     pick: (P, lv, cap) => (P.w === 'frac' ? fracPick(lv, cap) : P.w === 'neg' ? negPick(lv, cap) : pick(P, lv, cap)),
     arr: (P, lv) => (P.w === 'frac' ? fracArr(lv) : P.w === 'neg' ? negArr(lv) : arr(P, lv)),
     miss: (P, lv) => (P.w === 'frac' ? fracMiss(lv) : P.w === 'neg' ? negMiss(lv) : miss(P, lv)),
+    tf: (P, lv) => (P.w === 'frac' ? fracTf(lv) : P.w === 'neg' ? negTf(lv) : tf(P, lv)),
+    seq: (P, lv) => (P.w === 'frac' ? fracSeq(lv) : P.w === 'neg' ? negSeq(lv) : seq(P, lv)),
+    pair: (P, lv, cap) => (P.w === 'frac' ? fracPair(lv, cap) : P.w === 'neg' ? negPair(lv, cap) : pair(P, lv, cap)),
+    ord: (P, lv, cap) => (P.w === 'frac' ? fracOrd(lv, cap) : P.w === 'neg' ? negOrd(lv, cap) : ord(P, lv, cap)),
   };
 
   // المستوى يرتفع بعد إجابتين صحيحتين متتاليتين، وينزل مع كل خطأ
@@ -418,5 +645,5 @@ const Brain = (() => {
 
   const medal = pts => (pts >= 300 ? '🥇' : pts >= 180 ? '🥈' : pts >= 80 ? '🥉' : '🎖️');
 
-  return { SECONDS, DUEL_SECONDS, GAMES, state, pool, make, step, medal };
+  return { SECONDS, DUEL_SECONDS, GAMES, PER, game, pickGames, state, pool, make, step, medal };
 })();

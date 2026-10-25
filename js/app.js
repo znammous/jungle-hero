@@ -277,7 +277,7 @@
             <span class="big-icon">🏃</span><b>سباق النهر</b><small>دقيقة واحدة!</small>
           </button>
           <button class="big-btn pink" data-act="startBrain">
-            <span class="big-icon">🧠</span><b>تحدّي العقل</b><small>${(ws.brain || {}).best ? `أفضل وزن: ${ltr(ws.brain.best)} غ` : `${ltr(Brain.GAMES.length)} ألعاب سريعة`}</small>
+            <span class="big-icon">🧠</span><b>تحدّي العقل</b><small>${(ws.brain || {}).best ? `أفضل وزن: ${ltr(ws.brain.best)} غ` : `${ltr(Brain.PER)} ألعاب سريعة`}</small>
           </button>
           <button class="big-btn brown" data-act="go" data-arg="shop">
             <span class="big-icon">🎒</span><b>متجر المعدّات</b><small>اشترِ أدوات الرحلة</small>
@@ -511,7 +511,8 @@
     // ───── سباق الإخوة ─────
     duelPick() {
       const list = Store.state.profiles;
-      if (!duelLands().some(w => w.id === duelLand)) duelLand = 'mul';
+      const lands = duelLands();
+      if (!(duelLand === ALL_LANDS ? lands.length > 1 : lands.some(w => w.id === duelLand))) duelLand = 'mul';
       const net = duelMode === 'net';
       const n = duelPicks.length;
       const canNet = Sync.duel.ready();
@@ -535,15 +536,16 @@
         <div class="seg duel-modes duel-kinds">${Object.entries(DUEL_KINDS).map(([k, x]) =>
           `<button class="${k === duelKind ? 'on' : ''}" data-act="setDuelKind" data-arg="${k}">${x.icon} ${x.name}</button>`).join('')}</div>
         </div>
-        <div class="seg duel-modes duel-lands">${duelLands().map(w =>
-          `<button class="${w.id === duelLand ? 'on' : ''}" data-act="setDuelLand" data-arg="${w.id}">${w.icon} ${w.name}</button>`).join('')}</div>
+        <div class="seg duel-modes duel-lands">${lands.map(w =>
+          `<button class="${w.id === duelLand ? 'on' : ''}" data-act="setDuelLand" data-arg="${w.id}">${w.icon} ${w.name}</button>`).join('')}${lands.length > 1
+          ? `<button class="${duelLand === ALL_LANDS ? 'on' : ''}" data-act="setDuelLand" data-arg="${ALL_LANDS}">${landName(ALL_LANDS)}</button>` : ''}</div>
         <div class="card">
           ${rope ? `<p>${net ? 'اختر نفسك، ثم يقبل أخوك الدعوة على جهازه.' : 'اختر لاعبَين اثنين.'}
             حبل واحد بينكما، وكل إجابة صحيحة تشدّه نحوك خطوة. كل واحد يُسأل من الغابة المختارة بمستواه هو.
             <b>من يشدّ الحبل ${ltr(ROPE_LEAD)} خطوات إلى جهته يفوز، أو من يكون الحبل في جهته بعد ${ltr(CONFIG.raceSeconds)} ثانية!</b></p>
           <p class="muted">${net ? netNote : 'ضعا التابلت بينكما، ولكل واحد لوحة أرقامه.'}</p>`
           : brainKind ? `<p>الجميع يُسأل من الغابة المختارة، والصعوبة تتكيّف معه وحده: تصعب كلما أجاب صحيحاً.
-            ${ltr(Brain.GAMES.length)} ألعاب، ${ltr(Brain.DUEL_SECONDS)} ثانية لكل منها، ومن يُجب صحيحاً أكثر يفوز باللعبة.
+            ${ltr(Brain.PER)} ألعاب، ${ltr(Brain.DUEL_SECONDS)} ثانية لكل منها، ومن يُجب صحيحاً أكثر يفوز باللعبة.
             <b>الفائز من يكسب ألعاباً أكثر!</b></p>
           <p class="muted">${net
             ? (canNet ? `اختر نفسك، ثم يقبل إخوتك الدعوة على أجهزتهم (حتى ${ltr(MAX_PLAYERS)} لاعبين). تحتاج الأجهزة إلى الإنترنت وحساب Google نفسه.` : '⚠️ سجّل دخول ولي الأمر بحساب Google على كل الأجهزة أولاً، مع اتصال بالإنترنت.')
@@ -559,7 +561,7 @@
           const i = duelPicks.indexOf(p.id);
           return `<button class="profile-card ${i >= 0 ? 'picked' : ''}" data-act="duelPick" data-arg="${p.id}">
             <span class="avatar">${p.avatar}</span><b>${esc(p.name)}</b>
-            <small>${duelKind !== 'race' ? `${Engine.world(duelLand).icon} ${Engine.world(duelLand).name}` : `${Engine.world(duelLand).icon} 🏝️ هدفه ${ltr(duelGoal(p))}`}</small>
+            <small>${duelKind !== 'race' ? landName(duelLand) : `${landIcon(duelLand)} 🏝️ هدفه ${ltr(duelGoal(p))}`}</small>
             ${i >= 0 && !net ? `<span class="pick-no">${ltr(i + 1)}</span>` : ''}
           </button>`;
         }).join('')}</div>
@@ -610,12 +612,12 @@
           <span></span>
         </header>
         <div class="card center">
-          <p>${host.avatar} <b>${esc(host.name)}</b> يدعوك ${duelKindOf(d).invite} ${duelKindOf(d).icon} في ${Engine.world(d.world || 'mul').icon} ${Engine.world(d.world || 'mul').name}! من أنت؟</p>
+          <p>${host.avatar} <b>${esc(host.name)}</b> يدعوك ${duelKindOf(d).invite} ${duelKindOf(d).icon} في ${landName(d.world || 'mul')}! من أنت؟</p>
           <div class="net-players">${taken.map(x => `<span>${x.avatar}<b>${esc(x.name)}</b></span>`).join('')}</div>
         </div>
         <div class="profile-grid">${list.map(p => `<button class="profile-card" data-act="netJoin" data-arg="${p.id}">
             <span class="avatar">${p.avatar}</span><b>${esc(p.name)}</b>
-            <small>${d.kind === 'brain' || d.kind === 'rope' ? `${Engine.world(duelLand).icon} ${Engine.world(duelLand).name}` : `${Engine.world(duelLand).icon} 🏝️ هدفه ${ltr(duelGoal(p))}`}</small>
+            <small>${d.kind === 'brain' || d.kind === 'rope' ? landName(duelLand) : `${landIcon(duelLand)} 🏝️ هدفه ${ltr(duelGoal(p))}`}</small>
           </button>`).join('')}</div>
       </section>`);
     },
@@ -857,16 +859,16 @@
     // تحدّي العقل: بطاقة تعريف قبل كل لعبة، ثم شاشة اللعب
     brain() {
       const b = brain;
-      const G = Brain.GAMES[b.g];
+      const G = Brain.game(b.ids[b.g]);
       const games = b.sides[0].games;
-      const steps = `<div class="brain-steps">${Brain.GAMES.map((x, i) =>
+      const steps = `<div class="brain-steps">${b.ids.map(Brain.game).map((x, i) =>
         `<span class="${i < b.g ? 'done' : i === b.g ? 'on' : ''}">${i < b.g ? games[i].medal : x.icon}</span>`).join('')}</div>`;
       if (b.phase === 'intro') {
         render(`<section class="screen brain">
           <header class="topbar">
             <button class="chip" data-act="exitBrain" aria-label="خروج">✕</button>
             <h2 class="topbar-title">🧠 تحدّي العقل</h2>
-            <div class="chip">${ltr(`${b.g + 1}/${Brain.GAMES.length}`)}</div>
+            <div class="chip">${ltr(`${b.g + 1}/${b.ids.length}`)}</div>
           </header>
           ${steps}
           <div class="card brain-intro">
@@ -896,7 +898,7 @@
 
     // مبارزة العقول: نفس تقسيم شاشة سباق الإخوة، ولكل لاعب أسئلته ومستواه
     brainDuel() {
-      const G = Brain.GAMES[brain.g];
+      const G = Brain.game(brain.ids[brain.g]);
       const half = (s, i) => `<div class="duel-half bhalf" data-side="${i}">
         <div class="duel-head">
           <b>${s.p.avatar} ${esc(s.p.name)}</b>
@@ -1529,9 +1531,22 @@
   // جزيرة كل طفل على بُعد أفضل نتيجة له وإجابتين، فيفوز من يتفوّق على نفسه
   // الجميع في الغابة التي اختارها من بدأ التحدي، وهدف كل طفل من أفضل سباق له فيها
   // (من لم يفتح الغابة بعد يُسأل من منطقتها الأولى)
-  const duelGoal = p => Math.max(8, Engine.state(p, duelLand).bestRace + 2);
-  const duelSide = p => ({ p, w: duelLand, pool: Engine.racePool(p, duelLand), goal: duelGoal(p),
-    q: null, input: '', right: 0, locked: true, reachedAt: 0, qStart: 0 });
+  // «كل الغابات»: كل طفل يُسأل من الغابات التي فتحها هو، والهدف من متوسط أفضل سباقاته فيها
+  const ALL_LANDS = 'all';
+  const landIcon = id => id === ALL_LANDS ? '🌍' : Engine.world(id).icon;
+  const landName = id => id === ALL_LANDS ? '🌍 كل الغابات' : `${Engine.world(id).icon} ${Engine.world(id).name}`;
+  const kidLands = (p, id) => id === ALL_LANDS ? Engine.openWorlds(p).map(w => w.id) : [id];
+  const randomOf = list => list[Math.floor(Math.random() * list.length)];
+  const duelGoal = p => {
+    const ws = kidLands(p, duelLand);
+    return Math.max(8, Math.round(ws.reduce((n, w) => n + Engine.state(p, w).bestRace, 0) / ws.length) + 2);
+  };
+  const duelSide = p => {
+    const ws = kidLands(p, duelLand);
+    const pools = Object.fromEntries(ws.map(w => [w, Engine.racePool(p, w)]));
+    return { p, w: duelLand, ws, pools, goal: duelGoal(p),
+      q: null, input: '', right: 0, locked: true, reachedAt: 0, qStart: 0 };
+  };
 
   // الغابات المتاحة للتحدي: المفتوحة لمن يبدأه (أو لأي طفل قبل أن يختار أحد)
   function duelLands() {
@@ -1648,7 +1663,8 @@
 
   function duelNext(i) {
     const side = duel.sides[i];
-    side.q = Engine.pick(side.p, side.pool, side.q && side.q.key, side.w);
+    const w = randomOf(side.ws);
+    side.q = Engine.pick(side.p, side.pools[w], side.q && side.q.key, w);
     side.input = '';
     side.locked = false;
     side.qStart = performance.now();
@@ -1747,6 +1763,8 @@
   // نتيجة السباق في ملف الطفل: العملات والرقم القياسي والرتبة (مشتركة مع سباق النهر)
   function settleRace(p, right, w = 'mul') {
     const out = { newRecord: false, rankUp: null };
+    // سباق «كل الغابات» لا رقم قياسي له، فيكسب العملات فقط
+    if (w === ALL_LANDS) { p.coins += Math.floor(right * COINS.perCorrect); return out; }
     const ws = Engine.state(p, w);
     p.coins += Math.floor(right * COINS.perCorrect);
     const oldRank = Engine.rankFor(ws.bestRace);
@@ -1879,7 +1897,7 @@
   const netPlayer = p => ({
     device: DEVICE, pid: p.id, name: p.name, avatar: p.avatar, goal: duelGoal(p), joinedAt: Date.now(),
     right: 0, reachedMs: 0, done: false, left: false,
-    brain: Brain.GAMES.map(() => 0), g: 0,   // مبارزة العقول: الإجابات الصحيحة في كل لعبة، واللعبة الحالية
+    brain: [], g: 0,   // مبارزة العقول: الإجابات الصحيحة في كل لعبة، واللعبة الحالية
   });
   const activePlayers = d => Object.values((d && d.players) || {})
     .filter(x => !x.left).sort((a, b) => a.joinedAt - b.joinedAt);
@@ -1890,7 +1908,8 @@
     const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
     netPending = { id, role: 'host', pid: p.id };
     Screens.netWait('host');
-    Sync.duel.set({ id, kind, world: duelLand, state: 'waiting', createdAt: Date.now(), host: DEVICE, players: { [DEVICE]: netPlayer(p) } })
+    const games = kind === 'brain' ? Brain.pickGames(p, duelLand === ALL_LANDS ? null : duelLand) : null;
+    Sync.duel.set({ id, kind, world: duelLand, ...(games ? { games } : {}), state: 'waiting', createdAt: Date.now(), host: DEVICE, players: { [DEVICE]: netPlayer(p) } })
       .catch(() => {
         netPending = null;
         toast('⚠️ تعذّر إرسال الدعوة. تأكد من الإنترنت وتسجيل الدخول.', 5000);
@@ -2025,7 +2044,7 @@
     clearTimeout(inviteTimer);
     if (!ok) return;
     const host = d.players[d.host];
-    inviteBar.innerHTML = `<span>${duelKindOf(d).icon} ${host.avatar} <b>${esc(host.name)}</b> يدعوك ${duelKindOf(d).invite} في ${Engine.world(d.world || 'mul').icon} ${Engine.world(d.world || 'mul').name}!</span>
+    inviteBar.innerHTML = `<span>${duelKindOf(d).icon} ${host.avatar} <b>${esc(host.name)}</b> يدعوك ${duelKindOf(d).invite} في ${landName(d.world || 'mul')}!</span>
       <button class="btn orange" data-invite="join">انضم</button>
       <button class="chip" data-invite="no" aria-label="تجاهل">✕</button>`;
     inviteTimer = setTimeout(() => showInvite(Sync.duel.data()), d.createdAt + INVITE_MS - Date.now());
@@ -2278,14 +2297,14 @@
   // ───── تحدّي العقل ─────
   // brain.sides: لاعب واحد من المخيّم، أو من 2 إلى 4 في مبارزة العقول على شاشة مقسومة.
   // كل لاعب يُسأل من غابته الحالية وبمستواه هو
-  function brainSideFor(p, w = Engine.current(p).id) {
-    const bs = Brain.state(p, w);
+  function brainSideFor(p, w, ids) {
+    const ws = kidLands(p, w);
     return {
-      p, w, P: null, q: null, locked: true,
-      // كل لعبة تبدأ أقل بمستوى من آخر ما وصل إليه، ليبدأ مرتاحاً
-      games: Brain.GAMES.map(G => {
-        const lv = Math.max(1, (bs.lv[G.id] || 1) - 1);
-        return { id: G.id, lv, top: lv, streak: 0, right: 0, wrong: 0, points: 0, medal: '', won: false };
+      p, w, ws, P: null, q: null, locked: true,
+      // كل لعبة تبدأ أقل بمستوى من آخر ما وصل إليه (في «كل الغابات»: من أقلّها)، ليبدأ مرتاحاً
+      games: ids.map(id => {
+        const lv = Math.max(1, Math.min(...ws.map(x => Brain.state(p, x).lv[id] || 1)) - 1);
+        return { id, lv, top: lv, streak: 0, right: 0, wrong: 0, points: 0, medal: '', won: false };
       }),
     };
   }
@@ -2302,7 +2321,8 @@
   function startBrain() {
     const p = Store.current();
     abortBrain();
-    brain = { duel: false, g: 0, phase: 'intro', sides: [brainSideFor(p)], timer: null, timeouts: [], secsAtStart: Journey.today(p).secs };
+    const w = Engine.current(p).id, ids = Brain.pickGames(p, w);
+    brain = { duel: false, g: 0, ids, phase: 'intro', sides: [brainSideFor(p, w, ids)], timer: null, timeouts: [], secsAtStart: Journey.today(p).secs };
     Screens.brain();
   }
 
@@ -2310,7 +2330,9 @@
     const players = duelPicks.map(id => Store.state.profiles.find(p => p.id === id));
     if (players.length < 2 || players.some(p => !p)) { Screens.duelPick(); return; }
     abortBrain();
-    brain = { duel: true, g: 0, phase: 'play', sides: players.map(p => brainSideFor(p, duelLand)), timer: null, timeouts: [] };
+    // الألعاب نفسها للجميع، يختارها من يبدأ المبارزة
+    const ids = Brain.pickGames(players[0], duelLand === ALL_LANDS ? null : duelLand);
+    brain = { duel: true, g: 0, ids, phase: 'play', sides: players.map(p => brainSideFor(p, duelLand, ids)), timer: null, timeouts: [] };
     brainGo();
   }
 
@@ -2341,10 +2363,10 @@
     if (!brain) return;
     const b = brain;
     b.phase = 'play';
-    b.sides.forEach(s => { s.P = Brain.pool(s.p, s.w); s.locked = true; });
+    b.sides.forEach(s => { s.locked = true; });
     b.duel ? Screens.brainDuel() : Screens.brain();
     b.sides.forEach((_, i) => brainLevel(i));
-    const G = Brain.GAMES[b.g];
+    const G = Brain.game(b.ids[b.g]);
     const tick = n => {
       if (!brainAlive()) return;
       if (n === 0) {
@@ -2389,8 +2411,9 @@
     const b = brain;
     const s = b.sides[i];
     const g = s.games[b.g];
-    // مسائل الجمع والطرح والكسور عشوائية، فتتجدّد مع كل سؤال
-    if (Engine.world(s.w).gen) s.P = Brain.pool(s.p, s.w);
+    // مسائل الجمع والطرح والكسور عشوائية، فتتجدّد مع كل سؤال، وفي «كل الغابات» تتبدّل الغابة
+    const w = randomOf(s.ws);
+    if (!s.P || s.P.w !== w || Engine.world(w).gen) s.P = Brain.pool(s.p, w);
     // شاشة المبارزة أضيق، فبطاقات أقل
     const q = Brain.make[g.id](s.P, g.lv, b.duel ? 6 : 8);
     if (!q) { s.locked = true; return; }
@@ -2405,10 +2428,21 @@
     } else if (g.id === 'pick') {
       stage.innerHTML = `<div class="target">اضغط كل ما يساوي <b dir="ltr">${q.label || q.n}</b></div>
         <div class="bcards">${q.cards.map((c, k) => `<button class="bcard" data-act="brainCard" data-arg="${i}:${k}">${brainExpr(c)}</button>`).join('')}</div>`;
-    } else if (g.id === 'miss') {
+    } else if (g.id === 'pair') {
+      // عمود المسائل وعمود الأجوبة: يضغط الطفل واحدة من كل عمود
+      const col = (list, sd) => `<div class="pcol">${list.map((c, k) =>
+        `<button class="bcard" data-act="brainPair" data-arg="${i}:${sd}${k}">${typeof c.html === 'number' ? `<span dir="ltr">${c.html}</span>` : c.html}</button>`).join('')}</div>`;
+      s.sel = null;
+      stage.innerHTML = `<p class="arr-text">صِل كل مسألة بجوابها</p>
+        <div class="pairs">${col(q.left, 'L')}${col(q.right, 'R')}</div>`;
+    } else if (g.id === 'ord') {
+      s.step = 0;
+      stage.innerHTML = `<div class="target">اضغط من ${q.desc ? 'الأكبر إلى الأصغر ⬇️' : 'الأصغر إلى الأكبر ⬆️'}</div>
+        <div class="bcards">${q.cards.map((c, k) => `<button class="bcard" data-act="brainOrd" data-arg="${i}:${k}">${brainExpr(c)}</button>`).join('')}</div>`;
+    } else if (g.id === 'miss' || g.id === 'tf' || g.id === 'seq') {
       stage.innerHTML = `<p class="arr-text">${q.text}</p>
         <div class="question rich mq">${q.html}</div>
-        <div class="bchoices" dir="ltr">${q.options.map(o => (typeof o === 'object' ? o : { v: o, html: o })).map(o =>
+        <div class="bchoices ${q.two ? 'two' : ''}" dir="ltr">${q.options.map(o => (typeof o === 'object' ? o : { v: o, html: o })).map(o =>
           `<button class="bchoice" data-act="brainChoice" data-arg="${i}:${o.v}">${o.html}</button>`).join('')}</div>`;
     } else {
       const total = q.groups ? q.groups.reduce((n, x) => n + x.count, 0) : 0;
@@ -2465,7 +2499,7 @@
     } else {
       note = `${games[0].medal} ${games[0].points} نقطة`;
     }
-    if (++b.g < Brain.GAMES.length) {
+    if (++b.g < b.ids.length) {
       Sound.play('coin');
       if (note) toast(note, 1800);
       if (b.net) netBrainPush(false);
@@ -2494,6 +2528,7 @@
     const newRecord = grams > bs.best && bs.best > 0;
     if (grams > bs.best) { bs.best = grams; p.coins += COINS.raceRecord; }
     side.games.forEach(g => { bs.lv[g.id] = g.lv; });
+    bs.last = b.ids;
     const goalMin = Store.state.settings.goalMin;
     const summary = {
       grams, best: bs.best, games: side.games, newRecord, coins: p.coins - coinsBefore,
@@ -2526,16 +2561,15 @@
     list.forEach(x => {
       const before = x.p.coins;
       x.p.coins += Math.floor(x.right * COINS.perCorrect) + (x === winner ? COINS.duelWin : 0);
-      const bs = Brain.state(x.p, x.s.w);
-      x.s.games.forEach(g => { bs.lv[g.id] = g.lv; });
+      if (x.s.w !== ALL_LANDS) { const bs = Brain.state(x.p, x.s.w); x.s.games.forEach(g => { bs.lv[g.id] = g.lv; }); bs.last = b.ids; }
       x.coins = x.p.coins - before;
-      x.out = Brain.GAMES.map((G, j) => `${G.icon} ${x.s.games[j].won ? '👑' : ''}${x.s.games[j].right}`).join(' · ');
+      x.out = b.ids.map((id, j) => `${Brain.game(id).icon} ${x.s.games[j].won ? '👑' : ''}${x.s.games[j].right}`).join(' · ');
     });
     Store.save();
     Sound.play('win');
     Screens.duelResults({
       sides: ranked, winner, again: 'startBrainDuel',
-      note: winner ? `فاز بـ ${winner.wins} من ${Brain.GAMES.length} ألعاب` : 'نفس عدد الألعاب والإجابات الصحيحة',
+      note: winner ? `فاز بـ ${winner.wins} من ${b.ids.length} ألعاب` : 'نفس عدد الألعاب والإجابات الصحيحة',
     });
   }
 
@@ -2549,8 +2583,11 @@
     const opps = activePlayers(d).filter(x => x.device !== DEVICE).slice(0, MAX_PLAYERS - 1).map(x => Object.assign({}, x));
     if (!p || !opps.length) { go('home'); return; }
     abortBrain();
+    // الألعاب كتبها صاحب الدعوة في المستند (الدعوات القديمة بلا قائمة: أول أربع ألعاب)
+    const ids = (d.games || []).filter(id => Brain.GAMES.some(G => G.id === id));
+    if (!ids.length) Brain.GAMES.slice(0, Brain.PER).forEach(G => ids.push(G.id));
     brain = {
-      duel: true, g: 0, phase: 'play', sides: [brainSideFor(p, duelLand)], timer: null, timeouts: [],
+      duel: true, g: 0, ids, phase: 'play', sides: [brainSideFor(p, duelLand, ids)], timer: null, timeouts: [],
       net: { id: d.id, opps, finished: false },
     };
     brainGo();
@@ -2559,8 +2596,8 @@
   // شريط المنافسين: إجاباتهم الصحيحة في كل لعبة حتى الآن
   const brainOpps = () => brain.net.opps.map(o => `<div class="opp">
       <b>${o.avatar} ${esc(o.name)}</b>
-      <span class="ogames">${o.left ? '🏳️ انسحب' : Brain.GAMES.map((G, j) =>
-        `<span class="${j === (o.g || 0) && !o.done ? 'on' : ''}">${G.icon} ${ltr((o.brain || [])[j] || 0)}</span>`).join('')}</span>
+      <span class="ogames">${o.left ? '🏳️ انسحب' : brain.ids.map((id, j) =>
+        `<span class="${j === (o.g || 0) && !o.done ? 'on' : ''}">${Brain.game(id).icon} ${ltr((o.brain || [])[j] || 0)}</span>`).join('')}</span>
     </div>`).join('');
 
   // نرفع التقدّم كل 0.6 ثانية على الأكثر، والنتيجة النهائية فوراً
@@ -2569,7 +2606,7 @@
     const s = brain.sides[0];
     const send = () => {
       n.pushT = null;
-      const data = { [`${myPath}.brain`]: s.games.map(g => g.right), [`${myPath}.g`]: Math.min(brain ? brain.g : 0, Brain.GAMES.length - 1) };
+      const data = { [`${myPath}.brain`]: s.games.map(g => g.right), [`${myPath}.g`]: Math.min(brain.g, brain.ids.length - 1) };
       if (final) data[`${myPath}.done`] = true;
       Sync.duel.update(data).catch(() => {});
     };
@@ -2611,12 +2648,12 @@
     abortBrain();
     const mine = { p: s.p, s, per: s.games.map(g => g.right), banners: [] };
     const others = n.opps.map(o => ({
-      p: { avatar: o.avatar, name: o.name }, per: o.brain || Brain.GAMES.map(() => 0), coins: null, banners: [],
+      p: { avatar: o.avatar, name: o.name }, per: b.ids.map((_, j) => (o.brain || [])[j] || 0), coins: null, banners: [],
       gone: o.left ? '🏳️ انسحب قبل النهاية' : !o.done ? '📡 انقطع اتصاله' : '',
     }));
     const playing = [mine, ...others.filter(x => !x.gone)];
     // الفائز بكل لعبة: الأكثر إجابات صحيحة فيها
-    Brain.GAMES.forEach((G, j) => {
+    b.ids.forEach((id, j) => {
       const top = Math.max(...playing.map(x => x.per[j]));
       playing.forEach(x => { x.won = x.won || []; x.won[j] = top > 0 && x.per[j] === top; });
     });
@@ -2624,21 +2661,20 @@
       x.won = x.won || [];
       x.wins = x.won.filter(Boolean).length;
       x.right = x.per.reduce((a, c) => a + c, 0);
-      x.out = x.gone || Brain.GAMES.map((G, j) => `${G.icon} ${x.won[j] ? '👑' : ''}${x.per[j]}`).join(' · ');
+      x.out = x.gone || b.ids.map((id, j) => `${Brain.game(id).icon} ${x.won[j] ? '👑' : ''}${x.per[j]}`).join(' · ');
     });
     const ranked = rankBrain(playing);
     const winner = soleWinner(ranked);
     const before = s.p.coins;
     s.p.coins += Math.floor(mine.right * COINS.perCorrect) + (winner === mine ? COINS.duelWin : 0);
-    const bs = Brain.state(s.p, s.w);
-    s.games.forEach(g => { bs.lv[g.id] = g.lv; });
+    if (s.w !== ALL_LANDS) { const bs = Brain.state(s.p, s.w); s.games.forEach(g => { bs.lv[g.id] = g.lv; }); bs.last = b.ids; }
     mine.coins = s.p.coins - before;
     Store.save();
     Sound.play('win');
     Screens.duelResults({
       sides: ranked.concat(others.filter(x => x.gone)), winner, net: true, again: 'duelSetup',
       note: ranked.length < 2 ? 'لم يُكمل المنافسون المبارزة، فلا فائز هذه المرة'
-        : winner ? `فاز بـ ${winner.wins} من ${Brain.GAMES.length} ألعاب` : 'نفس عدد الألعاب والإجابات الصحيحة',
+        : winner ? `فاز بـ ${winner.wins} من ${b.ids.length} ألعاب` : 'نفس عدد الألعاب والإجابات الصحيحة',
     });
   }
 
@@ -2934,6 +2970,54 @@
       el.classList.add(ok ? 'right' : 'wrong');
       if (!ok) stage.querySelectorAll('.bchoice').forEach(e => { if (e.dataset.arg === `${i}:${ans}`) e.classList.add('right'); });
       brainAnswer(i, ok);
+    },
+
+    // الأزواج: الضغطة الأولى تختار بطاقة، والثانية من العمود الآخر تصلها بها
+    brainPair(arg, el) {
+      const [i, ref] = arg.split(':');
+      const s = brainSide(Number(i));
+      if (!s || el.classList.contains('picked')) return;
+      const sd = ref[0], c = (sd === 'L' ? s.q.left : s.q.right)[Number(ref.slice(1))];
+      if (!s.sel || s.sel.sd === sd) {
+        if (s.sel) s.sel.el.classList.remove('sel');
+        s.sel = { sd, c, el };
+        el.classList.add('sel');
+        return;
+      }
+      const first = s.sel;
+      s.sel = null;
+      first.el.classList.remove('sel');
+      if (first.c.key === c.key) {
+        first.el.classList.add('picked');
+        el.classList.add('picked');
+        Sound.play('tick');
+        if ($(`bStage${i}`).querySelectorAll('.bcard.picked').length === s.q.n * 2) brainAnswer(Number(i), true);
+        return;
+      }
+      first.el.classList.add('miss');
+      el.classList.add('miss');
+      brainAnswer(Number(i), false);
+    },
+
+    // رتّب الثمار: كل ضغطة يجب أن تكون التالية في الترتيب، والخطأ يكشف الترتيب كله
+    brainOrd(arg, el) {
+      const [i, k] = arg.split(':').map(Number);
+      const s = brainSide(i);
+      if (!s || el.classList.contains('picked')) return;
+      const c = s.q.cards[k];
+      const badge = (e, n) => { e.insertAdjacentHTML('beforeend', `<span class="ordno">${ltr(n)}</span>`); };
+      if (c.answer === s.q.order[s.step]) {
+        el.classList.add('picked');
+        badge(el, ++s.step);
+        Sound.play('tick');
+        if (s.step === s.q.order.length) brainAnswer(i, true);
+        return;
+      }
+      el.classList.add('miss');
+      $(`bStage${i}`).querySelectorAll('.bcard').forEach((e, j) => {
+        if (!e.classList.contains('picked')) badge(e, s.q.order.indexOf(s.q.cards[j].answer) + 1);
+      });
+      brainAnswer(i, false);
     },
 
     exitApp() {
