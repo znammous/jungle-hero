@@ -327,7 +327,7 @@ button.rank-badge { border: 0; font: inherit; font-weight: 800; cursor: pointer;
 /* كل غابة كوكب دائري متوهّج، والضغط عليه ينقل الطفل إليها */
 .planets-card h3 { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
 .planets-card h3 small { color: var(--muted); font-size: 0.85rem; }
-.planets { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-top: 12px; }
+.planets { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; margin-top: 18px; }
 .planet {
   display: flex; flex-direction: column; align-items: center; gap: 6px;
   background: none; padding: 4px 0; min-width: 0;
@@ -339,24 +339,32 @@ button.rank-badge { border: 0; font: inherit; font-weight: 800; cursor: pointer;
   display: grid; place-items: center;
   font-size: min(2rem, 7.5vw);
   background: radial-gradient(circle at 32% 28%, #fff 0%, var(--glow) 38%, color-mix(in srgb, var(--glow) 55%, #143a21) 100%);
-  box-shadow: 0 0 12px 2px var(--glow), inset -4px -6px 10px rgba(0, 0, 0, 0.18);
-  animation: planet-glow 2.6s ease-in-out infinite;
+  box-shadow: 0 0 8px 1px var(--glow), inset -4px -6px 10px rgba(0, 0, 0, 0.18);
   transition: transform 0.15s;
 }
 .planet:active .planet-ball { transform: scale(0.9); }
 .planet b { font-size: 0.78rem; line-height: 1.25; text-align: center; color: var(--ink); }
 .planet small { font-size: 0.7rem; font-weight: 700; color: var(--wood); white-space: nowrap; }
-.planet.on .planet-ball {
-  box-shadow: 0 0 20px 6px var(--glow), 0 0 0 3px #fff, inset -4px -6px 10px rgba(0, 0, 0, 0.18);
-  animation-duration: 1.6s;
-  transform: scale(1.08);
+/* الغابة الحالية وحدها تتحرك: تطفو، وتنبض بتوهّج قوي، ويدور حولها مدار */
+.planet.on .planet-ball { animation: planet-float 2.4s ease-in-out infinite, planet-glow 1.6s ease-in-out infinite; }
+.planet.on .planet-ball::before {
+  content: ''; position: absolute; inset: -9px;
+  border-radius: 50%;
+  border: 3px dashed var(--glow);
+  animation: planet-orbit 6s linear infinite;
 }
-.planet.locked .planet-ball { background: radial-gradient(circle at 32% 28%, #fff 0%, #c9cfc2 45%, #8d9686 100%); box-shadow: inset -4px -6px 10px rgba(0, 0, 0, 0.2); animation: none; }
+.planet.on b { color: var(--wood); }
+.planet.locked .planet-ball { background: radial-gradient(circle at 32% 28%, #fff 0%, #c9cfc2 45%, #8d9686 100%); box-shadow: inset -4px -6px 10px rgba(0, 0, 0, 0.2); }
 .planet.locked .planet-ball > span { filter: grayscale(1); opacity: 0.45; }
 .planet.locked b { color: var(--muted); }
 .planet-ball i { position: absolute; bottom: -4px; inset-inline-end: -4px; font-size: 1.2rem; font-style: normal; filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35)); }
-@keyframes planet-glow { 50% { box-shadow: 0 0 22px 7px var(--glow), inset -4px -6px 10px rgba(0, 0, 0, 0.18); } }
-@media (prefers-reduced-motion: reduce) { .planet-ball { animation: none; } }
+@keyframes planet-float { 0%, 100% { transform: translateY(0) scale(1.12); } 50% { transform: translateY(-7px) scale(1.12); } }
+@keyframes planet-glow {
+  0%, 100% { box-shadow: 0 0 12px 3px var(--glow), inset -4px -6px 10px rgba(0, 0, 0, 0.18); }
+  50% { box-shadow: 0 0 30px 12px var(--glow), inset -4px -6px 10px rgba(0, 0, 0, 0.18); }
+}
+@keyframes planet-orbit { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .planet.on .planet-ball, .planet.on .planet-ball::before { animation: none; } }
 
 /* ───── المتجر ───── */
 .shop-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
