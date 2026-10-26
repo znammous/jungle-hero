@@ -24,6 +24,7 @@
   let parentKid = null;
   let kidPinShown = false; // ولي الأمر أظهر رمز الطفل المختار
   let parentWorld = 'mul'; // الغابة المعروضة في تقرير الطفل
+  let parentTab = 'kids';  // تبويب اللوحة: 'kids' | 'rewards' | 'settings'
   let boardWorld = 'mul';  // الغابة المعروضة في لوحة المتصدرين
 
   // رمز دخول الطفل: { mode: 'login'|'create'|'change', id, name, avatar, stage: 'enter'|'old'|'new'|'confirm', buf, first }
@@ -1139,37 +1140,42 @@
           <span></span>
         </header>
 
-        <div class="card">
-          <h3>⚙️ الإعدادات</h3>
+        <div class="seg parent-tabs">
+          ${[['kids', '📊 الأطفال'], ['rewards', `🎁 الجوائز${badge(pendingRequests().length)}`], ['settings', '⚙️ الإعدادات']].map(([id, label]) =>
+            `<button class="${parentTab === id ? 'on' : ''}" data-act="parentTab" data-arg="${id}">${label}</button>`).join('')}
+        </div>
+
+        ${parentTab === 'settings' ? `<div class="card">
+          <h3>⚙️ إعدادات اللعب</h3>
           <div class="setting"><span>الهدف اليومي</span>
             <div class="seg">${seg('setGoal', [10, 15, 20, 30], s.goalMin, v => `${ltr(v)} د`)}</div></div>
           <div class="setting"><span>تذكير بالراحة بعد</span>
             <div class="seg">${seg('setMax', [0, 30, 45, 60], s.maxMin, v => v ? `${ltr(v)} د` : 'بدون')}</div></div>
-          <button class="link-btn dark" data-act="changePin">🔑 تغيير الرمز</button>
+          <button class="link-btn dark" data-act="changePin">🔑 تغيير رمز ولي الأمر</button>
         </div>
+        ${syncCard()}`
 
-        ${pendingCard()}
+        : parentTab === 'rewards' ? `${pendingCard()}
+        ${p ? `${kidChips(kids)}${redeemCard(p)}` : ''}
+        ${rewardsCard()}`
 
-        ${rewardsCard()}
-
-        ${syncCard()}
-
-        ${compareCard(kids)}
-
-        ${p ? `<div class="kid-tabs">${kids.map(k =>
-            `<button class="chip ${k.id === parentKid ? 'on' : ''}" data-act="parentKid" data-arg="${k.id}">${k.avatar} ${esc(k.name)}</button>`).join('')}</div>
-          ${redeemCard(p)}
+        : p ? `${compareCard(kids)}
+          ${kidChips(kids)}
           ${kidReport(p)}`
           : '<p class="hint">لا يوجد مستكشفون بعد.</p>'}
       </section>`);
     },
   };
 
+  const kidChips = kids => `<div class="kid-tabs">${kids.map(k =>
+    `<button class="chip ${k.id === parentKid ? 'on' : ''}" data-act="parentKid" data-arg="${k.id}">${k.avatar} ${esc(k.name)}</button>`).join('')}</div>`;
+
   // ───── جوائز العائلة ─────
   // الجوائز في إعدادات ولي الأمر، والطلبات في ملف كل طفل (فتُزامَن مع باقي البيانات)
   const rewards = () => Store.state.settings.rewards || (Store.state.settings.rewards = []);
   const requests = p => p.requests || (p.requests = []);
   let newRewardEmoji = REWARD_EMOJIS[0];
+  let addingReward = false; // نموذج إضافة جائزة مفتوح
   let editReward = null;  // الجائزة التي يعدّلها ولي الأمر الآن: { id, emoji }
 
   function requestsList(p) {
@@ -1264,6 +1270,7 @@
         <button class="link-btn edit" data-act="editReward" data-arg="${r.id}" aria-label="تعديل">✏️</button>
         <button class="link-btn danger" data-act="removeReward" data-arg="${r.id}" aria-label="حذف">✕</button>
       </li>`).join('')}</ul>` : ''}
+      ${list.length && !addingReward ? '<button class="btn green wide" data-act="toggleAddReward">➕ إضافة جائزة</button>' : `
       ${presets.length ? `<p class="label">اقتراحات سريعة:</p>
         <div class="preset-row">${presets.map((x, i) =>
           `<button class="chip light" data-act="addPreset" data-arg="${REWARD_PRESETS.indexOf(x)}">${x.emoji} ${x.name} · ${x.price}</button>`).join('')}</div>` : ''}
@@ -1275,6 +1282,7 @@
         <input id="rewardPrice" type="number" inputmode="numeric" min="10" max="2000" placeholder="السعر" dir="ltr">
         <button class="btn green small" data-act="addReward">➕ إضافة</button>
       </div>
+      ${list.length ? '<button class="link-btn dark" data-act="toggleAddReward">إغلاق</button>' : ''}`}
     </div>`;
   }
 
@@ -1488,20 +1496,6 @@
     }
 
     return `
-      <div class="card">
-        <div class="setting"><span>✏️ الاسم</span>
-          <div class="reward-form rename"><input id="renameInput" maxlength="20" autocomplete="off" value="${esc(p.name)}">
-            <button class="btn green" data-act="renameKid">حفظ</button></div></div>
-        <div class="setting"><span>🔑 رمز الدخول ${p.pin ? `<b dir="ltr">${kidPinShown ? p.pin : '••••'}</b>` : '<small class="muted">(لم يُختر بعد)</small>'}
-            ${p.pin ? `<button class="link-btn dark" data-act="toggleKidPin">${kidPinShown ? '🙈 إخفاء' : '👁️ إظهار'}</button>` : ''}</span>
-          <div class="reward-form rename"><input id="kidPinInput" type="tel" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="رمز جديد">
-            <button class="btn green" data-act="setKidPin">حفظ</button></div></div>
-        <div class="setting"><span>🏆 لوحة المتصدرين</span>
-          <div class="seg">${GROUPS.map(g => `<button class="${groupOf(p) === g.id ? 'on' : ''}" data-act="setGroup" data-arg="${g.id}">${g.name}</button>`).join('')}</div></div>
-        <div class="setting"><span>👑 ولي أمر <small class="muted">(تظهر له إشعارات الطلبات)</small></span>
-          <div class="seg"><button class="${isParent(p) ? 'on' : ''}" data-act="setParent" data-arg="1">نعم</button><button class="${isParent(p) ? '' : 'on'}" data-act="setParent" data-arg="0">لا</button></div></div>
-      </div>
-
       ${open.length > 1 ? `<div class="kid-tabs">${open.map(x =>
         `<button class="chip ${x === w ? 'on' : ''}" data-act="parentWorld" data-arg="${x.id}">${x.icon} ${x.name}</button>`).join('')}</div>` : ''}
 
@@ -1550,7 +1544,23 @@
         </div>
       </div>
 
-      <button class="link-btn danger" data-act="deleteProfile" data-arg="${p.id}">🗑️ حذف ${esc(p.name)}</button>`;
+
+      <div class="card">
+        <h3>⚙️ إعدادات ${p.avatar} ${esc(p.name)}</h3>
+        <div class="setting"><span>✏️ الاسم</span>
+          <div class="reward-form rename"><input id="renameInput" maxlength="20" autocomplete="off" value="${esc(p.name)}">
+            <button class="btn green" data-act="renameKid">حفظ</button></div></div>
+        <div class="setting"><span>🔑 رمز الدخول ${p.pin ? `<b dir="ltr">${kidPinShown ? p.pin : '••••'}</b>` : '<small class="muted">(لم يُختر بعد)</small>'}
+            ${p.pin ? `<button class="link-btn dark" data-act="toggleKidPin">${kidPinShown ? '🙈 إخفاء' : '👁️ إظهار'}</button>` : ''}</span>
+          <div class="reward-form rename"><input id="kidPinInput" type="tel" inputmode="numeric" maxlength="4" autocomplete="off" placeholder="رمز جديد">
+            <button class="btn green" data-act="setKidPin">حفظ</button></div></div>
+        <div class="setting"><span>🏆 لوحة المتصدرين</span>
+          <div class="seg">${GROUPS.map(g => `<button class="${groupOf(p) === g.id ? 'on' : ''}" data-act="setGroup" data-arg="${g.id}">${g.name}</button>`).join('')}</div></div>
+        <div class="setting"><span>👑 ولي أمر <small class="muted">(تظهر له إشعارات الطلبات)</small></span>
+          <div class="seg"><button class="${isParent(p) ? 'on' : ''}" data-act="setParent" data-arg="1">نعم</button><button class="${isParent(p) ? '' : 'on'}" data-act="setParent" data-arg="0">لا</button></div></div>
+      </div>
+        <button class="link-btn danger" data-act="deleteProfile" data-arg="${p.id}">🗑️ حذف ${esc(p.name)}</button>
+      </div>`;
   }
 
   // ───────────── زر الرجوع ─────────────
@@ -3570,6 +3580,8 @@
     openParent() {
       parentOK = false;
       editReward = null;
+      addingReward = false;
+      parentTab = pendingRequests().length ? 'rewards' : 'kids';
       pinStage = null;
       pinBuffer = '';
       Screens.parentGate();
@@ -3643,6 +3655,8 @@
     setGoal(v) { Store.state.settings.goalMin = Number(v); Store.save(); Screens.parent(); },
     setMax(v) { Store.state.settings.maxMin = Number(v); Store.save(); Screens.parent(); },
     parentKid(id) { parentKid = id; kidPinShown = false; Screens.parent(); },
+    parentTab(t) { parentTab = t; editReward = null; Screens.parent(); window.scrollTo(0, 0); },
+    toggleAddReward() { addingReward = !addingReward; stayAt(() => Screens.parent()); },
     parentWorld(id) { parentWorld = id; Screens.parent(); },
     boardWorld(id) { boardWorld = id; if (nav.cur === 'camp') Screens.camp(); else Screens.profiles(); },
     renameKid() {
@@ -3911,9 +3925,10 @@
       if (st === 'ok' || st === 'syncing' || st === 'offline') toast('✅ تم تسجيل الدخول، التقدّم يُزامَن الآن');
       Screens.profiles();
     } else if (app.querySelector('.screen.parent') && parentOK) {
+      // بطاقة المزامنة في تبويب الإعدادات فقط
       const card = $('syncCard');
-      if (changed || !card) Screens.parent();
-      else card.outerHTML = syncCard();
+      if (changed) Screens.parent();
+      else if (card) card.outerHTML = syncCard();
     } else if ((app.querySelector('.profile-grid') || !Store.current()) && !app.querySelector('.pin-card, .form-card')) {
       if (st === 'out' && !welcomeSkipped && navigator.onLine) Screens.welcome();
       else if (changed || app.querySelector('.profile-grid')) Screens.profiles();

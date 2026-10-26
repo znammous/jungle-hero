@@ -887,6 +887,9 @@ button.rank-badge { border: 0; font: inherit; font-weight: 800; cursor: pointer;
 .seg button.on { background: var(--leaf); color: #fff; }
 .kid-tabs { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
 .kid-tabs .chip.on { background: var(--sun); color: var(--ink); }
+.parent-tabs { position: sticky; top: 8px; z-index: 5; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15); }
+.parent-tabs button { flex: 1; padding: 10px 6px; font-size: 1rem; }
+.parent-tabs .notif-badge { margin-inline-start: 4px; }
 /* داخل البطاقات الفاتحة (اختيار الغابة، لوحة المتصدرين): الأزرار غير المختارة بيضاء بإطار */
 .card .kid-tabs .chip:not(.on) { background: #fff; color: var(--ink); border: 2px solid var(--sand-dark); }
 .compare { width: 100%; border-collapse: separate; border-spacing: 0 6px; margin-top: 8px; text-align: center; }
