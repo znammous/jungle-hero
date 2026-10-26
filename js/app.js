@@ -13,6 +13,8 @@
   let netPending = null;  // دعوة سباق على عدة أجهزة قبل أن يبدأ: { id, role, pid }
   let newAvatar = AVATARS[0];
   let welcomeSkipped = false;   // اختار «متابعة بدون مزامنة» في هذه المرة
+  let pairing = null;           // رمز انضمام جهاز جديد يعرضه ولي الأمر: { code, exp, kid }
+  let joinCode = '';            // الرمز المكتوب أو الممسوح في شاشة الانضمام
 
   // لوحة ولي الأمر
   let parentOK = false;   // فُتحت بالرمز في هذه الزيارة
@@ -130,13 +132,36 @@
           <button class="btn green wide google-btn" data-act="syncIn">
             <span class="g-logo">G</span> تسجيل الدخول بحساب Google
           </button>
-          <p class="muted">مرة واحدة فقط على كل جهاز، بنفس الحساب.</p>
+          <p class="muted">على جهاز ولي الأمر مرة واحدة فقط.</p>
+          <button class="btn orange wide" data-act="go" data-arg="join">📷 جهاز طفل؟ انضم برمز من ولي الأمر</button>
           <button class="link-btn dark" data-act="skipWelcome">متابعة بدون مزامنة ←</button>
         </div>
       </section>`);
     },
 
+    // جهاز الطفل ينضم إلى العائلة برمز QR أو بكتابة الرمز الظاهر في لوحة ولي الأمر
+    join() {
+      render(`<section class="screen welcome">
+        <header class="topbar"><button class="chip" data-act="showWelcome">→ رجوع</button></header>
+        <div class="card welcome-card">
+          <div class="welcome-icon">📱</div>
+          <h2>انضم إلى العائلة</h2>
+          <p>افتح <b>لوحة ولي الأمر</b> على جهاز ولي الأمر، ثم «أضف جهازاً»، وامسح الرمز أو اكتبه هنا.</p>
+          <div class="scan-box" id="scanBox" hidden><video id="scanVideo" playsinline muted></video></div>
+          <button class="btn green wide" data-act="scanJoin" id="scanBtn">📷 امسح رمز QR</button>
+          <div class="reward-form join-form">
+            <input id="joinInput" maxlength="9" placeholder="XXXX-XXXX" autocomplete="off" autocapitalize="characters" spellcheck="false" dir="ltr" value="${esc(joinCode)}">
+            <button class="btn orange small" data-act="joinFamily">انضم</button>
+          </div>
+        </div>
+      </section>`);
+    },
+
     profiles() {
+      // جهاز خاص بطفل: يفتح ملفه مباشرة بدون اختيار المستكشف
+      const own = ownerKid();
+      // (لا تبقى في سجلّ الرجوع حتى يخرج زر الرجوع من المخيّم كالمعتاد)
+      if (own) { nav.cur = null; enterProfile(own.id); return; }
       const list = Store.state.profiles;
       const pending = pendingRequests().length;
       // من يعود إلى هنا يحتاج رمز الطفل ليدخل ملفه من جديد
@@ -217,7 +242,8 @@
 
       render(`<section class="screen">
         <header class="topbar">
-          <button class="chip" data-act="go" data-arg="profiles">🔄 تغيير</button>
+          ${ownerKid() ? '<button class="chip" data-act="openParent" aria-label="ولي الأمر">👨‍👩‍👧</button>'
+            : '<button class="chip" data-act="go" data-arg="profiles">🔄 تغيير</button>'}
           <div class="chip coins">🪙 <b>${p.coins}</b></div>
           <button class="chip" data-act="toggleMute" aria-label="الصوت">${Store.state.muted ? '🔇' : '🔊'}</button>
         </header>
@@ -275,6 +301,8 @@
             <span>${ltr(`${mins}/${s.goalMin}`)} دقيقة</span>
           </div>
         </div>
+
+        ${ownerKid() ? leaderboard(Store.state.profiles) + compareCard(Store.state.profiles, false) : ''}
 
         <div class="card campsite">
           <h3>⛺ مخيّمك</h3>
@@ -506,7 +534,7 @@
       const brainKind = duelKind === 'brain', rope = duelKind === 'rope';
       // في عدة أجهزة يختار الطفل نفسه فقط (وغالباً يكون مختاراً مسبقاً)، فالزر فوق الأسماء
       const sendBtn = `<button class="btn green wide" data-act="netHost" data-arg="${duelKind}" ${n === 1 && canNet && (!brainKind || duelBrainPicks().length) ? '' : 'disabled'}>📨 أرسل الدعوة</button>`;
-      const netNote = canNet ? 'تحتاج الأجهزة إلى الإنترنت وحساب Google نفسه.' : '⚠️ سجّل دخول ولي الأمر بحساب Google على كل الأجهزة أولاً، مع اتصال بالإنترنت.';
+      const netNote = canNet ? 'تحتاج الأجهزة إلى الإنترنت وأن تكون مرتبطة بحساب العائلة.' : '⚠️ اربط الأجهزة بحساب العائلة أولاً (لوحة ولي الأمر ← أضف جهازاً)، مع اتصال بالإنترنت.';
       render(`<section class="screen duel-screen">
         <header class="topbar">
           <button class="chip" data-act="go" data-arg="home">→ رجوع</button>
@@ -1166,6 +1194,21 @@
   const isParent = p => parents().includes(p.id);
   const badge = n => n ? `<span class="notif-badge">${ltr(n)}</span>` : '';
 
+  // الطفل صاحب هذا الجهاز (يُحفظ على الجهاز فقط، لا يُزامَن)
+  const OWNER_KEY = 'jungle-hero-owner';
+  const ownerId = () => { try { return localStorage.getItem(OWNER_KEY) || ''; } catch (e) { return ''; } };
+  const setOwnerId = id => { try { id ? localStorage.setItem(OWNER_KEY, id) : localStorage.removeItem(OWNER_KEY); } catch (e) {} };
+  const ownerKid = () => { const id = ownerId(); return id && Store.state.profiles.find(k => k.id === id) || null; };
+  const deviceName = () => {
+    const ua = navigator.userAgent;
+    if (/iPad|Macintosh/.test(ua) && navigator.maxTouchPoints > 1) return 'iPad';
+    if (/iPhone/.test(ua)) return 'iPhone';
+    if (/Android/.test(ua)) return /Mobile/.test(ua) ? 'جوال Android' : 'تابلت Android';
+    if (/Mac/.test(ua)) return 'Mac';
+    if (/Windows/.test(ua)) return 'Windows';
+    return 'جهاز';
+  };
+
   // إشعار الطلبات المعلّقة: في الشاشة الرئيسية، وفي مخيّم ولي الأمر
   function requestsBanner() {
     const n = pendingRequests().length;
@@ -1248,11 +1291,52 @@
       <button class="btn green wide" data-act="syncIn">تسجيل الدخول بحساب Google</button>`;
     else {
       const label = { syncing: '⏳ جارٍ المزامنة…', offline: '📴 بدون اتصال — ستُرفع التعديلات عند عودة الإنترنت', ok: `✅ متزامن${when ? ` · آخر مزامنة ${when}` : ''}`, error: '⚠️ تعذّرت المزامنة' }[st];
-      body = `<p>${label}</p>
+      body = Sync.role() === 'device' ? `<p>${label}</p>
+        <p class="muted">📱 هذا الجهاز مرتبط بحساب العائلة برمز من ولي الأمر.</p>
+        <div class="setting"><span>صاحب الجهاز</span></div>
+        <div class="kid-tabs">${Store.state.profiles.map(k =>
+          `<button class="chip ${ownerId() === k.id ? 'on' : ''}" data-act="setOwner" data-arg="${k.id}">${k.avatar} ${esc(k.name)}</button>`).join('')}
+          <button class="chip ${ownerId() ? '' : 'on'}" data-act="setOwner" data-arg="">👨‍👩‍👧 جهاز مشترك</button></div>
+        <button class="link-btn dark" data-act="syncOut">فصل هذا الجهاز عن العائلة</button>`
+        : `<p>${label}</p>
         <p class="muted" dir="ltr">${esc(Sync.email())}</p>
+        ${devicesBox()}
         <button class="link-btn dark" data-act="syncOut">تسجيل الخروج من هذا الجهاز</button>`;
     }
     return `<div class="card" id="syncCard"><h3>☁️ المزامنة بين الأجهزة</h3>${body}</div>`;
+  }
+
+  // أجهزة الأطفال المرتبطة، وإضافة جهاز جديد برمز QR بدل تسجيل الدخول بالحساب نفسه
+  function devicesBox() {
+    const kids = Store.state.profiles;
+    const kidOf = id => kids.find(k => k.id === id);
+    const who = id => { const k = kidOf(id); return k ? `${k.avatar} ${esc(k.name)}` : '👨‍👩‍👧 مشترك'; };
+    const list = Sync.devices();
+    const rows = list.length
+      ? `<ul class="request-list device-list">${list.map(d =>
+          `<li><span>${who(d.kid)} <small class="muted">· ${esc(d.name || 'جهاز')}</small></span>
+            <button class="link-btn danger" data-act="removeDevice" data-arg="${d.id}">فصل</button></li>`).join('')}</ul>`
+      : '<p class="muted">لا توجد أجهزة أطفال مرتبطة بعد.</p>';
+    let add;
+    if (pairing && pairing.exp > Date.now()) {
+      const url = `${location.origin}${location.pathname}#join=${pairing.code}`;
+      const qr = qrcode(0, 'M');
+      qr.addData(url);
+      qr.make();
+      add = `<div class="pair-box">
+        <p>على جهاز ${who(pairing.kid)}: افتح اللعبة ← «جهاز طفل؟ انضم برمز» ثم امسح الرمز أو اكتبه</p>
+        <div class="qr">${qr.createSvgTag({ cellSize: 4, margin: 2, scalable: true })}</div>
+        <b class="pair-code" dir="ltr">${pairing.code.slice(0, 4)}-${pairing.code.slice(4)}</b>
+        <small class="muted">صالح لعشر دقائق</small>
+        <button class="link-btn dark" data-act="cancelPair">إلغاء</button>
+      </div>`;
+    } else {
+      add = `<div class="setting"><span>➕ أضف جهازاً لـ</span></div>
+        <div class="kid-tabs">${kids.map(k =>
+          `<button class="chip" data-act="pairDevice" data-arg="${k.id}">${k.avatar} ${esc(k.name)}</button>`).join('')}
+          <button class="chip" data-act="pairDevice" data-arg="">👨‍👩‍👧 جهاز مشترك</button></div>`;
+    }
+    return `<h4>📱 أجهزة الأطفال</h4>${rows}${add}`;
   }
 
   // لوحة المتصدرين: الصغار والكبار كلٌّ في لوحته، يحدّد ولي الأمر مجموعة كل طفل
@@ -2849,6 +2933,75 @@
     $('pinDots').innerHTML = pinDots(pinBuffer);
   }
 
+  function refreshSyncCard() {
+    const card = $('syncCard');
+    if (card) card.outerHTML = syncCard();
+  }
+
+  function joinWith(code) {
+    joinCode = code;
+    stopScan();
+    if (Sync.status() === 'loading') { toast('⏳ لحظة، جارٍ الاتصال…'); return; }
+    if (Sync.status() === 'unavailable' || !navigator.onLine) { toast('📡 الانضمام يحتاج اتصالاً بالإنترنت'); return; }
+    toast('⏳ جارٍ الانضمام…');
+    Sync.join(code, deviceName()).then(kid => {
+      joinCode = '';
+      setOwnerId(kid);
+      toast('✅ انضم الجهاز إلى العائلة');
+      Screens.profiles();
+    }).catch(e => {
+      const msg = { expired: '⚠️ الرمز غير صحيح أو انتهت صلاحيته. اطلب رمزاً جديداً من ولي الأمر.',
+        'signed-in': 'هذا الجهاز مسجّل بحساب Google بالفعل.', network: '📡 تعذّر الاتصال، تأكد من الإنترنت' }[e.message];
+      toast(msg || '⚠️ تعذّر الانضمام', 5000);
+    });
+  }
+
+  // مسح رمز QR بالكاميرا داخل اللعبة (مكتبة jsQR تُحمَّل عند الحاجة فقط)
+  let scanStream = null;
+  function stopScan() {
+    if (scanStream) scanStream.getTracks().forEach(t => t.stop());
+    scanStream = null;
+  }
+  const loadJsQR = () => window.jsQR ? Promise.resolve() : new Promise((ok, fail) => {
+    const sc = document.createElement('script');
+    sc.src = 'js/vendor/jsQR.js';
+    sc.onload = ok;
+    sc.onerror = fail;
+    document.head.appendChild(sc);
+  });
+  async function startScan() {
+    if (scanStream) return;
+    try {
+      const [stream] = await Promise.all([
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } }),
+        loadJsQR(),
+      ]);
+      scanStream = stream;
+    } catch (e) { toast('📷 تعذّر فتح الكاميرا. اكتب الرمز بدلاً من ذلك.', 4000); return; }
+    const video = $('scanVideo');
+    if (!video) { stopScan(); return; }
+    $('scanBox').hidden = false;
+    $('scanBtn').hidden = true;
+    video.srcObject = scanStream;
+    video.play().catch(() => {});
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    const tick = () => {
+      if (!scanStream || !document.body.contains(video)) { stopScan(); return; }
+      if (video.readyState >= 2 && video.videoWidth) {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0);
+        const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const hit = jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
+        const m = hit && hit.data.match(/join=([0-9A-Z]{8})/i);
+        if (m) { Sound.play('right'); joinWith(m[1].toUpperCase()); return; }
+      }
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }
+
   function enterProfile(id) {
     kidPin = null;
     Store.select(id);
@@ -3491,7 +3644,7 @@
     setMax(v) { Store.state.settings.maxMin = Number(v); Store.save(); Screens.parent(); },
     parentKid(id) { parentKid = id; kidPinShown = false; Screens.parent(); },
     parentWorld(id) { parentWorld = id; Screens.parent(); },
-    boardWorld(id) { boardWorld = id; Screens.profiles(); },
+    boardWorld(id) { boardWorld = id; if (nav.cur === 'camp') Screens.camp(); else Screens.profiles(); },
     renameKid() {
       const p = Store.state.profiles.find(k => k.id === parentKid);
       if (!p || !parentOK) return;
@@ -3617,8 +3770,44 @@
     showWelcome() { Screens.welcome(); },
 
     syncOut() {
-      if (confirm('تسجيل الخروج من هذا الجهاز؟ يبقى التقدّم محفوظاً عليه لكن لن يُزامَن.')) Sync.signOut();
+      const msg = Sync.role() === 'device'
+        ? 'فصل هذا الجهاز عن العائلة؟ يبقى التقدّم محفوظاً عليه لكن لن يُزامَن.'
+        : 'تسجيل الخروج من هذا الجهاز؟ يبقى التقدّم محفوظاً عليه لكن لن يُزامَن.';
+      if (!confirm(msg)) return;
+      setOwnerId('');
+      Sync.signOut();
     },
+
+    pairDevice(kid) {
+      if (!parentOK) return;
+      Sync.createCode(kid).then(r => {
+        pairing = { ...r, kid };
+        Screens.parent();
+        // نخفي الرمز عند انتهائه
+        setTimeout(() => { if (pairing && pairing.code === r.code) { pairing = null; refreshSyncCard(); } }, r.exp - Date.now() + 500);
+      }).catch(() => toast('⚠️ تعذّر إنشاء الرمز. تأكد من الإنترنت.'));
+    },
+
+    cancelPair() { pairing = null; refreshSyncCard(); },
+
+    removeDevice(id) {
+      if (!parentOK || !confirm('فصل هذا الجهاز عن العائلة؟')) return;
+      Sync.removeDevice(id).then(() => toast('تم فصل الجهاز')).catch(() => toast('⚠️ تعذّر فصل الجهاز'));
+    },
+
+    setOwner(id) {
+      if (!parentOK) return;
+      setOwnerId(id);
+      refreshSyncCard();
+    },
+
+    joinFamily() {
+      const code = ($('joinInput').value || '').toUpperCase().replace(/[^0-9A-Z]/g, '');
+      if (code.length !== 8) { toast('الرمز 8 أحرف وأرقام ✏️'); $('joinInput').focus(); return; }
+      joinWith(code);
+    },
+
+    scanJoin() { startScan(); },
   };
 
   app.addEventListener('click', e => {
@@ -3701,9 +3890,21 @@
 
   // وصلت بيانات من جهاز آخر أو تغيّرت حالة المزامنة: نحدّث الشاشة إن كانت لا تتأثر بجولة جارية
   Sync.onUpdate(changed => {
+    // فُصل جهاز الطفل أو خرج: يعود جهازاً عادياً
+    if (Sync.status() === 'out' && ownerId()) {
+      setOwnerId('');
+      toast('هذا الجهاز لم يعد مرتبطاً بالعائلة');
+      if (!round && !duel && !brain) Screens.profiles();
+    }
+    // انضم جهاز بالرمز المعروض: نخفيه
+    if (pairing && Sync.devices().some(d => d.code === pairing.code)) {
+      pairing = null;
+      toast('✅ انضم جهاز جديد إلى العائلة');
+    }
     // سباق الإخوة وشاشاته لا تتعلق بمستكشف واحد، فلا نعيد رسمها
     if (round || duel || brain || app.querySelector('.duel-screen')) return;
     const st = Sync.status();
+    if (app.querySelector('#joinInput')) return;
     if (app.querySelector('.screen.welcome')) {
       // نجح تسجيل الدخول (أو تعذّرت المزامنة): ننتقل لاختيار المستكشف
       if (st === 'out') return;
@@ -3769,8 +3970,20 @@
   }
 
   Store.load();
+  // رابط من رمز QR مسحته كاميرا الجهاز: نفتح شاشة الانضمام والرمز مكتوب فيها
+  const joinFromHash = () => {
+    const m = location.hash.match(/join=([0-9A-Z]{8})/i);
+    if (!m) return false;
+    joinCode = m[1].toUpperCase();
+    history.replaceState(history.state, '', location.pathname + location.search);
+    if (!round && !duel && !brain) go('join');
+    return true;
+  };
+  window.addEventListener('hashchange', joinFromHash);
+  if (joinFromHash()) { /* شاشة الانضمام */ }
   // يبقى المستكشف داخلاً بين مرات فتح اللعبة، ولا يُطلب رمزه إلا بعد «تغيير»
-  if (Store.current()) enterProfile(Store.state.currentId);
+  else if (ownerKid()) enterProfile(ownerKid().id);
+  else if (Store.current()) enterProfile(Store.state.currentId);
   else Screens.profiles();
   Sync.start();
 })();
