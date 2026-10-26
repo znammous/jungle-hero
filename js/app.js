@@ -1351,11 +1351,11 @@
     const qr = qrcode(0, 'M');
     qr.addData(`${location.origin}${location.pathname}#join=${pairing.code}`);
     qr.make();
-    return `<div class="pair-box">
+    return `<div class="pair-box ${pairing.ready ? '' : 'pending'}">
       <p>على جهاز ${who}: افتح اللعبة ← «جهاز طفل؟ انضم برمز» ثم امسح الرمز أو اكتبه</p>
       <div class="qr">${qr.createSvgTag({ cellSize: 4, margin: 2, scalable: true })}</div>
       <b class="pair-code" dir="ltr">${pairing.code.slice(0, 4)}-${pairing.code.slice(4)}</b>
-      <small class="muted">صالح لعشر دقائق</small>
+      <small class="muted">${pairing.ready ? '✅ جاهز · صالح لعشر دقائق' : '<span class="spinner"></span> جارٍ تفعيل الرمز…'}</small>
       <button class="link-btn dark" data-act="cancelPair">إلغاء</button>
     </div>`;
   }
@@ -3860,12 +3860,15 @@
 
     pairDevice(kid) {
       if (!parentOK) return;
-      Sync.createCode(kid).then(r => {
-        pairing = { ...r, kid };
-        showPairing();
-        // نخفي الرمز عند انتهائه
-        setTimeout(() => { if (pairing && pairing.code === r.code) { pairing = null; showPairing(); } }, r.exp - Date.now() + 500);
-      }).catch(() => toast('⚠️ تعذّر إنشاء الرمز. تأكد من الإنترنت.'));
+      // يظهر الرمز فوراً باهتاً، ويصبح صالحاً عندما يحفظه الخادم
+      const { code, exp, ready } = Sync.createCode(kid);
+      pairing = { code, exp, kid, ready: false };
+      showPairing();
+      const mine = () => pairing && pairing.code === code;
+      ready.then(() => { if (mine()) { pairing.ready = true; showPairing(); } })
+        .catch(() => { if (mine()) { pairing = null; showPairing(); toast('⚠️ تعذّر إنشاء الرمز. تأكد من الإنترنت.'); } });
+      // نخفي الرمز عند انتهائه
+      setTimeout(() => { if (mine()) { pairing = null; showPairing(); } }, exp - Date.now() + 500);
     },
 
     cancelPair() { pairing = null; showPairing(); },

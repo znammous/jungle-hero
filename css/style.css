@@ -1294,3 +1294,6 @@ body.tabs .toast, body.tabs .update-bar { bottom: calc(84px + env(safe-area-inse
 .offer-device { display: flex; flex-direction: column; gap: 10px; align-items: center; text-align: center; }
 .offer-device .kid-tabs { align-items: center; }
 .add-device .pair-box { border: none; padding: 0; }
+.pair-box .qr { transition: opacity 0.3s; }
+.pair-box.pending .qr, .pair-box.pending .pair-code { opacity: 0.3; }
+.spinner { display: inline-block; width: 0.9em; height: 0.9em; border: 2px solid currentColor; border-top-color: transparent; border-radius: 50%; vertical-align: -0.1em; animation: spin 0.8s linear infinite; }

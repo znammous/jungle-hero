@@ -147,13 +147,16 @@ const Sync = (() => {
   // رمز من 8 أحرف بلا الأحرف المتشابهة (0/O و1/I/L)، صالح لعشر دقائق
   const ALPHABET = '23456789ABCDEFGHJKMNPQRSTUVWXYZ';
   const CODE_MS = 10 * 60 * 1000;
-  async function createCode(kid) {
+  // يعيد الرمز فوراً ليُعرض، و ready يكتمل عندما يحفظه الخادم (أو يفشل بعد 15 ثانية بلا اتصال)
+  function createCode(kid) {
     const bytes = crypto.getRandomValues(new Uint8Array(8));
     const code = Array.from(bytes, b => ALPHABET[b % ALPHABET.length]).join('');
     const exp = Date.now() + CODE_MS;
-    await fb.fs.setDoc(fb.fs.doc(fb.db, 'pairCodes', code),
-      { fid, kid: kid || '', exp: fb.fs.Timestamp.fromMillis(exp) });
-    return { code, exp };
+    const ready = Promise.race([
+      fb.fs.setDoc(fb.fs.doc(fb.db, 'pairCodes', code), { fid, kid: kid || '', exp: fb.fs.Timestamp.fromMillis(exp) }),
+      new Promise((_, fail) => setTimeout(() => fail(new Error('timeout')), 15000)),
+    ]);
+    return { code, exp, ready };
   }
 
   // ينضم هذا الجهاز إلى عائلة ولي الأمر، ويعيد معرّف الطفل صاحب الجهاز (أو '' لجهاز مشترك)
