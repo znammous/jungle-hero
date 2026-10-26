@@ -27,7 +27,8 @@
   let parentTab = 'kids';  // تبويب اللوحة: 'kids' | 'rewards' | 'settings'
   let boardWorld = 'mul';  // الغابة المعروضة في لوحة المتصدرين
 
-  // رمز دخول الطفل: { mode: 'login'|'create'|'change', id, name, avatar, stage: 'enter'|'old'|'new'|'confirm', buf, first }
+  // رمز دخول الطفل: { mode: 'login'|'create'|'change'|'verify', id, name, avatar, stage: 'enter'|'old'|'new'|'confirm', buf, first }
+  // verify: يلعب باسم مستكشف غير المسجّل على الجهاز (دعوات اللعب على عدة أجهزة)، ثم then() و back للرجوع
   let kidPin = null;
 
   const esc = s => String(s).replace(/[&<>"']/g, c =>
@@ -203,13 +204,13 @@
       const p = k.mode === 'create' ? k : Store.state.profiles.find(x => x.id === k.id);
       if (!p) { kidPin = null; go('home'); return; }
       const prompts = {
-        enter: `أهلاً يا ${esc(p.name)}! أدخل رمزك السري`,
+        enter: k.mode === 'verify' ? `لتلعب باسم ${esc(p.name)}: أدخل رمزه السري` : `أهلاً يا ${esc(p.name)}! أدخل رمزك السري`,
         old: 'أدخل رمزك الحالي',
         new: k.mode === 'login' ? 'اختر رمزاً سرياً من 4 أرقام ليحمي ملفك 🔒' : 'اختر رمزاً سرياً من 4 أرقام تتذكّره',
         confirm: 'أعد إدخال الرمز للتأكيد',
       };
       render(`<section class="screen">
-        <header class="topbar"><button class="chip" data-act="go" data-arg="${k.mode === 'change' ? 'editProfile' : 'profiles'}">→ رجوع</button></header>
+        <header class="topbar"><button class="chip" data-act="go" data-arg="${k.mode === 'change' ? 'editProfile' : k.back || 'profiles'}">→ رجوع</button></header>
         <div class="card pin-card kid-pin">
           <span class="avatar">${p.avatar}</span>
           <p>${prompts[k.stage]}</p>
@@ -2110,6 +2111,15 @@
   const activePlayers = d => Object.values((d && d.players) || {})
     .filter(x => !x.left).sort((a, b) => a.joinedAt - b.joinedAt);
 
+  // اللعب باسم مستكشف غير المسجّل على هذا الجهاز يحتاج رمزه، حتى لا يلعب أحد باسم غيره
+  function asPlayer(id, back, then) {
+    const p = Store.state.profiles.find(k => k.id === id);
+    if (!p) return;
+    if (p.id === Store.state.currentId || !p.pin) { then(); return; }
+    kidPin = { mode: 'verify', id, stage: 'enter', buf: '', first: '', back, then };
+    go('kidPin');
+  }
+
   function netHost(kind = 'race') {
     const p = Store.state.profiles.find(k => k.id === duelPicks[0]);
     if (!p) return;
@@ -3170,6 +3180,7 @@
         const p = Store.state.profiles.find(x => x.id === k.id);
         if (k.stage === 'enter' || k.stage === 'old') {
           if (p && entered === p.pin) {
+            if (k.mode === 'verify') { kidPin = null; k.then(); return; }
             if (k.stage === 'enter') { enterProfile(p.id); return; }
             k.stage = 'new';
           } else { Sound.play('wrong'); toast('الرمز غير صحيح'); }
@@ -3291,9 +3302,9 @@
     startRope() { startDuel('rope'); },
     setDuelLand(id) { duelLand = id; Screens.duelPick(); },
     setDuelMode(m) { duelMode = m; duelPicks = duelPicks.slice(0, m === 'net' ? 1 : MAX_LOCAL); Screens.duelPick(); },
-    netHost(kind) { netHost(kind); },
+    netHost(kind) { const id = duelPicks[0]; asPlayer(id, 'duelPick', () => netHost(kind)); },
     netStart() { netStart(); },
-    netJoin(pid) { netJoin(pid); },
+    netJoin(pid) { asPlayer(pid, 'home', () => netJoin(pid)); },
     netCancel() { netCancel(); },
     setDuelLayout(id) {
       const k = Math.min(Math.max(duelPicks.length, 2), MAX_PLAYERS);
