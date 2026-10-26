@@ -766,6 +766,9 @@ button.rank-badge { border: 0; font: inherit; font-weight: 800; cursor: pointer;
 .pending-row:first-of-type { border-top: 0; }
 .pending-actions { display: flex; gap: 8px; }
 .preset-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 6px 0 4px; }
+.chip.preset { display: inline-flex; align-items: center; gap: 6px; padding: 0 6px 0 0; }
+.chip.preset > button { padding: 8px 4px 8px 0; font: inherit; color: inherit; }
+.chip.preset .preset-x { padding: 8px 10px; color: var(--red); font-weight: 800; border-inline-start: 1px solid var(--sand-dark); }
 .chip.light { background: #fff; color: var(--ink); font-size: 0.9rem; padding: 8px 12px; border: 2px solid var(--sand-dark); }
 .label { font-weight: 700; margin-top: 12px; }
 .emoji-row { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }

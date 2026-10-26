@@ -1176,7 +1176,8 @@
   const rewards = () => Store.state.settings.rewards || (Store.state.settings.rewards = []);
   const requests = p => p.requests || (p.requests = []);
   let newRewardEmoji = REWARD_EMOJIS[0];
-  let addingReward = false; // نموذج إضافة جائزة مفتوح
+  // اقتراحات حذفها ولي الأمر نهائياً (بالاسم)
+  const hiddenPresets = () => Store.state.settings.hiddenPresets || (Store.state.settings.hiddenPresets = []);
   let editReward = null;  // الجائزة التي يعدّلها ولي الأمر الآن: { id, emoji }
 
   function requestsList(p) {
@@ -1253,7 +1254,7 @@
 
   function rewardsCard() {
     const list = rewards();
-    const presets = REWARD_PRESETS.filter(x => !list.some(r => r.name === x.name));
+    const presets = REWARD_PRESETS.filter(x => !list.some(r => r.name === x.name) && !hiddenPresets().includes(x.name));
     return `<div class="card">
       <h3>🏠 جوائز العائلة</h3>
       <p class="muted">جوائز حقيقية يشتريها الأطفال بعملاتهم. عند الشراء يصلك طلب هنا لتؤكد التسليم، أو ترفضه فتعود العملات.</p>
@@ -1271,10 +1272,10 @@
         <button class="link-btn edit" data-act="editReward" data-arg="${r.id}" aria-label="تعديل">✏️</button>
         <button class="link-btn danger" data-act="removeReward" data-arg="${r.id}" aria-label="حذف">✕</button>
       </li>`).join('')}</ul>` : ''}
-      ${list.length && !addingReward ? '<button class="btn green wide" data-act="toggleAddReward">➕ إضافة جائزة</button>' : `
       ${presets.length ? `<p class="label">اقتراحات سريعة:</p>
         <div class="preset-row">${presets.map((x, i) =>
-          `<button class="chip light" data-act="addPreset" data-arg="${REWARD_PRESETS.indexOf(x)}">${x.emoji} ${x.name} · ${x.price}</button>`).join('')}</div>` : ''}
+          `<span class="chip light preset"><button data-act="addPreset" data-arg="${REWARD_PRESETS.indexOf(x)}">${x.emoji} ${x.name} · ${x.price}</button>
+            <button class="preset-x" data-act="hidePreset" data-arg="${REWARD_PRESETS.indexOf(x)}" aria-label="حذف الاقتراح">✕</button></span>`).join('')}</div>` : ''}
       <p class="label">أو أضف جائزة من عندك:</p>
       <div class="emoji-row">${REWARD_EMOJIS.map(e =>
         `<button class="avatar-btn small ${e === newRewardEmoji ? 'selected' : ''}" data-act="pickRewardEmoji" data-arg="${e}">${e}</button>`).join('')}</div>
@@ -1283,7 +1284,6 @@
         <input id="rewardPrice" type="number" inputmode="numeric" min="10" max="2000" placeholder="السعر" dir="ltr">
         <button class="btn green small" data-act="addReward">➕ إضافة</button>
       </div>
-      ${list.length ? '<button class="link-btn dark" data-act="toggleAddReward">إغلاق</button>' : ''}`}
     </div>`;
   }
 
@@ -3591,7 +3591,6 @@
     openParent() {
       parentOK = false;
       editReward = null;
-      addingReward = false;
       parentTab = pendingRequests().length ? 'rewards' : 'kids';
       pinStage = null;
       pinBuffer = '';
@@ -3667,7 +3666,13 @@
     setMax(v) { Store.state.settings.maxMin = Number(v); Store.save(); Screens.parent(); },
     parentKid(id) { parentKid = id; kidPinShown = false; Screens.parent(); },
     parentTab(t) { parentTab = t; editReward = null; Screens.parent(); window.scrollTo(0, 0); },
-    toggleAddReward() { addingReward = !addingReward; stayAt(() => Screens.parent()); },
+    hidePreset(i) {
+      const x = REWARD_PRESETS[Number(i)];
+      if (!x || !parentOK || !confirm(`حذف اقتراح «${x.name}» نهائياً؟`)) return;
+      hiddenPresets().push(x.name);
+      Store.save();
+      stayAt(() => Screens.parent());
+    },
     parentWorld(id) { parentWorld = id; Screens.parent(); },
     boardWorld(id) { boardWorld = id; if (nav.cur === 'camp') Screens.camp(); else Screens.profiles(); },
     renameKid() {
