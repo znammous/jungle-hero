@@ -42,7 +42,7 @@
     { name: 'shop', icon: '🎒', label: 'المتجر' },
     { name: 'performance', icon: '📊', label: 'أدائي' },
   ];
-  const TAB_SCREENS = new Set(['camp', 'map', 'shop', 'animals', 'diary', 'performance', 'ranks', 'worlds']);
+  const TAB_SCREENS = new Set(['camp', 'map', 'shop', 'animals', 'diary', 'performance', 'ranks']);
 
   function tabBar() {
     return `<nav class="tabbar">${TABS.map(t => t.act
@@ -237,11 +237,19 @@
 
         ${groupBtn()}
 
-        <button class="card world-card" data-act="go" data-arg="worlds">
-          <span class="world-icon">${w.icon}</span>
-          <span class="world-info"><b>${w.name}</b><small>عالم الغابات: ${ltr(`${Engine.openWorlds(p).length}/${WORLDS.length}`)} مفتوحة</small></span>
-          <span class="world-go">🌍 تغيير ${ltr('‹')}</span>
-        </button>
+        <div class="card planets-card">
+          <h3>🌍 عالم الغابات <small>${ltr(`${Engine.openWorlds(p).length}/${WORLDS.length}`)} مفتوحة</small></h3>
+          <div class="planets">
+            ${WORLDS.map(x => {
+              const open = !x.soon && Engine.isOpen(p, x);
+              return `<button class="planet ${open ? '' : 'locked'} ${x === w ? 'on' : ''}" style="--glow: ${x.glow}" data-act="selectWorld" data-arg="${x.id}" aria-label="${x.name}">
+                <span class="planet-ball"><span>${x.planet}</span>${open ? '' : '<i>🔒</i>'}</span>
+                <b>${x.short}</b>
+                ${x === w ? '<small>⭐ أنت هنا</small>' : ''}
+              </button>`;
+            }).join('')}
+          </div>
+        </div>
 
         ${tired ? `<div class="banner rest">⛺ المستكشف يحتاج راحة! لعبت ${ltr(mins)} دقيقة اليوم</div>` : ''}
 
@@ -324,35 +332,6 @@
                 ${bar(m)}
               </span>
               <span class="region-animal ${found ? '' : 'hidden'}"><i>${found ? r.animal.emoji : '🐾'}</i></span>
-            </button>`;
-          }).join('')}
-        </div>
-      </section>`);
-    },
-
-    // عالم الغابات: كل غابة عملية حسابية، والمستكشف يختار أين يلعب
-    worlds() {
-      const p = Store.current();
-      const cur = Engine.current(p);
-      render(`<section class="screen">
-        ${subHeader('🌍 عالم الغابات')}
-        <p class="hint">كل غابة مغامرة جديدة بمناطقها وحيواناتها. عملاتك ومعدّاتك وسلسلة أيامك تبقى معك في كل الغابات!</p>
-        <div class="world-list">
-          ${WORLDS.map(w => {
-            const open = Engine.isOpen(p, w);
-            let info;
-            if (w.soon) info = '🚧 قيد البناء، قريباً!';
-            else if (!open) {
-              const r = Engine.world(w.needs.world).regions[w.needs.regions - 1];
-              info = `🔒 تُفتح عند الوصول إلى ${r.icon} ${r.name}`;
-            } else {
-              const ws = Engine.state(p, w.id);
-              info = `🐾 ${ltr(`${ws.animals.length}/${w.regions.length}`)} · ${Engine.rankFor(ws.bestRace).emoji} ${Engine.rankFor(ws.bestRace).name}`;
-            }
-            return `<button class="world ${open ? '' : 'locked'} ${w === cur ? 'on' : ''}" data-act="selectWorld" data-arg="${w.id}">
-              <span class="world-icon">${open ? w.icon : w.soon ? '🚧' : '🔒'}</span>
-              <span class="world-info"><b>${w.name}</b><small>${info}</small></span>
-              ${w === cur ? '<span class="world-here">⭐ أنت هنا</span>' : ''}
             </button>`;
           }).join('')}
         </div>
@@ -3186,10 +3165,12 @@
         toast(`🔒 تُفتح عندما تصل إلى ${r.icon} ${r.name} في ${Engine.world(w.needs.world).name}`, 3000);
         return;
       }
+      if (p.world === id) return;
       p.world = id;
       Store.save();
       Sound.play('coin');
       go('camp');
+      toast(`${w.planet} أهلاً بك في ${w.name}!`);
     },
 
     // الخروج من الجولة يعيدك إلى الشاشة التي بدأتها منها

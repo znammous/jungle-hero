@@ -78,18 +78,24 @@ const NEG_REGIONS = [
 
 // عالم الغابات: كل غابة عملية حسابية، مرتّبة كما في المنهج. needs = تُفتح عند فتح عدد من مناطق غابة أخرى
 // total = عدد المسائل المختلفة فيها، gen = مسائل تُولَّد عشوائياً، soon = لم تُبنَ بعد
+// planet = صورة كوكبها في الشاشة الرئيسية، glow = لون توهّجه، short = اسمه تحت الكوكب
 const WORLDS = [
   { id: 'add', name: 'غابة الجمع والطرح', icon: '➕', op: '+', regions: ADD_REGIONS, skill: 'الجمع والطرح', gen: true,
+    planet: '🍎', glow: '#7ee36b', short: 'الجمع والطرح',
     hint: 'ابدأ بالجمع والطرح حتى 10، ثم حتى 20، ثم حتى 100. كل إجابة صحيحة سريعة تقرّبك من إتقان المنطقة!' },
   { id: 'mul', name: 'غابة الضرب', icon: '✖️', op: '×', regions: REGIONS, unit: 'جدول', skill: 'الجداول', total: 78,
+    planet: '🐼', glow: '#ffa53c', short: 'الضرب',
     hint: 'اختر منطقة لتتدرّب على جدولها. أتقنها لتفتح المنطقة التالية وتكتشف حيوانها!' },
   { id: 'div', name: 'غابة القسمة', icon: '➗', op: '÷', regions: DIV_REGIONS, unit: 'القسمة على', skill: 'القسمة', total: 132,
+    planet: '🍌', glow: '#ffe14d', short: 'القسمة',
     needs: { world: 'mul', regions: 4 },
     hint: 'كل منطقة فيها القسمة على عدد. القسمة عكس الضرب: <span dir="ltr">7 × 8 = 56</span> إذن <span dir="ltr">56 ÷ 7 = 8</span>' },
   { id: 'frac', name: 'غابة الكسور', icon: '🍕', op: '', regions: FRAC_REGIONS, skill: 'الكسور', gen: true,
+    planet: '🍉', glow: '#ff7eb6', short: 'الكسور',
     needs: { world: 'mul', regions: 4 },
     hint: 'الكسر جزء من كل: البسط فوق يقول كم جزءاً أخذنا، والمقام تحت يقول إلى كم جزءاً قسمنا.' },
   { id: 'neg', name: 'غابة السالب والموجب', icon: '🌡️', op: '', regions: NEG_REGIONS, skill: 'السالب والموجب', gen: true,
+    planet: '🐧', glow: '#8fdcff', short: 'السالب والموجب',
     needs: { world: 'add', regions: 5 },
     hint: 'الأعداد السالبة أصغر من الصفر، مثل الحرارة تحت الصفر. على خط الأعداد: كلما ذهبت يساراً صغر العدد.' },
 ];
