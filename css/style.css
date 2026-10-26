@@ -1291,3 +1291,6 @@ body.tabs .toast, body.tabs .update-bar { bottom: calc(84px + env(safe-area-inse
 .join-form input { text-align: center; font-size: 1.4rem; letter-spacing: 0.15em; text-transform: uppercase; }
 .scan-box { width: 100%; max-width: 320px; aspect-ratio: 1; border-radius: 16px; overflow: hidden; background: #000; }
 .scan-box video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.offer-device { display: flex; flex-direction: column; gap: 10px; align-items: center; text-align: center; }
+.offer-device .kid-tabs { align-items: center; }
+.add-device .pair-box { border: none; padding: 0; }
