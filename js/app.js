@@ -566,7 +566,7 @@
       const layout = duelLayout(n);
       const brainKind = duelKind === 'brain', rope = duelKind === 'rope';
       // في عدة أجهزة يختار الطفل نفسه فقط (وغالباً يكون مختاراً مسبقاً)، فالزر فوق الأسماء
-      const sendBtn = `<button class="btn green wide" data-act="netHost" data-arg="${duelKind}" ${n === 1 && canNet && (!brainKind || duelBrainPicks().length) ? '' : 'disabled'}>📨 أرسل الدعوة</button>`;
+      const sendBtn = `<button class="btn gold wide" data-act="netHost" data-arg="${duelKind}" ${n === 1 && canNet && (!brainKind || duelBrainPicks().length) ? '' : 'disabled'}>📨 أرسل الدعوة</button>`;
       const netNote = canNet ? 'تحتاج الأجهزة إلى الإنترنت وأن تكون مرتبطة بحساب العائلة.' : '⚠️ اربط الأجهزة بحساب العائلة أولاً (لوحة ولي الأمر ← أضف جهازاً)، مع اتصال بالإنترنت.';
       render(`<section class="screen duel-screen">
         <header class="topbar">
@@ -587,7 +587,7 @@
           ? `<button class="${duelLand === ALL_LANDS ? 'on' : ''}" data-act="setDuelLand" data-arg="${ALL_LANDS}">${landName(ALL_LANDS)}</button>` : ''}</div>
         ${brainKind ? `<div class="card"><h3>🎮 الألعاب</h3>${brainPickGrid(duelBrainPicks(), 'duelBrainToggle')}</div>` : ''}
         ${net ? onlineStrip() + sendBtn : ''}
-        <button class="btn shot-btn wide" data-act="go" data-arg="winners">🏆 سجل الفائزين</button>
+        <button class="btn green wide winners-btn" data-act="go" data-arg="winners">🏆 سجل الفائزين</button>
         <div class="profile-grid">${list.map(p => {
           const i = duelPicks.indexOf(p.id);
           return `<button class="profile-card ${i >= 0 ? 'picked' : ''}" data-act="duelPick" data-arg="${p.id}">
