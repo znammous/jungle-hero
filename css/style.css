@@ -468,7 +468,11 @@ button.rank-badge { border: 0; font: inherit; font-weight: 800; cursor: pointer;
 .rank-step.current { background: var(--sun); color: var(--ink); box-shadow: 0 6px 0 var(--orange); transform: scale(1.02); }
 
 /* ───── شاشة اللعب ───── */
-.play { gap: 12px; }
+/* شاشات الأسئلة تملأ الطول، والسؤال مع إجاباته في منتصف المساحة المتبقية */
+.play { gap: 12px; min-height: 100vh; min-height: 100dvh; }
+.play-body { flex: 1; justify-content: center; }
+.screen.brain .brain-stage { margin-top: auto; }
+.screen.brain > .feedback:last-child { margin-bottom: auto; }
 .track {
   position: relative;
   height: 74px;
@@ -505,7 +509,7 @@ button.rank-badge { border: 0; font: inherit; font-weight: 800; cursor: pointer;
 .steps i.right { background: var(--leaf-light); }
 .steps i.wrong { background: var(--red); }
 
-.play-body { display: flex; flex-direction: column; gap: 14px; align-items: center; }
+.play-body { display: flex; flex-direction: column; gap: 24px; align-items: center; }
 .question-area { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 8px; }
 .question {
   background: var(--sand);
@@ -1063,7 +1067,10 @@ body.tabs .toast, body.tabs .update-bar { bottom: calc(84px + env(safe-area-inse
 .brain-icon { font-size: 4.5rem; animation: pop 0.5s; }
 .brain-lv { color: #fff; text-align: center; font-size: 1.1rem; }
 .brain-lv .dim { opacity: 0.25; }
-.brain-stage { display: flex; flex-direction: column; align-items: center; gap: 14px; min-height: 260px; }
+.brain-stage { display: flex; flex-direction: column; align-items: center; gap: 14px; min-height: 260px; justify-content: center; }
+/* مسافة أوضح بين السؤال والإجابات */
+.brain-stage > .bchoices, .brain-stage > .bcards, .brain-stage > .pairs { margin-top: 14px; }
+.duel .brain-stage > .bchoices, .duel .brain-stage > .bcards, .duel .brain-stage > .pairs { margin-top: 6px; }
 
 .scale { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; max-width: 560px; }
 .fulcrum { font-size: 2.2rem; width: 60px; height: 60px; flex-shrink: 0; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--sun); box-shadow: 0 5px 0 rgba(0, 0, 0, 0.22); }
