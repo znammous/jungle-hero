@@ -641,6 +641,7 @@
           ? `افتح اللعبة على الأجهزة الأخرى واضغط «انضم» (${K.max === 2 ? 'لاعبان فقط' : `حتى ${ltr(K.max)} لاعبين`}).`
           : `تبدأ ${what} عندما يضغط صاحب الدعوة «ابدأ».`}</p>
         <div class="net-players">${players.map(x => `<span>${x.avatar}<b>${esc(x.name)}</b></span>`).join('')}</div>
+        ${onlineStrip()}
         ${host ? '<button class="btn gray wide" data-act="netShare">🔗 شارك رابط الدعوة</button>' : ''}
         <div class="actions">
           ${host ? `<button class="btn green" data-act="netStart" ${players.length >= 2 ? '' : 'disabled'}>🏁 ابدأ ${what} (${ltr(players.length)})</button>` : ''}
@@ -2149,7 +2150,9 @@
   // أفراد العائلة المتصلون الآن على أجهزة أخرى (نبض خلال آخر 75 ثانية)
   const ONLINE_MS = 75 * 1000;
   const onlineOthers = () => {
-    const seen = new Set();
+    // في انتظار السباق نعرض فقط من لم ينضم بعد
+    const d = netPending && Sync.duel.data();
+    const seen = new Set(d && d.id === netPending.id ? activePlayers(d).map(x => x.pid) : []);
     return Object.entries(Sync.online.data())
       .filter(([dev, x]) => dev !== DEVICE && x && x.at && Date.now() - x.at < ONLINE_MS)
       .map(([, x]) => x).sort((a, b) => b.at - a.at)
