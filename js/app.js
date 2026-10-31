@@ -561,7 +561,7 @@
       if (!(duelLand === ALL_LANDS ? lands.length > 1 : lands.some(w => w.id === duelLand))) duelLand = 'mul';
       const net = duelMode === 'net';
       const n = duelPicks.length;
-      const canNet = Sync.duel.ready();
+      const canNet = Screens.duelPick.canNet = Sync.duel.ready();
       const picked = duelPicks.map(id => list.find(p => p.id === id));
       const layout = duelLayout(n);
       const brainKind = duelKind === 'brain', rope = duelKind === 'rope';
@@ -3478,8 +3478,8 @@
       startRound(lastRound.mode, lastRound.regionIndex);
     },
     duelSetup() {
-      // عدة أجهزة هو الوضع الافتراضي، إلا إذا لم تكن المزامنة جاهزة على هذا الجهاز
-      duelMode = Sync.duel.ready() ? 'net' : 'local';
+      // عدة أجهزة هو الوضع الافتراضي دائماً، وزر الدعوة يُفعَّل عندما تجهز المزامنة
+      duelMode = 'net';
       brainPicks = null;   // ألعاب المبارزة تبدأ من اختيار من يبدأها
       duelPicks = duelPicks.filter(id => Store.state.profiles.some(p => p.id === id));
       // من يبدأ من مخيّمه يكون مختاراً تلقائياً
@@ -4152,6 +4152,9 @@
       if (app.querySelector('.add-device')) { actions.leaveParent(); return; }
     }
     if (app.querySelector('.add-device')) return;
+    // شاشة اختيار التحدي: يُفعَّل زر الدعوة فور جاهزية المزامنة
+    if (nav.cur === 'duelPick' && !round && !duel && !brain && app.querySelector('.duel-opts')
+      && Screens.duelPick.canNet !== Sync.duel.ready()) { Screens.duelPick(); return; }
     // سباق الإخوة وشاشاته لا تتعلق بمستكشف واحد، فلا نعيد رسمها
     if (round || duel || brain || app.querySelector('.duel-screen')) return;
     const st = Sync.status();
