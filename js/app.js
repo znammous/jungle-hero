@@ -1038,7 +1038,7 @@
       if (brain.net) {
         render(`<section class="duel brain net">
           ${mid}
-          <div id="bOpps">${brainOpps()}</div>
+          <div id="bOpps" class="opps-mini">${brainOpps()}</div>
           ${half(brain.sides[0], 0)}
         </section>`);
         return;
@@ -2891,12 +2891,15 @@
     brainGo();
   }
 
-  // شريط المنافسين: إجاباتهم الصحيحة في كل لعبة حتى الآن
-  const brainOpps = () => brain.net.opps.map(o => `<div class="opp">
-      <b>${o.avatar} ${esc(o.name)}</b>
-      <span class="ogames">${o.left ? '🏳️ انسحب' : brain.ids.map((id, j) =>
-        `<span class="${j === (o.g || 0) && !o.done ? 'on' : ''}">${Brain.game(id).icon} ${ltr((o.brain || [])[j] || 0)}</span>`).join('')}</span>
-    </div>`).join('');
+  // شريط المنافسين مختصر ليبقى معظم الشاشة للعب: لعبتهم الحالية ونتيجتها، ومجموعهم عند الانتهاء
+  const brainOpps = () => brain.net.opps.map(o => {
+    const got = o.brain || [];
+    const g = Math.min(o.g || 0, brain.ids.length - 1);
+    const st = o.left ? '🏳️'
+      : o.done ? `🏁 ${ltr(got.reduce((a, x) => a + (x || 0), 0))}`
+      : `${Brain.game(brain.ids[g]).icon} ${ltr(got[g] || 0)}`;
+    return `<div class="opp mini"><b>${o.avatar} ${esc(o.name)}</b><span class="ostat">${st}</span></div>`;
+  }).join('');
 
   // نرفع التقدّم كل 0.6 ثانية على الأكثر، والنتيجة النهائية فوراً
   function netBrainPush(final) {
