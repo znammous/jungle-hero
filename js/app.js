@@ -2738,6 +2738,7 @@
         </div>
         <div class="bchoices" dir="ltr">${q.options.map(o => (typeof o === 'object' ? o : { v: o, html: o })).map(o =>
           `<button class="bchoice" data-act="brainChoice" data-arg="${i}:${o.v}">${o.html}</button>`).join('')}</div>`;
+      fitFruits(stage);
       // المستويات العليا: الثمار تظهر لحظة ثم تُغطّى، فيحسب بدل أن يعدّ
       if (q.flash) {
         b.timeouts.push(setTimeout(() => {
@@ -2747,6 +2748,22 @@
     }
     s.locked = false;
   }
+
+  // في المبارزة تكبر الثمار حتى تملأ المساحة المتاحة لكل لاعب بدل حجم ثابت صغير
+  function fitFruits(stage) {
+    const box = stage.querySelector('.fruits');
+    if (!box || !stage.closest('.duel') || !stage.clientHeight) return;
+    const fits = () => stage.scrollHeight <= stage.clientHeight + 1 && box.scrollWidth <= box.clientWidth + 1
+      && box.offsetWidth <= stage.clientWidth + 1;
+    let lo = 10, hi = 72;
+    while (hi - lo > 1) {
+      const mid = (lo + hi) >> 1;
+      box.style.fontSize = mid + 'px';
+      if (fits()) lo = mid; else hi = mid;
+    }
+    box.style.fontSize = lo + 'px';
+  }
+  addEventListener('resize', () => document.querySelectorAll('.duel .brain-stage').forEach(fitFruits));
 
   function brainAnswer(i, ok) {
     const b = brain;

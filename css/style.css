@@ -1124,7 +1124,9 @@ body.tabs .toast, body.tabs .update-bar { bottom: calc(84px + env(safe-area-inse
 .duel .bcards { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .duel .bcard { font-size: clamp(1.05rem, 3.4vmin, 1.6rem); padding: 10px 4px; }
 .duel .fruits { padding: 8px; gap: 8px; }
-.duel .fgrid, .duel .fruits.many .fgrid { font-size: clamp(0.75rem, 2.4vmin, 1.3rem); }
+.duel .fgrid, .duel .fruits.many .fgrid { font-size: 1em; }
+.duel .basket { font-size: 1em; }
+.duel .plus { font-size: 1.4em; }
 .duel .bshape .shape { width: 100px; height: 100px; }
 .duel .bshape .shape.strip { width: 180px; height: 72px; }
 .duel .bchoices { gap: 8px; }
@@ -1138,10 +1140,8 @@ body.tabs .toast, body.tabs .update-bar { bottom: calc(84px + env(safe-area-inse
 .duel .brain-stage { justify-content: safe center; overflow: hidden; }
 .duel.multi .brain-lv { font-size: 0.8rem; }
 .duel.multi .feedback { min-height: 0; font-size: 0.9rem; }
-.duel.multi .fgrid, .duel.multi .fruits.many .fgrid { font-size: clamp(0.6rem, 1.9vmin, 1.05rem); }
 .duel.multi .fruits { padding: 6px; gap: 4px; }
 .duel.multi .fruits.rows { gap: 2px; }
-.duel.multi .basket { font-size: 1rem; }
 .duel.multi .pan { min-height: 64px; }
 .duel.multi .bcard { padding: 6px 4px; }
 .duel.multi .arr-text, .duel.multi .target { font-size: 0.95rem; }
