@@ -30,7 +30,7 @@ service cloud.firestore {
 
       // أجهزة الأطفال تصل إلى بيانات أبطال الغابة فقط
       match /apps/{app} {
-        allow read, write: if app in ['jungleHero', 'jungleDuel'] && isMember(fid);
+        allow read, write: if app in ['jungleHero', 'jungleDuel', 'jungleOnline'] && isMember(fid);
       }
 
       // الجهاز يسجّل نفسه برمز صالح لهذه العائلة، ويستطيع حذف نفسه

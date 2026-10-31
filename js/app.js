@@ -282,6 +282,8 @@
           </div>
         </div>
 
+        ${onlineStrip()}
+
         ${isParent(p) ? requestsBanner() : ''}
 
         ${offerDevice === p.id && Sync.role() === 'parent' ? `<div class="card offer-device">
@@ -584,7 +586,7 @@
           `<button class="${w.id === duelLand ? 'on' : ''}" data-act="setDuelLand" data-arg="${w.id}">${w.icon} ${w.name}</button>`).join('')}${lands.length > 1
           ? `<button class="${duelLand === ALL_LANDS ? 'on' : ''}" data-act="setDuelLand" data-arg="${ALL_LANDS}">${landName(ALL_LANDS)}</button>` : ''}</div>
         ${brainKind ? `<div class="card"><h3>🎮 الألعاب</h3>${brainPickGrid(duelBrainPicks(), 'duelBrainToggle')}</div>` : ''}
-        ${net ? sendBtn : ''}
+        ${net ? onlineStrip() + sendBtn : ''}
         <button class="btn shot-btn wide" data-act="go" data-arg="winners">🏆 سجل الفائزين</button>
         <div class="profile-grid">${list.map(p => {
           const i = duelPicks.indexOf(p.id);
@@ -2144,6 +2146,42 @@
     right: 0, reachedMs: 0, done: false, left: false,
     brain: [], g: 0,   // مبارزة العقول: الإجابات الصحيحة في كل لعبة، واللعبة الحالية
   });
+  // أفراد العائلة المتصلون الآن على أجهزة أخرى (نبض خلال آخر 75 ثانية)
+  const ONLINE_MS = 75 * 1000;
+  const onlineOthers = () => {
+    const seen = new Set();
+    return Object.entries(Sync.online.data())
+      .filter(([dev, x]) => dev !== DEVICE && x && x.at && Date.now() - x.at < ONLINE_MS)
+      .map(([, x]) => x).sort((a, b) => b.at - a.at)
+      .filter(x => !seen.has(x.pid) && seen.add(x.pid));
+  };
+  const onlineInner = () => {
+    const list = onlineOthers();
+    return list.length ? `<b>🟢 متصل الآن:</b> ${list.map(x =>
+      `<span>${esc(x.avatar)} ${esc(x.name)}${x.busy ? ' 🎮' : ''}</span>`).join('')}` : '';
+  };
+  function onlineStrip() {
+    const inner = onlineInner();
+    return `<div class="online-strip" id="onlineStrip" ${inner ? '' : 'hidden'}>${inner}</div>`;
+  }
+  function refreshOnline() {
+    const el = $('onlineStrip');
+    if (!el) return;
+    const inner = onlineInner();
+    el.innerHTML = inner;
+    el.hidden = !inner;
+  }
+  function beat() {
+    const p = Store.current();
+    if (!p) return;
+    Sync.online.beat(DEVICE, document.visibilityState === 'hidden' ? { at: 0 }
+      : { pid: p.id, name: p.name, avatar: p.avatar, at: Date.now(), busy: !!(round || duel || brain) });
+  }
+  Sync.online.on(refreshOnline);
+  Sync.onUpdate(() => { if (!beat.done && Sync.duel.ready()) { beat.done = true; beat(); } });
+  setInterval(() => { beat(); refreshOnline(); }, 30 * 1000);
+  document.addEventListener('visibilitychange', beat);
+
   const activePlayers = d => Object.values((d && d.players) || {})
     .filter(x => !x.left).sort((a, b) => a.joinedAt - b.joinedAt);
 

@@ -1313,3 +1313,6 @@ body.tabs .toast, body.tabs .update-bar { bottom: calc(84px + env(safe-area-inse
 .pair-box .qr { transition: opacity 0.3s; }
 .pair-box.pending .qr, .pair-box.pending .pair-code { opacity: 0.3; }
 .spinner { display: inline-block; width: 0.9em; height: 0.9em; border: 2px solid currentColor; border-top-color: transparent; border-radius: 50%; vertical-align: -0.1em; animation: spin 0.8s linear infinite; }
+.online-strip { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; background: rgba(0, 0, 0, 0.28); color: #fff; border-radius: 16px; padding: 8px 14px; margin: 0 0 12px; font-size: 1rem; }
+.online-strip[hidden] { display: none; }
+.online-strip span { white-space: nowrap; }

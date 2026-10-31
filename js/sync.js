@@ -26,6 +26,10 @@ const Sync = (() => {
   let duelRef = null, duelUnsub = null, duelData = null;
   const duelListeners = [];
   const duelNotify = () => duelListeners.forEach(fn => fn(duelData));
+  // من المتصل الآن: كل جهاز يكتب نبضه في online.{معرّف الجهاز} كل نصف دقيقة
+  let onlineRef = null, onlineUnsub = null, onlineData = {};
+  const onlineListeners = [];
+  const onlineNotify = () => onlineListeners.forEach(fn => fn(onlineData));
   const notify = changed => listeners.forEach(fn => fn(changed));
   const set = s => { status = s; notify(false); };
 
@@ -58,6 +62,7 @@ const Sync = (() => {
     if (joining && u && u.isAnonymous && !savedFid()) { user = u; return; }
     if (unsub) { unsub(); unsub = null; }
     if (duelUnsub) { duelUnsub(); duelUnsub = null; }
+    if (onlineUnsub) { onlineUnsub(); onlineUnsub = null; }
     if (memberUnsub) { memberUnsub(); memberUnsub = null; }
     if (devicesUnsub) { devicesUnsub(); devicesUnsub = null; }
     devices = [];
@@ -67,6 +72,9 @@ const Sync = (() => {
     duelData = null;
     duelRef = fid ? fb.fs.doc(fb.db, 'families', fid, 'apps', 'jungleDuel') : null;
     duelNotify();
+    onlineData = {};
+    onlineRef = fid ? fb.fs.doc(fb.db, 'families', fid, 'apps', 'jungleOnline') : null;
+    onlineNotify();
     if (!fid) { ref = null; set('out'); return; }
     if (u.isAnonymous) {
       // إذا فصل ولي الأمر هذا الجهاز نخرج منه ويبقى التقدّم محفوظاً عليه
@@ -83,6 +91,10 @@ const Sync = (() => {
       duelData = snap.exists() ? snap.data() : null;
       duelNotify();
     }, () => { duelData = null; duelNotify(); });
+    onlineUnsub = fb.fs.onSnapshot(onlineRef, snap => {
+      onlineData = (snap.exists() && snap.data()) || {};
+      onlineNotify();
+    }, () => { onlineData = {}; onlineNotify(); });
     set('syncing');
     ref = fb.fs.doc(fb.db, 'families', fid, 'apps', 'jungleHero');
     unsub = fb.fs.onSnapshot(ref, { includeMetadataChanges: true }, snap => {
@@ -201,6 +213,12 @@ const Sync = (() => {
       on: fn => duelListeners.push(fn),
       set: obj => duelRef ? fb.fs.setDoc(duelRef, obj) : Promise.reject(new Error('signed out')),
       update: obj => duelRef ? fb.fs.updateDoc(duelRef, obj) : Promise.reject(new Error('signed out')),
+    },
+    online: {
+      data: () => onlineData,
+      on: fn => onlineListeners.push(fn),
+      beat: (device, entry) => onlineRef && (status === 'ok' || status === 'syncing')
+        ? fb.fs.setDoc(onlineRef, { [device]: entry }, { merge: true }).catch(() => {}) : Promise.resolve(),
     },
   };
 })();
