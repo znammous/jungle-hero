@@ -120,6 +120,8 @@ input { font: inherit; user-select: text; -webkit-user-select: text; }
 
 /* أثناء الأسئلة تهدأ الغابة: تركيز أكثر، وحمل أقل على الجهاز */
 body.bgrest .bg * { animation-play-state: paused; }
+/* ولا يُحدَّث الصفحة بالسحب للأسفل أثناء الحل أو السباق */
+html:has(body.bgrest), body.bgrest { overscroll-behavior-y: none; }
 
 @media (prefers-reduced-motion: reduce) {
   .bg * { animation: none !important; }
