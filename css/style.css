@@ -639,6 +639,10 @@ button.rank-badge { border: 0; font: inherit; font-weight: 800; cursor: pointer;
 .opp .walker { font-size: 1.7rem; }
 .opp .goal { font-size: 1.6rem; }
 .duel.net .duel-half { flex: 1; }
+/* على عدة أجهزة: الاسم والنهر في الأعلى، والسؤال مع لوحة الأرقام في منتصف ما تبقّى مثل التمارين العادية */
+.duel.net:not(.brain) .duel-half { justify-content: flex-start; }
+.duel.net:not(.brain) .duel-half > .question { margin-top: auto; }
+.duel.net:not(.brain) .duel-half > .pad > * { margin-top: 8px; margin-bottom: auto; }
 
 .invite-bar { position: fixed; z-index: 20; top: max(10px, env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); width: min(560px, calc(100% - 32px)); display: flex; align-items: center; gap: 10px; background: var(--sand); color: var(--ink); border-radius: 18px; padding: 10px 12px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35); animation: pop 0.4s; }
 .invite-bar[hidden] { display: none; }
