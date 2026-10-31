@@ -690,6 +690,9 @@ button.rank-badge { border: 0; font: inherit; font-weight: 800; cursor: pointer;
 .duel-card.won { outline: 5px solid var(--sun); }
 .duel-card .banner { font-size: 1rem; padding: 8px 12px; }
 .duel-card .stat { background: #fff; min-width: 90px; }
+.duel-card .stats { flex-wrap: nowrap; width: 100%; gap: 8px; }
+.duel-card .stats .stat { flex: 1 1 0; min-width: 0; padding: 10px 6px; }
+.duel-card .stats .stat b { font-size: 1.8rem; }
 .bchart { width: 100%; max-width: 900px; text-align: start; }
 .bchart h3 { margin: 0 0 6px; text-align: center; }
 .bchart-key { display: flex; justify-content: center; gap: 18px; font-size: 0.95rem; margin-bottom: 8px; }
@@ -716,6 +719,9 @@ button.rank-badge { border: 0; font: inherit; font-weight: 800; cursor: pointer;
 .stat.good b { color: var(--leaf); }
 .stat.bad b { color: var(--red); }
 .stat.coin b { color: var(--wood); }
+.stat.crown { background: #fff6d6; box-shadow: 0 5px 0 var(--sun); }
+.stat.crown b { color: #b8860b; }
+.rank-rule { font-size: .95rem; opacity: .85; margin-top: -6px; }
 .banner {
   background: var(--sun);
   color: var(--ink);

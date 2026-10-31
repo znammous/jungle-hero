@@ -733,6 +733,7 @@
         <div class="avatar">${x.p.avatar}</div>
         <b>${esc(x.p.name)}</b>
         <div class="stats">
+          ${x.wins == null || x.gone ? '' : `<div class="stat crown"><b>${ltr(`${x.wins}/${x.won.length}`)}</b><small>👑 ألعاب فاز بها</small></div>`}
           <div class="stat good"><b>${x.right}</b><small>صحيحة</small></div>
           ${x.wrong == null ? '' : `<div class="stat bad"><b>${x.wrong}</b><small>خاطئة</small></div>`}
           ${x.coins === null ? '' : `<div class="stat coin"><b>${ltr('+' + x.coins)}</b><small>🪙</small></div>`}
@@ -745,6 +746,7 @@
         <div class="result-hero">${res.winner ? '🏆' : '🤝'}</div>
         <h1>${title}</h1>
         <p class="hint">${res.note || (res.winner && res.winner.reachedAt ? 'وصل إلى جزيرته أولاً' : res.winner ? 'الأقرب إلى جزيرته' : 'وصلوا بنفس النسبة')}</p>
+        ${res.chart ? '<p class="hint rank-rule">الترتيب: 👑 عدد الألعاب التي فاز بها أولاً، ثم عدد الإجابات الصحيحة</p>' : ''}
         <div class="duel-cards">${res.sides.map(card).join('')}</div>
         ${res.chart ? brainChart(res.chart) : ''}
         <div class="actions">
