@@ -1196,7 +1196,7 @@ body.tabs .toast, body.tabs .update-bar { bottom: calc(84px + env(safe-area-inse
 /* القرد الناقص */
 .meq { display: inline-flex; align-items: center; gap: 0.3em; white-space: nowrap; }
 .monkey { font-style: normal; display: inline-block; background: var(--sun); border-radius: 12px; padding: 0 0.12em; animation: nudge 1.2s ease-in-out infinite; }
-.mq { min-height: 0; }
+.mq { min-height: 0; max-width: 100%; }
 .duel .mq { font-size: clamp(1.4rem, 4.5vmin, 2.4rem); padding: 8px; }
 
 /* صحّ أم خطأ: زرّان كبيران */

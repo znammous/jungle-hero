@@ -639,6 +639,7 @@
           ? `افتح اللعبة على الأجهزة الأخرى واضغط «انضم» (${K.max === 2 ? 'لاعبان فقط' : `حتى ${ltr(K.max)} لاعبين`}).`
           : `تبدأ ${what} عندما يضغط صاحب الدعوة «ابدأ».`}</p>
         <div class="net-players">${players.map(x => `<span>${x.avatar}<b>${esc(x.name)}</b></span>`).join('')}</div>
+        ${host ? '<button class="btn gray wide" data-act="netShare">🔗 شارك رابط الدعوة</button>' : ''}
         <div class="actions">
           ${host ? `<button class="btn green" data-act="netStart" ${players.length >= 2 ? '' : 'disabled'}>🏁 ابدأ ${what} (${ltr(players.length)})</button>` : ''}
           <button class="btn orange" data-act="netCancel">✕ إلغاء</button>
@@ -2191,6 +2192,18 @@
     d.kind === 'brain' ? startNetBrain(d) : startNetDuel(d);
   }
 
+  // رابط يفتح الدعوة مباشرة على جهاز آخر من أجهزة العائلة (واتساب وغيره)
+  function netShare() {
+    const d = Sync.duel.data();
+    if (!netPending || !d || d.id !== netPending.id) return;
+    const K = duelKindOf(d);
+    const url = `${location.origin}${location.pathname}#duel=${d.id}`;
+    const text = `${K.icon} ${d.players[d.host].name} يدعوك ${K.invite} في بطل الغابة!`;
+    if (navigator.share) { navigator.share({ title: 'بطل الغابة', text, url }).catch(() => {}); return; }
+    (navigator.clipboard ? navigator.clipboard.writeText(`${text}\n${url}`) : Promise.reject())
+      .then(() => toast('📋 نُسخ الرابط، الصقه في المحادثة'), () => toast(url, 6000));
+  }
+
   function netCancel() {
     if (netPending) {
       Sync.duel.update(netPending.role === 'host' ? { state: 'cancelled' } : { [`${myPath}.left`]: true }).catch(() => {});
@@ -2305,8 +2318,36 @@
     inviteTimer = setTimeout(() => showInvite(Sync.duel.data()), d.createdAt + INVITE_MS - Date.now());
   }
 
+  // رابط دعوة مفتوح: ننتظر وصول بيانات السباق ثم نعرض شاشة القبول
+  let linkDuel = '', linkTimer;
+  function openLinkDuel(d) {
+    if (!linkDuel || !d || round || duel || brain || netPending) return;
+    if (d.id !== linkDuel) { if (Date.now() - d.createdAt > INVITE_MS) return; }   // بيانات قديمة، ننتظر الأحدث
+    const id = linkDuel;
+    linkDuel = ''; clearTimeout(linkTimer);
+    if (d.id === id && d.host === DEVICE) return;
+    if (d.id === id && inviteFor(d)) { inviteBar.hidden = true; Screens.netJoin(d); }
+    else toast('انتهت الدعوة أو اكتمل العدد', 3500);
+  }
+  const duelFromHash = () => {
+    const m = location.hash.match(/duel=([0-9a-z]{6,20})/);
+    if (!m) return false;
+    history.replaceState(history.state, '', location.pathname + location.search);
+    linkDuel = m[1];
+    clearTimeout(linkTimer);
+    linkTimer = setTimeout(() => {
+      if (!linkDuel) return;
+      linkDuel = '';
+      toast(Sync.duel.ready() ? 'انتهت الدعوة' : '⚠️ افتح الرابط على جهاز مسجّل في حساب العائلة ومتصل بالإنترنت', 5000);
+    }, 15000);
+    openLinkDuel(Sync.duel.data());
+    return true;
+  };
+  window.addEventListener('hashchange', duelFromHash);
+
   Sync.duel.on(d => {
     showInvite(d);
+    openLinkDuel(d);
     if (netPending) {
       // انتظار: لا نتابع إلا إذا كانت شاشة الانتظار ما زالت ظاهرة
       if (!app.querySelector('.net-wait')) { netPending = null; return; }
@@ -2726,6 +2767,7 @@
         <div class="question rich mq">${q.html}</div>
         <div class="bchoices ${q.two ? 'two' : ''}" dir="ltr">${q.options.map(o => (typeof o === 'object' ? o : { v: o, html: o })).map(o =>
           `<button class="bchoice" data-act="brainChoice" data-arg="${i}:${o.v}">${o.html}</button>`).join('')}</div>`;
+      fitWide(stage.querySelector('.mq'));
     } else {
       const total = q.groups ? q.groups.reduce((n, x) => n + x.count, 0) : 0;
       const fruits = x => Array.from({ length: x.count }, (_, k) =>
@@ -2763,7 +2805,21 @@
     }
     box.style.fontSize = lo + 'px';
   }
-  addEventListener('resize', () => document.querySelectorAll('.duel .brain-stage').forEach(fitFruits));
+  // سطر المسألة (القرد الناقص وتتبّع الأثر) لا ينكسر، فيصغر خطّه حتى يتّسع في عرض الشاشة
+  function fitWide(el) {
+    if (!el) return;
+    el.style.fontSize = '';
+    let fs = parseFloat(getComputedStyle(el).fontSize);
+    const room = () => el.parentElement.clientWidth;
+    while (fs > 12 && (el.scrollWidth > el.clientWidth + 1 || el.offsetWidth > room() + 1)) {
+      fs = Math.floor(fs * 0.92);
+      el.style.fontSize = fs + 'px';
+    }
+  }
+  addEventListener('resize', () => {
+    document.querySelectorAll('.duel .brain-stage').forEach(fitFruits);
+    document.querySelectorAll('.brain-stage .mq').forEach(fitWide);
+  });
 
   function brainAnswer(i, ok) {
     const b = brain;
@@ -3375,6 +3431,7 @@
     netStart() { netStart(); },
     netJoin(pid) { asPlayer(pid, 'home', () => netJoin(pid)); },
     netCancel() { netCancel(); },
+    netShare() { netShare(); },
     setDuelLayout(id) {
       const k = Math.min(Math.max(duelPicks.length, 2), MAX_PLAYERS);
       Store.state.duelLayouts = Object.assign({}, Store.state.duelLayouts, { [k]: id });
@@ -3491,7 +3548,7 @@
       if (fruits) fruits.classList.remove('covered');
       // القرد الناقص: يظهر الرقم المخفي مكان القرد
       const mq = stage.querySelector('.mq');
-      if (mq) mq.innerHTML = s.q.reveal;
+      if (mq) { mq.innerHTML = s.q.reveal; fitWide(mq); }
       el.classList.add(ok ? 'right' : 'wrong');
       if (!ok) stage.querySelectorAll('.bchoice').forEach(e => { if (e.dataset.arg === `${i}:${ans}`) e.classList.add('right'); });
       brainAnswer(i, ok);
@@ -4101,6 +4158,7 @@
     return true;
   };
   window.addEventListener('hashchange', joinFromHash);
+  duelFromHash();
   if (joinFromHash()) { /* شاشة الانضمام */ }
   // يبقى المستكشف داخلاً بين مرات فتح اللعبة، ولا يُطلب رمزه إلا بعد «تغيير»
   else if (ownerKid()) enterProfile(ownerKid().id);
