@@ -634,6 +634,11 @@
       const host = role === 'host';
       const K = duelKindOf(d);
       const what = K.what;
+      // هل وصل ما نراه إلى الخادم؟ حتى لا يظن المنضم أنه انضم وصاحب الدعوة لا يراه
+      const synced = Sync.duel.synced();
+      const conn = host
+        ? (synced ? '' : '📡 جارٍ الاتصال… يظهر المنضمون فور عودته')
+        : (synced && players.some(x => x.device === DEVICE) ? `✅ وصل انضمامك إلى ${esc(d.players[d.host].name)}` : '📡 جارٍ إرسال انضمامك…');
       render(`<section class="screen results duel-screen net-wait">
         <div class="result-hero wait-spin">⏳</div>
         <h1>${host ? 'بانتظار المتسابقين…' : `بانتظار بدء ${what}…`}</h1>
@@ -641,6 +646,7 @@
           ? `افتح اللعبة على الأجهزة الأخرى واضغط «انضم» (${K.max === 2 ? 'لاعبان فقط' : `حتى ${ltr(K.max)} لاعبين`}).`
           : `تبدأ ${what} عندما يضغط صاحب الدعوة «ابدأ».`}</p>
         <div class="net-players">${players.map(x => `<span>${x.avatar}<b>${esc(x.name)}</b></span>`).join('')}</div>
+        ${conn ? `<p class="muted center">${conn}</p>` : ''}
         ${onlineStrip()}
         ${host ? '<button class="btn gray wide" data-act="netShare">🔗 شارك رابط الدعوة</button>' : ''}
         <div class="actions">
@@ -2386,6 +2392,12 @@
   };
   window.addEventListener('hashchange', duelFromHash);
 
+  // أثناء انتظار السباق نتأكد من الخادم كل بضع ثوانٍ وعند العودة إلى التطبيق،
+  // فلا يبقى صاحب الدعوة لا يرى من انضم إذا علق المستمع
+  const netCheck = () => { if (netPending && app.querySelector('.net-wait')) Sync.duel.refresh(); };
+  setInterval(netCheck, 4000);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') netCheck(); });
+
   Sync.duel.on(d => {
     showInvite(d);
     openLinkDuel(d);
@@ -2398,6 +2410,13 @@
         if (activePlayers(d).some(x => x.device === DEVICE)) d.kind === 'brain' ? startNetBrain(d) : startNetDuel(d);
         else { netPending = null; toast('بدأ السباق قبل انضمامك'); go('home'); }
         return;
+      }
+      // الخادم لا يعرف بانضمامنا (ضاعت الكتابة مع انقطاع الاتصال): نرسله مرة أخرى
+      const me = d.players && d.players[DEVICE];
+      if (netPending.role === 'guest' && Sync.duel.synced() && (!me || me.left) && !(netPending.retryAt > Date.now() - 5000)) {
+        const p = Store.state.profiles.find(k => k.id === netPending.pid);
+        netPending.retryAt = Date.now();
+        if (p) Sync.duel.update({ [myPath]: netPlayer(p) }).catch(() => {});
       }
       Screens.netWait(netPending.role);   // تحديث قائمة المنضمين
       return;

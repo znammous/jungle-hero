@@ -24,6 +24,8 @@ const Sync = (() => {
   let listeners = [];
   // سباق الإخوة على جهازين: مستند واحد للسباق الحالي بجانب مستند اللعبة
   let duelRef = null, duelUnsub = null, duelData = null;
+  // duelMeta: هل في المستند كتابات من هذا الجهاز لم تصل الخادم بعد، وهل هو من الكاش فقط
+  let duelMeta = { pending: false, cache: true }, kickAt = 0;
   const duelListeners = [];
   const duelNotify = () => duelListeners.forEach(fn => fn(duelData));
   // من المتصل الآن: كل جهاز يكتب نبضه في online.{معرّف الجهاز} كل نصف دقيقة
@@ -87,8 +89,9 @@ const Sync = (() => {
         notify(false);
       }, () => {});
     }
-    duelUnsub = fb.fs.onSnapshot(duelRef, snap => {
+    duelUnsub = fb.fs.onSnapshot(duelRef, { includeMetadataChanges: true }, snap => {
       duelData = snap.exists() ? snap.data() : null;
+      duelMeta = { pending: snap.metadata.hasPendingWrites, cache: snap.metadata.fromCache };
       duelNotify();
     }, () => { duelData = null; duelNotify(); });
     onlineUnsub = fb.fs.onSnapshot(onlineRef, snap => {
@@ -195,6 +198,30 @@ const Sync = (() => {
     } finally { joining = false; }
   }
 
+  // شاشة انتظار السباق: نقرأ المستند من الخادم مباشرة بدل الاعتماد على المستمع وحده،
+  // وإذا لم يردّ الخادم (اتصال عالق بعد الرجوع من تطبيق آخر) نعيد فتح الاتصال
+  async function duelRefresh() {
+    if (!duelRef || !fb) return;
+    try {
+      const snap = await Promise.race([
+        fb.fs.getDocFromServer(duelRef),
+        new Promise((_, fail) => setTimeout(() => fail(new Error('timeout')), 5000)),
+      ]);
+      // كتاباتنا التي لم تصل بعد يعرضها المستمع، فلا نستبدلها بنسخة الخادم
+      if (duelMeta.pending) return;
+      const data = snap.exists() ? snap.data() : null;
+      if (!duelMeta.cache && JSON.stringify(data) === JSON.stringify(duelData)) return;
+      duelData = data;
+      duelMeta = { pending: false, cache: false };
+      duelNotify();
+    } catch (e) {
+      if (Date.now() - kickAt < 15000) return;
+      kickAt = Date.now();
+      await fb.fs.disableNetwork(fb.db).catch(() => {});
+      await fb.fs.enableNetwork(fb.db).catch(() => {});
+    }
+  }
+
   const removeDevice = id => fb.fs.deleteDoc(fb.fs.doc(fb.db, 'families', fid, 'members', id));
 
   return {
@@ -210,6 +237,9 @@ const Sync = (() => {
     duel: {
       ready: () => !!duelRef && (status === 'ok' || status === 'syncing'),
       data: () => duelData,
+      // true عندما يطابق ما نعرضه ما على الخادم (لا كتابات معلّقة ولا كاش فقط)
+      synced: () => !duelMeta.pending && !duelMeta.cache,
+      refresh: duelRefresh,
       on: fn => duelListeners.push(fn),
       set: obj => duelRef ? fb.fs.setDoc(duelRef, obj) : Promise.reject(new Error('signed out')),
       update: obj => duelRef ? fb.fs.updateDoc(duelRef, obj) : Promise.reject(new Error('signed out')),
