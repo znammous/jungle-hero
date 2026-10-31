@@ -1081,6 +1081,8 @@ body.tabs .toast, body.tabs .update-bar { bottom: calc(84px + env(safe-area-inse
 }
 .pan:active { transform: translateY(4px); }
 .pan .val { font-size: 1.4rem; color: var(--muted); min-height: 1.4em; }
+/* السطر الفارغ للناتج لا يحجز مكاناً قبل الإجابة، فتبقى المسألة في منتصف الكفّة */
+.pan .val:empty { display: none; }
 .pan.heavy { transform: translateY(18px); background: #d9f5cf; }
 .pan.light { transform: translateY(-12px); }
 .scale.wrong .pan.light { background: #ffd9d3; }
