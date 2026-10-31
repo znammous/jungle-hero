@@ -624,8 +624,9 @@ button.rank-badge { border: 0; font: inherit; font-weight: 800; cursor: pointer;
 /* الجهاز ونوع التحدي في صف واحد، وينزل الثاني تحت الأول على الشاشة الضيقة */
 .duel-opts { display: flex; flex-wrap: wrap; gap: 10px; }
 .duel-opts .seg { flex: 1 1 280px; }
-.duel-lands { flex-wrap: wrap; }
-.duel-lands button { flex: 1 1 auto; }
+.duel-planets .planets { gap: 4px; }
+.duel-planets .planet-ball { width: min(54px, 12.5vw); font-size: min(1.7rem, 6.4vw); }
+.duel-planets .planet b { font-size: 0.72rem; }
 .wait-spin { animation: spin 2s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
 

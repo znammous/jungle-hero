@@ -582,9 +582,23 @@
         <div class="seg duel-modes duel-kinds">${Object.entries(DUEL_KINDS).map(([k, x]) =>
           `<button class="${k === duelKind ? 'on' : ''}" data-act="setDuelKind" data-arg="${k}">${x.icon} ${x.name}</button>`).join('')}</div>
         </div>
-        <div class="seg duel-modes duel-lands">${lands.map(w =>
-          `<button class="${w.id === duelLand ? 'on' : ''}" data-act="setDuelLand" data-arg="${w.id}">${w.icon} ${w.name}</button>`).join('')}${lands.length > 1
-          ? `<button class="${duelLand === ALL_LANDS ? 'on' : ''}" data-act="setDuelLand" data-arg="${ALL_LANDS}">${landName(ALL_LANDS)}</button>` : ''}</div>
+        <div class="card planets-card duel-planets">
+          <h3>🌍 اختر الغابة <small>${landName(duelLand)}</small></h3>
+          <div class="planets" style="grid-template-columns: repeat(${WORLDS.length + (lands.length > 1 ? 1 : 0)}, 1fr)">
+            ${WORLDS.map(x => {
+              // مثل كواكب المخيّم: الغابة المقفلة لمن يبدأ التحدي تظهر بقفل ولا تُختار
+              const open = lands.includes(x);
+              return `<button class="planet ${open ? '' : 'locked'} ${x.id === duelLand ? 'on' : ''}" style="--glow: ${x.glow}" ${open ? `data-act="setDuelLand" data-arg="${x.id}"` : 'disabled'} aria-label="${x.name}">
+                <span class="planet-ball"><span>${x.planet}</span>${open ? '' : '<i>🔒</i>'}</span>
+                <b>${x.short}</b>
+              </button>`;
+            }).join('')}
+            ${lands.length > 1 ? `<button class="planet ${duelLand === ALL_LANDS ? 'on' : ''}" style="--glow: #b98cff" data-act="setDuelLand" data-arg="${ALL_LANDS}" aria-label="كل الغابات">
+                <span class="planet-ball"><span>🌍</span></span>
+                <b>كل الغابات</b>
+              </button>` : ''}
+          </div>
+        </div>
         ${brainKind ? `<div class="card"><h3>🎮 الألعاب</h3>${brainPickGrid(duelBrainPicks(), 'duelBrainToggle')}</div>` : ''}
         ${net ? onlineStrip() + sendBtn : ''}
         <button class="btn green wide winners-btn" data-act="go" data-arg="winners">🏆 سجل الفائزين</button>
