@@ -114,6 +114,7 @@ const World = (() => {
     <path d="M26 44q34-11 68 0l6 7q-40-10-80 0z" fill="#f5d58b" stroke="#a97f33" stroke-width="2.6" stroke-linejoin="round"/>
     <path d="M33 42c0-20 11-31 27-31s27 11 27 31q-27-8-54 0z" fill="#f5d58b" stroke="#a97f33" stroke-width="2.6" stroke-linejoin="round"/>
     <path d="M33 42q27-8 54 0l-1-8q-26-8-52 0z" fill="#3fae5f" stroke="#237a3f" stroke-width="1.8" stroke-linejoin="round"/>
+    <g transform="translate(38 33)" stroke="#d9527f" stroke-width="1.4"><g fill="#ff9dbd"><circle cx="0" cy="-6.5" r="4.6"/><circle cx="6.2" cy="-2" r="4.6"/><circle cx="3.8" cy="5.3" r="4.6"/><circle cx="-3.8" cy="5.3" r="4.6"/><circle cx="-6.2" cy="-2" r="4.6"/></g><circle r="3.6" fill="#ffd84d" stroke="#d99a1c"/></g>
     <ellipse cx="30" cy="84" rx="7" ry="4.6" fill="#ffb3c4" opacity=".85"/><ellipse cx="90" cy="84" rx="7" ry="4.6" fill="#ffb3c4" opacity=".85"/>
     ${EYES[m]}
     ${MOUTH[m]}
