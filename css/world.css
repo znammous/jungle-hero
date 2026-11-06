@@ -1,0 +1,94 @@
+/* ───── عالم فلفولة: يُفعَّل بـ data-theme="falfoula" على <html> ───── */
+.cloud, .sun-disc, .hill { display: none; }
+
+html[data-theme="falfoula"] {
+  --jungle: #1b7a45; --jungle-dark: #125c33; --leaf: #2d8c4c; --leaf-light: #a6e08f;
+  --sand: #fffdf2; --sand-dark: #dcebc6;
+  --sun: #ffcb3d; --orange: #e0701a; --wood: #8a5a2b; --teal: #13807c; --river: #4fb3d9; --red: #d43f2c;
+  --ink: #1f3a2d; --muted: #4f6a5c;
+  --radius: 26px;
+  background: #cfeeff;
+}
+html[data-theme="falfoula"] body { background: linear-gradient(180deg, #cfeeff 0%, #e6f8ff 40%, #f4fbdc 72%, #d3f0b4 100%); background-attachment: fixed; }
+html[data-theme="falfoula"] .bg { background: linear-gradient(180deg, #cfeeff 0%, #e6f8ff 40%, #f4fbdc 72%, #d3f0b4 100%); }
+
+/* المشهد: شمس وسحب وتلال، وتهدأ اليراعات والأشعة */
+[data-theme="falfoula"] .ray, [data-theme="falfoula"] .firefly { display: none; }
+[data-theme="falfoula"] .plant { opacity: .5; }
+[data-theme="falfoula"] .leaf { opacity: .35 !important; }
+[data-theme="falfoula"] .flyer { opacity: .75; }
+[data-theme="falfoula"] .sun-disc { display: block; position: absolute; top: -46px; left: -46px; width: 190px; height: 190px; border-radius: 50%; background: radial-gradient(circle, #fff3b0 0 42%, rgba(255, 214, 90, .55) 58%, rgba(255, 214, 90, 0) 72%); }
+[data-theme="falfoula"] .hill { display: block; position: absolute; border-radius: 50%; }
+[data-theme="falfoula"] .hill.far { bottom: -16vh; right: -20vw; width: 95vw; height: 42vh; background: #bde79a; }
+[data-theme="falfoula"] .hill.near { bottom: -20vh; left: -22vw; width: 110vw; height: 44vh; background: #a6dc86; }
+[data-theme="falfoula"] .cloud { display: block; position: absolute; left: 0; width: var(--w); height: calc(var(--w) * .34); background: #fff; border-radius: 999px; opacity: .9; animation: cross linear infinite; }
+[data-theme="falfoula"] .cloud::before, [data-theme="falfoula"] .cloud::after { content: ""; position: absolute; background: #fff; border-radius: 50%; }
+[data-theme="falfoula"] .cloud::before { width: 44%; height: 130%; top: -70%; left: 16%; }
+[data-theme="falfoula"] .cloud::after { width: 34%; height: 100%; top: -42%; right: 16%; }
+
+/* العناصر التي كانت مصمّمة للكتابة على خلفية داكنة */
+[data-theme="falfoula"] .card { box-shadow: 0 6px 0 rgba(27, 122, 69, .18); }
+[data-theme="falfoula"] .topbar-title, [data-theme="falfoula"] .hint, [data-theme="falfoula"] .shop-title, [data-theme="falfoula"] .brain-lv,
+[data-theme="falfoula"] .target, [data-theme="falfoula"] .arr-text, [data-theme="falfoula"] .bgame { color: var(--jungle-dark); }
+[data-theme="falfoula"] .link-btn:not(.dark):not(.danger) { color: var(--jungle-dark); }
+[data-theme="falfoula"] .chip { background: rgba(255, 255, 255, .92); color: var(--jungle-dark); box-shadow: 0 3px 0 var(--sand-dark); }
+[data-theme="falfoula"] button.chip:active { background: #fff; }
+[data-theme="falfoula"] .chip.coins, [data-theme="falfoula"] .kid-tabs .chip.on { background: var(--sun); color: var(--ink); box-shadow: 0 3px 0 #e0a524; }
+[data-theme="falfoula"] .hero-title { color: var(--jungle-dark); }
+[data-theme="falfoula"] .hero-title h1, [data-theme="falfoula"] .results h1 { color: var(--jungle); text-shadow: 0 3px 0 #fff; }
+[data-theme="falfoula"] .profile-card.add { background: rgba(255, 255, 255, .6); color: var(--jungle-dark); border-color: var(--leaf); }
+[data-theme="falfoula"] .btn.blue, [data-theme="falfoula"] .big-btn.blue { background: #bfe6ff; color: var(--jungle-dark); box-shadow: 0 7px 0 #8cc8ef; }
+[data-theme="falfoula"] .big-btn.blue:active { box-shadow: 0 3px 0 #8cc8ef; }
+[data-theme="falfoula"] .region.locked { background: #e7ece0; box-shadow: 0 6px 0 #ccd6c2; }
+[data-theme="falfoula"] .tabbar { background: rgba(255, 255, 255, .96); border-top-color: var(--leaf-light); box-shadow: 0 -4px 14px rgba(27, 122, 69, .18); }
+[data-theme="falfoula"] .tab { color: var(--muted); }
+[data-theme="falfoula"] .tab.on { background: var(--leaf); color: #fff; }
+[data-theme="falfoula"] .animal:not(.found) { background: rgba(255, 255, 255, .7); color: var(--ink); }
+[data-theme="falfoula"] .animal.hidden { border-color: rgba(45, 140, 76, .45); }
+[data-theme="falfoula"] .animal.hidden b { color: var(--wood); }
+[data-theme="falfoula"] .rank-step { background: rgba(255, 255, 255, .7); color: var(--ink); }
+[data-theme="falfoula"] .rank-step.done { background: var(--sand); }
+[data-theme="falfoula"] .rank-step.current { background: var(--sun); }
+[data-theme="falfoula"] .online-strip { background: rgba(255, 255, 255, .85); color: var(--jungle-dark); }
+
+/* الجولة */
+[data-theme="falfoula"] .timebar { background: rgba(255, 255, 255, .85); }
+[data-theme="falfoula"] .timebar span { color: var(--ink); text-shadow: none; }
+[data-theme="falfoula"] .steps i { background: rgba(27, 122, 69, .2); }
+[data-theme="falfoula"] .steps i.right { background: #39b06f; }
+[data-theme="falfoula"] .feedback { color: var(--ink); }
+[data-theme="falfoula"] .feedback b { color: #b8500c; }
+
+/* الألعاب الجماعية وتحدّي العقل */
+[data-theme="falfoula"] .duel-half, [data-theme="falfoula"] .opp { background: rgba(255, 255, 255, .6); }
+[data-theme="falfoula"] .duel-head, [data-theme="falfoula"] .opp { color: var(--jungle-dark); }
+[data-theme="falfoula"] .brain-steps span { background: rgba(255, 255, 255, .85); }
+[data-theme="falfoula"] .brain-steps span.on { background: var(--sun); }
+
+/* ───── فلفولة ───── */
+.falfoula { display: inline-block; width: 64px; height: 80px; line-height: 0; }
+.falfoula svg { width: 100%; height: 100%; display: block; }
+.falfoula.hop { animation: falfoulaHop .55s ease-out; }
+.falfoula.sway { animation: wobble .6s ease-in-out; }
+@keyframes falfoulaHop { 0%, 100% { transform: translateY(0); } 40% { transform: translateY(-14px) scale(1.06); } 70% { transform: translateY(0) scale(1.03, .96); } }
+.logo-falfoula { width: 124px; height: 155px; }
+.falfoula-talk { display: flex; align-items: center; gap: 10px; }
+.talk-falfoula { flex-shrink: 0; width: 66px; height: 82px; animation: falfoulaFloat 3s ease-in-out infinite; }
+@keyframes falfoulaFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+.falfoula-talk p { position: relative; flex: 1; background: #fff; color: var(--ink); border-radius: 18px; padding: 10px 14px; font-weight: 600; line-height: 1.45; box-shadow: 0 4px 0 var(--sand-dark); }
+.falfoula-talk p::before { content: ""; position: absolute; top: 50%; inset-inline-start: -9px; margin-top: -9px; width: 18px; height: 18px; background: #fff; transform: rotate(45deg); border-radius: 3px; }
+.falfoula-talk b { color: var(--jungle); }
+.q-wrap { position: relative; display: flex; justify-content: center; width: 100%; }
+.buddy { position: absolute; top: -26px; inset-inline-start: 50%; margin-inline-start: min(150px, calc(50% - 50px)); z-index: 2; pointer-events: none; }
+.buddy .falfoula { width: 48px; height: 60px; }
+.result-falfoula { width: 112px; height: 140px; animation: pop .55s; }
+.look-pick { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.look-opt { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 10px 6px; background: #fff; border: 3px solid var(--sand-dark); border-radius: 18px; text-align: center; }
+.look-opt > span:first-child { font-size: 2.4rem; line-height: 1.2; }
+.look-opt .look-falfoula { width: 46px; height: 58px; }
+.look-opt b { font-size: 1.05rem; color: var(--jungle-dark); }
+.look-opt small { font-size: .8rem; line-height: 1.3; color: var(--muted); }
+.look-opt.selected { border-color: var(--leaf); background: #e3f4dc; }
+@media (max-height: 700px) { .buddy { top: -14px; } .buddy .falfoula { width: 38px; height: 48px; } }
+@media (prefers-reduced-motion: reduce) { .talk-falfoula, .falfoula.hop, .falfoula.sway, .result-falfoula { animation: none; } }
+@media print { .cloud, .sun-disc, .hill { display: none !important; } }

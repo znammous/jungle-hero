@@ -4,6 +4,13 @@ const WinnerCard = (() => {
   const FONT = '"Baloo Bhaijaan 2", "Segoe UI", Tahoma, sans-serif';
   const EMOJI = '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif';
 
+  // ألوان البطاقة حسب عالم المستكشف
+  const PAL = {
+    plain: { from: '#2b6b3f', to: '#0f2c19', ray: 'rgba(255, 216, 102, 0.07)', brand: 'rgba(255, 255, 255, 0.75)', cheer: '#143a21', name: '#fff', nameEdge: '#b4561a', vs: '#ffc93c', note: '#fbf3dc', stats: '#8fd17f', date: 'rgba(255, 255, 255, 0.55)' },
+    falfoula: { from: '#bfe9ff', to: '#d6f3b8', ray: 'rgba(255, 255, 255, 0.35)', brand: '#125c33', cheer: '#125c33', name: '#1b7a45', nameEdge: '#fff', vs: '#125c33', note: '#1f3a2d', stats: '#1b7a45', date: '#4f6a5c' },
+  };
+  let pal = PAL.plain;
+
   // عشوائية ثابتة حتى تخرج الزينة بنفس الشكل كل مرة
   let seed = 7;
   const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
@@ -39,8 +46,8 @@ const WinnerCard = (() => {
 
   function background(ctx) {
     const g = ctx.createLinearGradient(0, 0, W * 0.4, H);
-    g.addColorStop(0, '#2b6b3f');
-    g.addColorStop(1, '#0f2c19');
+    g.addColorStop(0, pal.from);
+    g.addColorStop(1, pal.to);
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, W, H);
 
@@ -55,7 +62,7 @@ const WinnerCard = (() => {
       ctx.lineTo(-60, -900);
       ctx.lineTo(60, -900);
       ctx.closePath();
-      ctx.fillStyle = 'rgba(255, 216, 102, 0.07)';
+      ctx.fillStyle = pal.ray;
       ctx.fill();
     }
     ctx.restore();
@@ -180,9 +187,11 @@ const WinnerCard = (() => {
     c.width = W;
     c.height = H;
     const ctx = c.getContext('2d');
+    const falfoula = World.isFalfoula();
+    pal = falfoula ? PAL.falfoula : PAL.plain;
     background(ctx);
 
-    text(ctx, 'أبطال الغابة', W / 2, 80, 46, { color: 'rgba(255, 255, 255, 0.75)' });
+    text(ctx, 'أبطال الغابة', W / 2, 80, 46, { color: pal.brand });
 
     // التاج فوق دائرة الصورة الرمزية
     const cy = 520, r = 170;
@@ -203,17 +212,21 @@ const WinnerCard = (() => {
     ctx.fill();
     text(ctx, info.avatar, W / 2, cy + 12, 210, { emoji: true });
     crown(ctx, W / 2, cy - r - 175, 300);
+    if (falfoula) {
+      const img = await World.falfoulaImage('cheer');
+      if (img) ctx.drawImage(img, W / 2 + r - 20, cy - 90, 224, 280);
+    }
 
-    text(ctx, '🎉 تهانينا 🎉', W / 2, 765, 92, { color: '#ffc93c', stroke: '#143a21', strokeWidth: 14 });
-    text(ctx, info.name, W / 2, 890, 150, { color: '#fff', stroke: '#b4561a', strokeWidth: 22 });
+    text(ctx, '🎉 تهانينا 🎉', W / 2, 765, 92, { color: '#ffc93c', stroke: pal.cheer, strokeWidth: 14 });
+    text(ctx, info.name, W / 2, 890, 150, { color: pal.name, stroke: pal.nameEdge, strokeWidth: 22 });
     ribbon(ctx, `بطل ${info.kind}`, 1025);
-    if (info.vs && info.vs.length) text(ctx, `⚔️ ضد ${info.vs.join(' و')}`, W / 2, 1130, 52, { color: '#ffc93c' });
+    if (info.vs && info.vs.length) text(ctx, `⚔️ ضد ${info.vs.join(' و')}`, W / 2, 1130, 52, { color: pal.vs });
 
-    if (info.note) text(ctx, info.note, W / 2, 1195, 40, { color: '#fbf3dc', weight: 400 });
+    if (info.note) text(ctx, info.note, W / 2, 1195, 40, { color: pal.note, weight: 400 });
     const stats = [`✅ ${info.right} صحيحة`].concat(info.wrong == null ? [] : [`❌ ${info.wrong} خاطئة`]);
     const line = [info.land, ...stats].join('   •   ');
-    text(ctx, line, W / 2, 1252, 36, { color: '#8fd17f', weight: 400 });
-    text(ctx, info.date, W / 2, 1305, 30, { color: 'rgba(255, 255, 255, 0.55)', weight: 400 });
+    text(ctx, line, W / 2, 1252, 36, { color: pal.stats, weight: 400 });
+    text(ctx, info.date, W / 2, 1305, 30, { color: pal.date, weight: 400 });
 
     return new Promise(res => c.toBlob(res, 'image/png'));
   }

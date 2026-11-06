@@ -12,6 +12,7 @@
   let duelKind = 'race';  // 'race' سباق النهر | 'brain' مبارزة العقول | 'rope' شدّ الحبل (لاعبان فقط)
   let netPending = null;  // دعوة سباق على عدة أجهزة قبل أن يبدأ: { id, role, pid }
   let newAvatar = AVATARS[0];
+  let newLook = World.FALFOULA;
   let welcomeSkipped = false;   // اختار «متابعة بدون مزامنة» في هذه المرة
   let pairing = null;           // رمز انضمام جهاز جديد يعرضه ولي الأمر: { code, exp, kid }
   let joinCode = '';            // الرمز المكتوب أو الممسوح في شاشة الانضمام
@@ -59,6 +60,7 @@
 
   function render(html) {
     const tabs = !round && !duel && TAB_SCREENS.has(nav.cur) && !!Store.current();
+    World.paint();
     document.body.classList.toggle('bgrest', !!(round || duel || brain));
     document.body.classList.toggle('tabs', tabs);
     app.innerHTML = html + (tabs ? tabBar() : '');
@@ -100,6 +102,7 @@
   // نموذج الاسم والشخصية: لمستكشف جديد، أو لتعديل المستكشف الحالي
   function profileForm(p) {
     newAvatar = p ? p.avatar : AVATARS[0];
+    newLook = World.lookOf(p);
     render(`<section class="screen">
       <header class="topbar"><button class="chip" data-act="go" data-arg="${p ? 'camp' : 'profiles'}">→ رجوع</button></header>
       <div class="card form-card">
@@ -109,6 +112,7 @@
           ? `<p class="label">اسمك: <b>${esc(p.name)}</b></p><p class="muted">لتغيير الاسم اطلب من ولي الأمر 👨‍👩‍👧</p>`
           : `<label for="nameInput">ما اسمك؟</label>
         <input id="nameInput" maxlength="20" autocomplete="off" placeholder="اكتب اسمك هنا">`}
+        ${World.lookPicker(newLook)}
         <p class="label">اختر شخصيتك</p>
         <div class="avatar-grid">
           ${AVATARS.map(a => `<button class="avatar-btn ${a === newAvatar ? 'selected' : ''}" data-act="pickAvatar" data-arg="${a}">${a}</button>`).join('')}
@@ -126,7 +130,7 @@
     welcome() {
       render(`<section class="screen welcome">
         <header class="hero-title">
-          <div class="logo">🌴🧭🌴</div>
+          <div class="logo">${World.logo('🌴🧭🌴')}</div>
           <h1>أبطال الغابة</h1>
         </header>
         <div class="card welcome-card">
@@ -190,7 +194,7 @@
       Store.select(null);
       render(`<section class="screen">
         <header class="hero-title">
-          <div class="logo">🌴🧭🌴</div>
+          <div class="logo">${World.logo('🌴🧭🌴')}</div>
           <h1>أبطال الغابة</h1>
           <p>من المستكشف اليوم؟</p>
         </header>
@@ -271,6 +275,7 @@
           <button class="chip" data-act="toggleMute" aria-label="الصوت">${Store.state.muted ? '🔇' : '🔊'}</button>
         </header>
 
+        ${World.greeting(st.count)}
         <div class="card explorer-card">
           <button class="avatar xl edit-avatar" data-act="go" data-arg="editProfile" aria-label="تعديل الاسم والشخصية">${p.avatar}<i>✏️</i></button>
           <div>
@@ -945,7 +950,7 @@
 
         <div class="play-body">
           <div class="question-area">
-            <div id="question" class="question" dir="ltr"></div>
+            <div class="q-wrap">${World.buddy()}<div id="question" class="question" dir="ltr"></div></div>
             <div id="feedback" class="feedback"></div>
           </div>
           <div id="pad" class="pad">${numpad()}</div>
@@ -1129,7 +1134,7 @@
       const unique = [...new Map(s.mistakes.map(q => [q.id, q])).values()];
 
       render(`<section class="screen results">
-        <div class="result-hero">${hero}</div>
+        <div class="result-hero">${World.resultFace(hero, s.mode !== 'practice' || pct >= 0.7)}</div>
         <h1>${title}</h1>
         <div class="stats">
           <div class="stat good"><b>${s.right}</b><small>صحيحة</small></div>
@@ -2558,11 +2563,13 @@
     if (ok) {
       round.right++;
       Sound.play('right');
+      World.react(true);
       el.classList.add('right');
       $('feedback').textContent = ['رائع! 🎉', 'صحيح! ⭐', 'ممتاز! 🌟', 'أحسنت! 👏'][round.right % 4];
     } else {
       round.mistakes.push(q);
       Sound.play('wrong');
+      World.react(false);
       el.classList.add('wrong');
       $('feedback').innerHTML = `الإجابة الصحيحة: <b dir="ltr">${q.solved}</b>`;
     }
@@ -3392,6 +3399,8 @@
         } else if (k.mode === 'create') {
           kidPin = null;
           const kid = Store.createProfile(k.name, k.avatar, entered);
+          kid.look = k.look;
+          Store.save();
           if (Sync.role() === 'parent') offerDevice = kid.id;
           Sound.play('win');
           go('camp');
@@ -3440,10 +3449,17 @@
       app.querySelectorAll('.avatar-btn').forEach(b => b.classList.toggle('selected', b === el));
     },
 
+    pickLook(look, el) {
+      newLook = look;
+      el.parentElement.querySelectorAll('.look-opt').forEach(b => b.classList.toggle('selected', b === el));
+      World.preview(look);
+    },
+
     saveProfile(mode) {
       if (mode === 'edit') {
         const p = Store.current();
         p.avatar = newAvatar;
+        p.look = newLook;
         Store.save();
         toast('✅ حُفظت التغييرات');
         go('camp');
@@ -3451,7 +3467,7 @@
       }
       const name = $('nameInput').value.trim();
       if (!name) { toast('اكتب اسمك أولاً ✏️'); $('nameInput').focus(); return; }
-      kidPin = { mode: 'create', name, avatar: newAvatar, stage: 'new', buf: '', first: '' };
+      kidPin = { mode: 'create', name, avatar: newAvatar, look: newLook, stage: 'new', buf: '', first: '' };
       go('kidPin');
     },
 
