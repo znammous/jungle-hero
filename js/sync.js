@@ -189,8 +189,13 @@ const Sync = (() => {
       });
       if (!snap.exists() || snap.data().exp.toMillis() < Date.now()) throw new Error('expired');
       const c = snap.data();
-      await fb.fs.setDoc(fb.fs.doc(fb.db, 'families', c.fid, 'members', cred.uid),
-        { code, kid: c.kid || '', name: String(name || '').slice(0, 40), at: Date.now() });
+      // الحساب المجهول مشترك مع أبطال الإملاء وجدول الأبطال (نفس النطاق ونفس مشروع Firebase)،
+      // فقد يكون الجهاز عضواً في العائلة من قبل؛ القواعد تسمح بإنشاء العضوية لا بتعديلها
+      const mref = fb.fs.doc(fb.db, 'families', c.fid, 'members', cred.uid);
+      const member = await fb.fs.getDocFromServer(mref).catch(() => null);
+      if (!member || !member.exists()) {
+        await fb.fs.setDoc(mref, { code, kid: c.kid || '', name: String(name || '').slice(0, 40), at: Date.now() });
+      }
       saveFid(c.fid);
       joining = false;
       onUser(cred);
