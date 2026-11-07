@@ -141,7 +141,7 @@
             <span class="g-logo">G</span> تسجيل الدخول بحساب Google
           </button>
           <p class="muted">على جهاز ولي الأمر مرة واحدة فقط.</p>
-          <button class="btn orange wide" data-act="go" data-arg="join">📷 جهاز طفل؟ انضم برمز من ولي الأمر</button>
+          <button class="btn orange wide" data-act="go" data-arg="join">📷 جهاز طفل أو ولي أمر آخر؟ انضم برمز</button>
           <button class="link-btn dark" data-act="skipWelcome">متابعة بدون مزامنة ←</button>
         </div>
       </section>`);
@@ -178,7 +178,8 @@
           ${pairing && pairing.exp > Date.now() ? pairBox() : `<h2>جهاز من؟</h2>
           <div class="kid-tabs">${kids.map(k =>
             `<button class="chip light" data-act="pairDevice" data-arg="${k.id}">${k.avatar} ${esc(k.name)}</button>`).join('')}
-            <button class="chip light" data-act="pairDevice" data-arg="">👨‍👩‍👧 جهاز مشترك</button></div>`}
+            <button class="chip light" data-act="pairDevice" data-arg="">👨‍👩‍👧 جهاز مشترك</button>
+            <button class="chip light" data-act="pairGuardian">👑 ولي أمر آخر</button></div>`}
         </div>
       </section>`);
     },
@@ -1367,6 +1368,10 @@
           `<button class="chip ${ownerId() === k.id ? 'on' : ''}" data-act="setOwner" data-arg="${k.id}">${k.avatar} ${esc(k.name)}</button>`).join('')}
           <button class="chip ${ownerId() ? '' : 'on'}" data-act="setOwner" data-arg="">👨‍👩‍👧 جهاز مشترك</button></div>
         <button class="link-btn dark" data-act="syncOut">فصل هذا الجهاز عن العائلة</button>`
+        : Sync.guardian() ? `<p>${label}</p>
+        <p class="muted">👑 هذا الجهاز لولي أمر انضم برمز، وله ما لولي الأمر.</p>
+        ${devicesBox()}
+        <button class="link-btn dark" data-act="syncOut">فصل هذا الجهاز عن العائلة</button>`
         : `<p>${label}</p>
         <p class="muted" dir="ltr">${esc(Sync.email())}</p>
         ${devicesBox()}
@@ -1378,12 +1383,13 @@
   // أجهزة الأطفال المرتبطة، وإضافة جهاز جديد برمز QR بدل تسجيل الدخول بالحساب نفسه
   function pairBox() {
     const k = Store.state.profiles.find(x => x.id === pairing.kid);
-    const who = k ? `${k.avatar} ${esc(k.name)}` : 'الجهاز المشترك';
+    const g = pairing.kid.startsWith('A|');
+    const who = g ? `👑 ${esc(pairing.kid.slice(2))}` : k ? `${k.avatar} ${esc(k.name)}` : 'الجهاز المشترك';
     const qr = qrcode(0, 'M');
     qr.addData(`${location.origin}${location.pathname}#join=${pairing.code}`);
     qr.make();
     return `<div class="pair-box ${pairing.ready ? '' : 'pending'}">
-      <p>على جهاز ${who}: افتح اللعبة ← «جهاز طفل؟ انضم برمز» ثم امسح الرمز أو اكتبه</p>
+      <p>على جهاز ${who}: افتح اللعبة ← «انضم برمز» ثم امسح الرمز أو اكتبه${g ? '. سيصبح ولي أمر يرى اللوحة ويضيف الأجهزة، والرمز لمرة واحدة.' : ''}</p>
       <div class="qr">${qr.createSvgTag({ cellSize: 4, margin: 2, scalable: true })}</div>
       <b class="pair-code" dir="ltr">${pairing.code.slice(0, 4)}-${pairing.code.slice(4)}</b>
       <small class="muted">${pairing.ready ? '✅ جاهز · صالح لعشر دقائق' : '<span class="spinner"></span> جارٍ تفعيل الرمز…'}</small>
@@ -1394,11 +1400,15 @@
   function devicesBox() {
     const kids = Store.state.profiles;
     const kidOf = id => kids.find(k => k.id === id);
-    const who = id => { const k = kidOf(id); return k ? `${k.avatar} ${esc(k.name)}` : '👨‍👩‍👧 مشترك'; };
+    const gs = Sync.guardians();
+    const who = d => {
+      if (gs[d.id] !== undefined) return `👑 ${esc(gs[d.id] || 'ولي أمر')}`;
+      const k = kidOf(d.kid); return k ? `${k.avatar} ${esc(k.name)}` : '👨‍👩‍👧 مشترك';
+    };
     const list = Sync.devices();
     const rows = list.length
       ? `<ul class="request-list device-list">${list.map(d =>
-          `<li><span>${who(d.kid)} <small class="muted">· ${esc(d.name || 'جهاز')}</small></span>
+          `<li><span>${who(d)} <small class="muted">· ${esc(d.name || 'جهاز')}${d.id === Sync.uid() ? ' (هذا الجهاز)' : ''}</small></span>
             <button class="link-btn danger" data-act="removeDevice" data-arg="${d.id}">فصل</button></li>`).join('')}</ul>`
       : '<p class="muted">لا توجد أجهزة أطفال مرتبطة بعد.</p>';
     let add;
@@ -1407,9 +1417,10 @@
       add = `<div class="setting"><span>➕ أضف جهازاً لـ</span></div>
         <div class="kid-tabs">${kids.map(k =>
           `<button class="chip" data-act="pairDevice" data-arg="${k.id}">${k.avatar} ${esc(k.name)}</button>`).join('')}
-          <button class="chip" data-act="pairDevice" data-arg="">👨‍👩‍👧 جهاز مشترك</button></div>`;
+          <button class="chip" data-act="pairDevice" data-arg="">👨‍👩‍👧 جهاز مشترك</button>
+          <button class="chip" data-act="pairGuardian">👑 ولي أمر آخر</button></div>`;
     }
-    return `<h4>📱 أجهزة الأطفال</h4>${rows}${add}`;
+    return `<h4>📱 أجهزة العائلة</h4>${rows}${add}`;
   }
 
   // لوحة المتصدرين: الصغار والكبار كلٌّ في لوحته، يحدّد ولي الأمر مجموعة كل طفل
@@ -3172,7 +3183,7 @@
     Sync.join(code, deviceName()).then(kid => {
       joinCode = '';
       setOwnerId(kid);
-      toast('✅ انضم الجهاز إلى العائلة');
+      toast(Sync.guardian() ? '✅ انضممت إلى العائلة كولي أمر 👑' : '✅ انضم الجهاز إلى العائلة');
       Screens.profiles();
     }).catch(e => {
       const msg = { expired: '⚠️ الرمز غير صحيح أو انتهت صلاحيته. اطلب رمزاً جديداً من ولي الأمر.',
@@ -4020,7 +4031,7 @@
     showWelcome() { Screens.welcome(); },
 
     syncOut() {
-      const msg = Sync.role() === 'device'
+      const msg = Sync.role() === 'device' || Sync.guardian()
         ? 'فصل هذا الجهاز عن العائلة؟ يبقى التقدّم محفوظاً عليه لكن لن يُزامَن.'
         : 'تسجيل الخروج من هذا الجهاز؟ يبقى التقدّم محفوظاً عليه لكن لن يُزامَن.';
       if (!confirm(msg)) return;
@@ -4039,6 +4050,14 @@
         .catch(() => { if (mine()) { pairing = null; showPairing(); toast('⚠️ تعذّر إنشاء الرمز. تأكد من الإنترنت.'); } });
       // نخفي الرمز عند انتهائه
       setTimeout(() => { if (mine()) { pairing = null; showPairing(); } }, exp - Date.now() + 500);
+    },
+
+    // رمز لولي أمر آخر (الأب أو الأم) ينضم بجهازه فيصبح له ما لولي الأمر
+    pairGuardian() {
+      if (!parentOK) return;
+      const name = prompt('اسم ولي الأمر الذي سينضم (مثل: أم محمد)', '');
+      if (name === null) return;
+      actions.pairDevice('A|' + ([...name.trim()].slice(0, 30).join('') || 'ولي الأمر'));
     },
 
     cancelPair() { pairing = null; showPairing(); },
