@@ -16,7 +16,14 @@ const Sync = (() => {
   // 'loading' | 'unavailable' | 'out' (غير مسجّل) | 'syncing' | 'offline' | 'ok' | 'error'
   let status = 'loading';
   let fb = null, user = null, ref = null, unsub = null, pushTimer = null;
-  let fid = null, joining = false, memberUnsub = null, devicesUnsub = null, devices = [];
+  let fid = null, joining = false, memberUnsub = null, devicesUnsub = null, devices = [], memberData = null;
+  // سجلّ الجهاز في العائلة مشترك مع أبطال الإملاء (نفس النطاق ونفس الحساب المجهول)،
+  // فيحفظ كل تطبيق طفله في apps.{اسم التطبيق}. السجلات القديمة بلا apps فيها kid فقط.
+  const APP = 'jungleHero';
+  const OTHER_APPS = { spellingHero: 'spelling-hero-family' };
+  const appKid = d => (d.apps ? d.apps[APP] : d.kid) || '';
+  const inApp = d => !d.apps || APP in d.apps;
+  const otherApps = d => !!(d && d.apps && Object.keys(d.apps).some(a => a !== APP));
   const FID_KEY = 'jungle-hero-family';
   const savedFid = () => { try { return localStorage.getItem(FID_KEY); } catch (e) { return null; } };
   const saveFid = v => { try { v ? localStorage.setItem(FID_KEY, v) : localStorage.removeItem(FID_KEY); } catch (e) {} };
@@ -81,11 +88,14 @@ const Sync = (() => {
     if (u.isAnonymous) {
       // إذا فصل ولي الأمر هذا الجهاز نخرج منه ويبقى التقدّم محفوظاً عليه
       memberUnsub = fb.fs.onSnapshot(fb.fs.doc(fb.db, 'families', fid, 'members', u.uid), snap => {
-        if (!snap.exists() && !snap.metadata.fromCache) leave();
+        memberData = snap.exists() ? snap.data() : null;
+        if (snap.metadata.fromCache) return;
+        if (!memberData || !inApp(memberData)) leave();
       }, () => {});
     } else {
       devicesUnsub = fb.fs.onSnapshot(fb.fs.collection(fb.db, 'families', fid, 'members'), snap => {
-        devices = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => a.at - b.at);
+        devices = snap.docs.filter(d => inApp(d.data()))
+          .map(d => ({ id: d.id, ...d.data(), kid: appKid(d.data()) })).sort((a, b) => a.at - b.at);
         notify(false);
       }, () => {});
     }
@@ -145,9 +155,13 @@ const Sync = (() => {
   }
 
   function signOut() {
-    // جهاز الطفل يحذف نفسه من أجهزة العائلة قبل الخروج
+    // جهاز الطفل يحذف نفسه من أجهزة العائلة قبل الخروج، أو يحذف هذا التطبيق فقط من سجلّه إن كان مرتبطاً بتطبيق آخر
     if (user && user.isAnonymous && fid) {
-      return fb.fs.deleteDoc(fb.fs.doc(fb.db, 'families', fid, 'members', user.uid)).catch(() => {}).then(leave);
+      const mref = fb.fs.doc(fb.db, 'families', fid, 'members', user.uid);
+      const done = otherApps(memberData)
+        ? fb.fs.updateDoc(mref, { ['apps.' + APP]: fb.fs.deleteField() })
+        : fb.fs.deleteDoc(mref);
+      return done.catch(() => {}).then(leave);
     }
     return leave();
   }
@@ -156,6 +170,12 @@ const Sync = (() => {
     Store.state.linked = false;
     Store.save();
     saveFid(null);
+    // الجهاز ما زال مرتبطاً بتطبيق آخر: نفصل هذا التطبيق وحده دون الخروج من الحساب المشترك
+    if (user && user.isAnonymous && otherApps(memberData)) {
+      memberData = null;
+      onUser(user);
+      return Promise.resolve();
+    }
     return fb.auth.signOut(fb.authI);
   }
 
@@ -189,12 +209,26 @@ const Sync = (() => {
       });
       if (!snap.exists() || snap.data().exp.toMillis() < Date.now()) throw new Error('expired');
       const c = snap.data();
-      // الحساب المجهول مشترك مع أبطال الإملاء وجدول الأبطال (نفس النطاق ونفس مشروع Firebase)،
-      // فقد يكون الجهاز عضواً في العائلة من قبل؛ القواعد تسمح بإنشاء العضوية لا بتعديلها
+      const kid = c.kid || '';
       const mref = fb.fs.doc(fb.db, 'families', c.fid, 'members', cred.uid);
       const member = await fb.fs.getDocFromServer(mref).catch(() => null);
-      if (!member || !member.exists()) {
-        await fb.fs.setDoc(mref, { code, kid: c.kid || '', name: String(name || '').slice(0, 40), at: Date.now() });
+      const old = member && member.exists() ? member.data() : null;
+      const entry = { code, name: String(name || '').slice(0, 40), at: Date.now() };
+      if (!old) {
+        await fb.fs.setDoc(mref, { ...entry, kid, apps: { [APP]: kid } });
+      } else {
+        // الجهاز عضو من قبل عبر تطبيق آخر: نضيف هذا التطبيق إلى سجلّه.
+        // السجل القديم بلا apps يعود طفله (kid) للتطبيق الآخر المرتبط بنفس العائلة على هذا الجهاز
+        const apps = { ...(old.apps || {}) };
+        if (!old.apps) {
+          for (const [a, key] of Object.entries(OTHER_APPS)) {
+            let f = null;
+            try { f = localStorage.getItem(key); } catch (e) {}
+            if (f === c.fid) apps[a] = old.kid || '';
+          }
+        }
+        apps[APP] = kid;
+        await fb.fs.setDoc(mref, { ...entry, kid: old.kid || '', apps });
       }
       saveFid(c.fid);
       joining = false;
@@ -227,7 +261,13 @@ const Sync = (() => {
     }
   }
 
-  const removeDevice = id => fb.fs.deleteDoc(fb.fs.doc(fb.db, 'families', fid, 'members', id));
+  // ولي الأمر يفصل الجهاز عن هذا التطبيق فقط إن كان مرتبطاً بتطبيق آخر أيضاً
+  async function removeDevice(id) {
+    const mref = fb.fs.doc(fb.db, 'families', fid, 'members', id);
+    const snap = await fb.fs.getDocFromServer(mref).catch(() => null);
+    if (snap && snap.exists() && otherApps(snap.data())) return fb.fs.updateDoc(mref, { ['apps.' + APP]: fb.fs.deleteField() });
+    return fb.fs.deleteDoc(mref);
+  }
 
   return {
     start, signIn, signOut, createCode, join, removeDevice,

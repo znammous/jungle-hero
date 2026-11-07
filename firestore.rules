@@ -34,17 +34,28 @@ service cloud.firestore {
         allow read, write: if app in ['jungleHero', 'jungleDuel', 'jungleOnline', 'spellingHero', 'spellingDuel', 'spellingOnline'] && isMember(fid);
       }
 
-      // الجهاز يسجّل نفسه برمز صالح لهذه العائلة، ويستطيع حذف نفسه
+      // الجهاز يسجّل نفسه برمز صالح لهذه العائلة، ويستطيع حذف نفسه.
+      // السجل مشترك بين التطبيقات على نفس النطاق: apps.{التطبيق} = طفل الجهاز في كل تطبيق
+      function validMember(fid) {
+        let d = request.resource.data;
+        return d.keys().hasOnly(['code', 'kid', 'name', 'at', 'apps'])
+          && d.name is string && d.name.size() <= 40
+          && d.kid is string && d.kid.size() <= 40
+          && (!('apps' in d) || (d.apps is map && d.apps.size() <= 10))
+          && d.code is string && d.code.size() == 8
+          && exists(/databases/$(database)/documents/pairCodes/$(d.code))
+          && pairCode(d.code).fid == fid
+          && pairCode(d.code).exp > request.time;
+      }
       match /members/{mid} {
         allow read, delete: if request.auth != null && request.auth.uid == mid;
-        allow create: if request.auth != null && request.auth.uid == mid
-          && request.resource.data.keys().hasOnly(['code', 'kid', 'name', 'at'])
-          && request.resource.data.name is string && request.resource.data.name.size() <= 40
-          && request.resource.data.kid is string && request.resource.data.kid.size() <= 40
-          && request.resource.data.code is string && request.resource.data.code.size() == 8
-          && exists(/databases/$(database)/documents/pairCodes/$(request.resource.data.code))
-          && pairCode(request.resource.data.code).fid == fid
-          && pairCode(request.resource.data.code).exp > request.time;
+        // إنشاء السجل، أو إضافة تطبيق آخر إليه، يحتاج رمزاً صالحاً
+        allow create, update: if request.auth != null && request.auth.uid == mid && validMember(fid);
+        // الجهاز يفصل تطبيقاً واحداً عن نفسه: يحذف من apps فقط
+        allow update: if request.auth != null && request.auth.uid == mid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['apps'])
+          && request.resource.data.apps is map
+          && resource.data.apps.keys().hasAll(request.resource.data.apps.keys());
       }
     }
 
